@@ -15,8 +15,11 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/tree">Family Tree</a></li>
                 <li><a href="/search">Search</a></li>
+                <li><a id="authLink" href="/signin">Sign In</a></li>
             </ul>
         </nav>
+        <p id="authStatus" class="auth-status">Checking sign-in...</p>
+        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
     </header>
 
     <main>
@@ -47,7 +50,7 @@
                 <article class="action-card">
                     <h3>Join an Existing Tree</h3>
                     <p>
-                        Already have an access code? Use it to jump straight into your family’s tree and start
+                        Already have an access code? Use it to jump straight into your family's tree and start
                         exploring parents, siblings, cousins, and more.
                     </p>
                     <button id="joinTreeBtn" class="button">
@@ -77,7 +80,7 @@
 
             <div id="createTreeFormCard" class="form-card">
                 <h3>Create a New Family Tree</h3>
-                <p>Give your tree a name. We’ll generate an access code you can share with your family.</p>
+                <p>Give your tree a name. We'll generate an access code you can share with your family.</p>
 
                 <form id="createFamilyForm">
                     <label for="familyName">Family Tree Name</label>
@@ -103,7 +106,7 @@
 
             <div id="joinTreeFormCard" class="form-card">
                 <h3>Join an Existing Family Tree</h3>
-                <p>Enter the access code that was shared with you to open your family’s tree.</p>
+                <p>Enter the access code that was shared with you to open your family's tree.</p>
 
                 <form id="joinFamilyForm">
                     <label for="joinCode">Access Code</label>
@@ -129,14 +132,14 @@
                 <p>
                     From this home page, either <strong>create a new tree</strong> for your family
                     or <strong>join an existing tree</strong> with an access code.
-                    Once you’re inside a tree, everything you see is specific to that family only.
+                    Once you're inside a tree, everything you see is specific to that family only.
                 </p>
             </div>
 
             <div class="instruction-card">
                 <h3>2. View Your Family Tree</h3>
                 <p>
-                    On the <strong>"Family Tree"</strong> page, you’ll see everyone in the current tree
+                    On the <strong>"Family Tree"</strong> page, you'll see everyone in the current tree
                     organized by generation, with spouses and siblings grouped together.
                 </p>
                 <a href="/tree" class="button">Go to Family Tree</a>
@@ -159,7 +162,7 @@
             <div class="instruction-card">
                 <h3>4. View &amp; Edit Profiles</h3>
                 <p>
-                    Click on any person’s card in the tree to open their profile. You’ll see:
+                    Click on any person's card in the tree to open their profile. You'll see:
                 </p>
                 <ul class="instruction-list">
                     <li>Birth date</li>

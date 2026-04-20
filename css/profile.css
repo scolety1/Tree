@@ -1,16 +1,10 @@
 /* Center the profile card on the page */
 .profile-page {
-  min-height: 100vh;
+  min-height: 60vh;
   padding: 2rem 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Override global <strong> inside the profile card */
-.profile-card strong {
-  color: #ffffff !important;
-  font-weight: 600;
 }
 
 /* Main card (image + info) */
@@ -138,6 +132,22 @@
   display: none;
 }
 
-.fart {
-    color: black;
+.form-label {
+  color: #111827;
+  display: block;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  text-align: left;
+}
+
+.form-label input,
+.form-label select,
+.form-label textarea {
+  box-sizing: border-box;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+footer {
+  padding-bottom: 2rem;
 }

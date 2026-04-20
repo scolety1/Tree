@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Family Tree</title>
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+
+    <header>
+        <h1>Family tree</h1>
+        <nav aria-label="Main">
+            <ul class="nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tree">Family Tree</a></li>
+                <li><a href="/search">Search</a></li>
+                <li><a id="authLink" href="/signin">Sign In</a></li>
+            </ul>
+        </nav>
+        <p id="authStatus" class="auth-status">Checking sign-in...</p>
+        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+    </header>
+
+    <main>
+        <section class="auth-panel">
+            <h2 id="authTitle">Sign In</h2>
+            <p>
+                Sign in to start building private family trees that can later be shared with invited relatives.
+            </p>
+
+            <p id="authFormStatus" class="form-status" aria-live="polite"></p>
+
+            <form id="authForm">
+                <label for="authEmail">Email</label>
+                <input id="authEmail" type="email" autocomplete="email" required>
+
+                <label for="authPassword">Password</label>
+                <input id="authPassword" type="password" autocomplete="current-password" required>
+
+                <button id="authSubmitBtn" type="submit">Sign In</button>
+            </form>
+
+            <button id="googleSignInBtn" class="button auth-secondary-button" type="button">
+                Continue with Google
+            </button>
+
+            <div class="auth-actions">
+                <button id="authModeToggle" type="button">New here? Create an account</button>
+                <button id="resetPasswordBtn" type="button">Reset password</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+    </footer>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>

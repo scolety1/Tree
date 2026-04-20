@@ -15,8 +15,11 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/tree">Family Tree</a></li>
                 <li><a href="/search">Search</a></li>
+                <li><a id="authLink" href="/signin">Sign In</a></li>
             </ul>
         </nav>
+        <p id="authStatus" class="auth-status">Checking sign-in...</p>
+        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
     </header>
 
 
@@ -46,14 +49,21 @@
             <div class="modal-content">
                 <span class="close">&times;</span>
                 <h2>Add a New Family Member</h2>
+                <p id="addPersonStatus" class="form-status" aria-live="polite"></p>
                 <form id="addPersonForm">
-                    <input type="text" id="firstName" placeholder="Enter First Name" required><br>
-                    <input type="text" id="middleInitial" placeholder="Enter Middle Initial"><br>
-                    <input type="text" id="lastName" placeholder="Enter Last Name" required><br>           
-                    <input type="date" id="birthDate" placeholder="Enter Birthdate"><br>
-                    <input type="text" id="parent1" placeholder="Enter First Parent"><br>
-                    <input type="text" id="parent2" placeholder="Enter Second Parent"><br>
-                    <input type="text" id="spouse" placeholder="Enter Spouse's First and Last Name"><br>
+                    <input type="text" id="firstName" placeholder="Enter First Name" aria-label="First name" required><br>
+                    <input type="text" id="middleInitial" placeholder="Enter Middle Initial" aria-label="Middle initial"><br>
+                    <input type="text" id="lastName" placeholder="Enter Last Name" aria-label="Last name" required><br>
+                    <input type="date" id="birthDate" placeholder="Enter Birthdate" aria-label="Birthdate"><br>
+                    <select id="parent1" aria-label="First parent">
+                        <option value="">Select First Parent</option>
+                    </select><br>
+                    <select id="parent2" aria-label="Second parent">
+                        <option value="">Select Second Parent</option>
+                    </select><br>
+                    <select id="spouse" aria-label="Spouse">
+                        <option value="">Select Spouse</option>
+                    </select><br>
                     <button type="submit">Add</button>
                 </form>
             </div>
@@ -62,7 +72,7 @@
 
         
     <footer>
-        <small>Copyright &copy; <span id="year"></span> Flex &amp; Grid Co.</small>
+        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>
     
     <script type="module" src="/js/main.js"></script>

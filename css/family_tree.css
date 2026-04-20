@@ -48,7 +48,7 @@
     margin-top: 4px;
 }
 
-/* ===== FAMILY TREE PAGE — CARD LAYOUT ===== */
+/* ===== FAMILY TREE PAGE CARD LAYOUT ===== */
 
 .tree-layout {
     position: relative;
@@ -67,7 +67,7 @@
     overflow-y: auto;   /* just in case it gets tall */
 }
 
-/* SVG layer for parent→child connectors */
+/* SVG layer for parent-to-child connectors */
 .tree-lines {
     position: absolute;
     inset: 0;
@@ -102,7 +102,7 @@
 .generation-row {
     position: relative;
     display: flex;
-    flex-wrap: nowrap;      /* 🔥 keep everyone on the same line */
+    flex-wrap: nowrap;
     gap: 24px;
     justify-content: center;
     z-index: 1; /* keep above SVG lines */
@@ -133,7 +133,7 @@
     z-index: 0;
 }
 
-/* Divorced pair: visually separated but still “linked” */
+/* Divorced pair: visually separated but still linked */
 .divorced-pair {
     display: flex;
     gap: 24px;
@@ -194,13 +194,7 @@
     margin: 2px 0;
 }
 
-/* Debug generation text if you keep .debug-gen */
-.person-card .debug-gen {
-    font-size: 0.8rem;
-    color: #9ca3af;
-}
-
-/* Example of a subtle tag (e.g., “Divorced”, “Spouse”, etc.) */
+/* Example of a subtle tag, such as Divorced or Spouse */
 .person-card .tag {
     display: inline-block;
     margin-top: 8px;

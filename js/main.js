@@ -3,6 +3,8 @@ import "./postPeople.js";
 import "./tree.js";
 import "./search.js";
 import "./home.js";
+import "./auth.js";
+import "./dashboard.js";
 import { getCurrentFamilyId } from "./helpers.js";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -29,9 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    const backToTreeBtn = document.querySelector('a[href="/tree"]');
-    if (backToTreeBtn && familyId && backToTreeBtn.textContent.includes('Back to Family Tree')) {
-        backToTreeBtn.href = `/tree?familyId=${familyId}`;
+    if (familyId) {
+        document.querySelectorAll('a[href="/tree"]').forEach((link) => {
+            link.href = `/tree?familyId=${familyId}`;
+        });
+
+        document.querySelectorAll('a[href="/search"]').forEach((link) => {
+            link.href = `/search?familyId=${familyId}`;
+        });
     }
     
     const yearElement = document.getElementById('year');

@@ -10,6 +10,20 @@
 
 </head>
 <body>
+  <header>
+    <h1>Family tree</h1>
+    <nav aria-label="Main">
+      <ul class="nav">
+        <li><a href="/">Home</a></li>
+        <li><a href="/tree">Family Tree</a></li>
+        <li><a href="/search">Search</a></li>
+        <li><a id="authLink" href="/signin">Sign In</a></li>
+      </ul>
+    </nav>
+    <p id="authStatus" class="auth-status">Checking sign-in...</p>
+    <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+  </header>
+
   <div class="profile-page">
     <section class="profile-card" id="profileCard">
       <!-- LEFT: PHOTO -->
@@ -71,39 +85,45 @@
       <span class="close">&times;</span>
       <h2>Edit Person</h2>
       <form id="editPersonForm" enctype="multipart/form-data">
-        <label class="fart">
+        <label class="form-label">
           First Name
-          <input type="text" id="editFirstName"><br>
+          <input type="text" id="editFirstName" required><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Middle Initial
           <input type="text" id="editMiddleInitial"><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Last Name
-          <input type="text" id="editLastName"><br>
+          <input type="text" id="editLastName" required><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Person's Birthday
           <input type="date" id="editBirthDate"><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Parent One
-          <input type="text" id="editParent1" placeholder="Enter Parent 1"><br>
+          <select id="editParent1">
+            <option value="">Select Parent 1</option>
+          </select><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Parent Two
-          <input type="text" id="editParent2" placeholder="Enter Parent 2"><br>
+          <select id="editParent2">
+            <option value="">Select Parent 2</option>
+          </select><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Spouse
-          <input type="text" id="editSpouse"><br>
+          <select id="editSpouse">
+            <option value="">Select Spouse</option>
+          </select><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Bio
           <textarea id="editBio" placeholder="Add a Bio" rows="4"></textarea><br>
         </label>
-        <label class="fart">
+        <label class="form-label">
           Profile Image
           <input type="file" id="editImageFile" accept="image/*"><br>
         </label>
@@ -112,6 +132,11 @@
     </div>
   </div>
 
+  <footer>
+    <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+  </footer>
+
+  <script type="module" src="/js/main.js"></script>
   <script type="module" src="/js/profile.js"></script>
 </body>
 

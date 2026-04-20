@@ -79,6 +79,22 @@ export function toTitleFullName(firstName, lastName) {
   return `${toTitle(firstName)} ${toTitle(lastName)}`.trim();
 }
 
+export function getDisplayName(person) {
+  if (!person) return "";
+  return toTitleFullName(person.firstName || "", person.lastName || "") || "Unnamed";
+}
+
+export function getPersonNameKey(person) {
+  if (!person) return "";
+  return buildFullName(person.firstName, person.lastName);
+}
+
+export function findPersonByNameString(name, allPeople) {
+  const cleanName = normalizeNamePart(name);
+  if (!cleanName || !Array.isArray(allPeople)) return null;
+  return allPeople.find(person => getPersonNameKey(person) === cleanName) || null;
+}
+
 /* -----------------------------------
    FIRESTORE LOOKUPS
 ----------------------------------- */
@@ -138,6 +154,13 @@ export async function findPersonByFullName(firstName, lastName, familyId = null)
 export function areSpouses(personA, personB) {
   if (!personA || !personB) return false;
 
+  const aSpouseIds = Array.isArray(personA.spouseIds) ? personA.spouseIds : [];
+  const bSpouseIds = Array.isArray(personB.spouseIds) ? personB.spouseIds : [];
+
+  if (aSpouseIds.includes(personB.id) || bSpouseIds.includes(personA.id)) {
+    return true;
+  }
+
   const aSpouseFull = buildFullName(
     personA.spouseFirstName,
     personA.spouseLastName
@@ -158,6 +181,7 @@ export function areSpouses(personA, personB) {
 
 export function hasParents(person) {
   if (!person) return false;
+  if (Array.isArray(person.parentIds) && person.parentIds.length > 0) return true;
   return Boolean(
     (person.parent1 && person.parent1.trim() !== "") ||
     (person.parent2 && person.parent2.trim() !== "")
@@ -166,6 +190,7 @@ export function hasParents(person) {
 
 export function hasTwoParents(person) {
   if (!person) return false;
+  if (Array.isArray(person.parentIds) && person.parentIds.length >= 2) return true;
   return Boolean(
     (person.parent1 && person.parent1.trim() !== "") &&
     (person.parent2 && person.parent2.trim() !== "")
@@ -178,6 +203,7 @@ export function getChildren(person, allPeople) {
   const fullName = buildFullName(person.firstName, person.lastName);
 
   return allPeople.filter(p =>
+    (Array.isArray(p.parentIds) && p.parentIds.includes(person.id)) ||
     p.parent1 === fullName || p.parent2 === fullName
   );
 }
@@ -196,7 +222,14 @@ export function getSiblings(person, allPeople) {
       p.parent1 === person.parent2 &&
       p.parent2 === person.parent1;
 
-    return sameOrder || swappedOrder;
+    const personParentIds = Array.isArray(person.parentIds) ? person.parentIds : [];
+    const otherParentIds = Array.isArray(p.parentIds) ? p.parentIds : [];
+    const sameParentIds =
+      personParentIds.length > 0 &&
+      personParentIds.length === otherParentIds.length &&
+      personParentIds.every(parentId => otherParentIds.includes(parentId));
+
+    return sameParentIds || sameOrder || swappedOrder;
   });
 }
 
@@ -208,6 +241,10 @@ export function getSharedChildren(personA, personB, allPeople) {
   const bName = buildFullName(personB.firstName, personB.lastName);
 
   return allPeople.filter(child => {
+    if (Array.isArray(child.parentIds)) {
+      return child.parentIds.includes(personA.id) && child.parentIds.includes(personB.id);
+    }
+
     const parents = [child.parent1, child.parent2].filter(Boolean);
     return parents.includes(aName) && parents.includes(bName);
   });
@@ -218,10 +255,17 @@ export function getCoParents(person, allPeople) {
   if (!person) return [];
 
   const myName = buildFullName(person.firstName, person.lastName);
+  const coParentIds = new Set();
   const coParentNames = new Set();
 
   // Find all name-strings of people who are the "other" parent
   allPeople.forEach(child => {
+    if (Array.isArray(child.parentIds) && child.parentIds.includes(person.id)) {
+      child.parentIds.forEach(parentId => {
+        if (parentId !== person.id) coParentIds.add(parentId);
+      });
+    }
+
     const parents = [child.parent1, child.parent2].filter(Boolean);
     if (!parents.includes(myName)) return;
 
@@ -236,7 +280,7 @@ export function getCoParents(person, allPeople) {
   const result = [];
   allPeople.forEach(p => {
     const full = buildFullName(p.firstName, p.lastName);
-    if (coParentNames.has(full)) {
+    if (coParentIds.has(p.id) || coParentNames.has(full)) {
       result.push(p);
     }
   });
@@ -261,7 +305,14 @@ export function getHalfSiblings(person, allPeople) {
     if (p.id === person.id) return false; // skip self
 
     // share at least one parent (either slot)
+    const personParentIds = Array.isArray(person.parentIds) ? person.parentIds : [];
+    const otherParentIds = Array.isArray(p.parentIds) ? p.parentIds : [];
+    const shareAnyId =
+      personParentIds.length > 0 &&
+      personParentIds.some(parentId => otherParentIds.includes(parentId));
+
     const shareAny =
+      shareAnyId ||
       p.parent1 === person.parent1 ||
       p.parent2 === person.parent1 ||
       p.parent1 === person.parent2 ||
@@ -269,6 +320,11 @@ export function getHalfSiblings(person, allPeople) {
 
     // share both parents (full sibling)
     const shareBoth =
+      (
+        personParentIds.length > 0 &&
+        personParentIds.length === otherParentIds.length &&
+        personParentIds.every(parentId => otherParentIds.includes(parentId))
+      ) ||
       (p.parent1 === person.parent1 && p.parent2 === person.parent2) ||
       (p.parent1 === person.parent2 && p.parent2 === person.parent1);
 
@@ -282,7 +338,10 @@ export function areSiblings(personA, personB) {
 
   const parentsA = [personA.parent1, personA.parent2].filter(Boolean);
   const parentsB = [personB.parent1, personB.parent2].filter(Boolean);
+  const parentIdsA = Array.isArray(personA.parentIds) ? personA.parentIds : [];
+  const parentIdsB = Array.isArray(personB.parentIds) ? personB.parentIds : [];
 
+  if (parentIdsA.some(parentId => parentIdsB.includes(parentId))) return true;
   if (parentsA.length === 0 || parentsB.length === 0) return false;
 
   return parentsA.some(pa => parentsB.includes(pa));
@@ -314,11 +373,31 @@ function buildNameToPerson(people) {
   return map;
 }
 
+function buildIdToPerson(people) {
+  const map = new Map();
+  people.forEach(p => {
+    if (p.id) {
+      map.set(p.id, p);
+    }
+  });
+  return map;
+}
+
 // Internal: build parentName -> [children] map
 function buildChildrenMap(people) {
   const childrenMap = new Map();
 
   people.forEach(child => {
+    if (Array.isArray(child.parentIds)) {
+      child.parentIds.forEach(parentId => {
+        if (!parentId) return;
+        if (!childrenMap.has(parentId)) {
+          childrenMap.set(parentId, []);
+        }
+        childrenMap.get(parentId).push(child);
+      });
+    }
+
     [child.parent1, child.parent2].forEach(parentName => {
       if (!parentName) return;
       if (!childrenMap.has(parentName)) {
@@ -370,8 +449,26 @@ function alignSpouseGenerations(people) {
 // NEW: align co-parents (people who share a child) so they stay in same generation
 function alignCoParentGenerations(people) {
   const nameToPerson = buildNameToPerson(people);
+  const idToPerson = buildIdToPerson(people);
 
   people.forEach(child => {
+    if (Array.isArray(child.parentIds) && child.parentIds.length >= 2) {
+      const parents = child.parentIds
+        .map(parentId => idToPerson.get(parentId))
+        .filter(Boolean);
+
+      const parentGenerations = parents
+        .map(parent => parent.generation)
+        .filter(generation => typeof generation === "number");
+
+      if (parents.length >= 2 && parentGenerations.length === parents.length) {
+        const targetGen = Math.max(...parentGenerations);
+        parents.forEach(parent => {
+          parent.generation = targetGen;
+        });
+      }
+    }
+
     const p1Name = child.parent1;
     const p2Name = child.parent2;
 
@@ -398,6 +495,7 @@ function assignGenerationsBFS(people) {
   if (!Array.isArray(people) || people.length === 0) return people;
 
   const nameToPerson = buildNameToPerson(people);
+  const idToPerson = buildIdToPerson(people);
   const childrenMap = buildChildrenMap(people);
 
   // Reset any previous generation / bfs index
@@ -409,9 +507,12 @@ function assignGenerationsBFS(people) {
   // 1. Roots = people with no known parents in the dataset
   const roots = [];
   people.forEach(p => {
+    const hasParentIds =
+      Array.isArray(p.parentIds) &&
+      p.parentIds.some(parentId => idToPerson.has(parentId));
     const hasParent1 = !!p.parent1 && nameToPerson.has(p.parent1);
     const hasParent2 = !!p.parent2 && nameToPerson.has(p.parent2);
-    if (!hasParent1 && !hasParent2) {
+    if (!hasParentIds && !hasParent1 && !hasParent2) {
       roots.push(p);
     }
   });
@@ -437,7 +538,9 @@ function assignGenerationsBFS(people) {
     current._bfsIndex = bfsIndex++;
 
     const parentFull = buildFullName(current.firstName, current.lastName);
-    const children = childrenMap.get(parentFull) || [];
+    const idChildren = childrenMap.get(current.id) || [];
+    const nameChildren = childrenMap.get(parentFull) || [];
+    const children = dedupeById([...idChildren, ...nameChildren]);
 
     children.forEach(child => {
       const proposedGen = (current.generation || 1) + 1;
@@ -572,6 +675,19 @@ export function dedupeByFullName(people) {
     if (seen.has(full)) return;
     seen.add(full);
     result.push(p);
+  });
+
+  return result;
+}
+
+export function dedupeById(people) {
+  const seen = new Set();
+  const result = [];
+
+  people.forEach(person => {
+    if (!person || !person.id || seen.has(person.id)) return;
+    seen.add(person.id);
+    result.push(person);
   });
 
   return result;

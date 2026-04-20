@@ -22,6 +22,14 @@
     {
       "source": "/profile",
       "destination": "/html/profile.html"
+    },
+    {
+      "source": "/signin",
+      "destination": "/html/signin.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/html/dashboard.html"
     }
   ],
   "headers": [

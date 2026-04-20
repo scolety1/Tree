@@ -1,0 +1,27 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function familyDoc(familyId) {
+      return firestore.get(/databases/(default)/documents/families/$(familyId));
+    }
+
+    function isFamilyMember(familyId) {
+      return signedIn()
+        && familyDoc(familyId).data.memberIds is list
+        && request.auth.uid in familyDoc(familyId).data.memberIds;
+    }
+
+    match /families/{familyId}/people/{personId}/{fileName} {
+      allow read: if isFamilyMember(familyId);
+      allow write: if signedIn()
+        && isFamilyMember(familyId)
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

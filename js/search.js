@@ -61,14 +61,12 @@ function runSearch(rawQuery, resultsContainer) {
   }
 
   const q = normalizeNamePart(trimmed);
-  console.log("Search query (normalized):", q);
 
   const matches = allPeople.filter((person) => {
     const full = buildFullName(person.firstName, person.lastName);
     return full.includes(q);
   });
 
-  console.log("Search matches:", matches);
 
   if (matches.length === 0) {
     resultsContainer.innerHTML = `<p>No results for "<strong>${trimmed}</strong>".</p>`;
@@ -99,14 +97,10 @@ async function initSearchPage() {
     return;
   }
 
-  console.log("Initializing search page…");
-
   currentFamilyId = getCurrentFamilyId();
 
   try {
     allPeople = await getAllPeople(currentFamilyId);
-    console.log("Loaded people for search (count):", allPeople.length);
-    console.log("Sample people:", allPeople.slice(0, 3));
   } catch (err) {
     console.error("Error loading people for search:", err);
     resultsContainer.innerHTML = "<p>Error loading search data.</p>";
@@ -115,12 +109,20 @@ async function initSearchPage() {
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    console.log("Form submitted, query:", input.value);
     runSearch(input.value, resultsContainer);
   });
 
   input.addEventListener("input", () => {
     runSearch(input.value, resultsContainer);
+  });
+
+  window.addEventListener("person-added", async () => {
+    try {
+      allPeople = await getAllPeople(currentFamilyId);
+      runSearch(input.value, resultsContainer);
+    } catch (err) {
+      console.error("Error refreshing search data:", err);
+    }
   });
 }
 

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Family Tree</title>
+    <link rel="stylesheet" href="/css/global.css">
+</head>
+<body>
+
+    <header>
+        <h1>Family tree</h1>
+        <nav aria-label="Main">
+            <ul class="nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="/tree">Family Tree</a></li>
+                <li><a href="/search">Search</a></li>
+                <li><a id="authLink" href="/signin">Sign In</a></li>
+            </ul>
+        </nav>
+        <p id="authStatus" class="auth-status">Checking sign-in...</p>
+        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+    </header>
+
+    <main>
+        <section class="dashboard-hero">
+            <h2>Your Family Trees</h2>
+            <p>
+                Pick up where you left off, open a shared tree, or start a new private family tree.
+            </p>
+            <div class="dashboard-actions">
+                <a class="button" href="/#createTreeFormCard">Create Tree</a>
+                <a class="button button-secondary" href="/#joinTreeFormCard">Join with Code</a>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <div id="dashboardStatus" class="dashboard-status" aria-live="polite">
+                Loading your family trees...
+            </div>
+            <div id="familyTreeList" class="family-tree-list"></div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+    </footer>
+
+    <script type="module" src="/js/main.js"></script>
+</body>
+</html>

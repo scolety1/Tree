@@ -5,6 +5,7 @@ import {
   getDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
@@ -15,6 +16,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-storage.js";
 
 import { 
+  buildFullName,
+  findPersonByNameString,
+  getDisplayName,
   toTitleFullName, 
   toTitle, 
   getChildren,
@@ -25,6 +29,29 @@ import {
 
 let personId = null;
 let familyId = null;
+let collectionName = "example";
+let allPeople = [];
+
+function fillRelationshipSelect(select, people, selectedId, placeholder) {
+  if (!select) return;
+
+  select.innerHTML = `<option value="">${placeholder}</option>`;
+
+  people
+    .filter(person => person.id !== personId)
+    .forEach(person => {
+      const option = document.createElement("option");
+      option.value = person.id;
+      option.textContent = getDisplayName(person);
+      select.appendChild(option);
+    });
+
+  select.value = selectedId || "";
+}
+
+function resolveLegacyPersonId(name) {
+  return findPersonByNameString(name, allPeople)?.id || "";
+}
 
 async function loadProfile() {
   const params = new URLSearchParams(window.location.search);
@@ -45,11 +72,24 @@ async function loadProfile() {
     if (familyId) {
       docRef = doc(db, "people", personId);
       docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        document.getElementById("name").textContent = "Profile not found in this family tree.";
+        return;
+      }
+
+      if (docSnap.exists() && docSnap.data().familyId !== familyId) {
+        document.getElementById("name").textContent = "Profile not found in this family tree.";
+        return;
+      }
     }
     
-    if (!familyId || !docSnap.exists()) {
+    if (!familyId) {
       docRef = doc(db, "example", personId);
       docSnap = await getDoc(docRef);
+      collectionName = "example";
+    } else {
+      collectionName = "people";
     }
 
     if (!docSnap.exists()) {
@@ -83,37 +123,50 @@ async function loadProfile() {
       birthDateEl.textContent = "Unknown";
     }
 
+    allPeople = await getAllPeople(familyId);
+
     // PARENTS
-    const parentsList = [];
-    if (data.parent1) {
-      const parts = data.parent1.split(" ");
-      if (parts.length >= 2) {
-        parentsList.push(toTitleFullName(parts[0], parts.slice(1).join(" ")));
-      } else {
-        parentsList.push(toTitle(data.parent1));
-      }
+    const parentIds = Array.isArray(data.parentIds) ? data.parentIds : [];
+    const parentsList = parentIds
+      .map(parentId => allPeople.find(person => person.id === parentId))
+      .filter(Boolean)
+      .map(getDisplayName);
+
+    if (parentsList.length === 0) {
+      [data.parent1, data.parent2].filter(Boolean).forEach(parentName => {
+        const matchedParent = findPersonByNameString(parentName, allPeople);
+        if (matchedParent) {
+          parentsList.push(getDisplayName(matchedParent));
+          return;
+        }
+
+        const parts = parentName.split(" ");
+        if (parts.length >= 2) {
+          parentsList.push(toTitleFullName(parts[0], parts.slice(1).join(" ")));
+        } else {
+          parentsList.push(toTitle(parentName));
+        }
+      });
     }
-    if (data.parent2) {
-      const parts = data.parent2.split(" ");
-      if (parts.length >= 2) {
-        parentsList.push(toTitleFullName(parts[0], parts.slice(1).join(" ")));
-      } else {
-        parentsList.push(toTitle(data.parent2));
-      }
-    }
+
     document.getElementById("parents").textContent =
       parentsList.length > 0 ? parentsList.join(" and ") : "Unknown";
 
     // SPOUSE
-    const spouseName = toTitleFullName(
-      data.spouseFirstName || "", 
-      data.spouseLastName || ""
-    );
+    const spouseIds = Array.isArray(data.spouseIds) ? data.spouseIds : [];
+    const spouseName = spouseIds
+      .map(spouseId => allPeople.find(person => person.id === spouseId))
+      .filter(Boolean)
+      .map(getDisplayName)
+      .join(", ") || toTitleFullName(
+        data.spouseFirstName || "",
+        data.spouseLastName || ""
+      );
+
     document.getElementById("spouse").textContent =
       spouseName || "No spouse listed.";
 
     // CHILDREN
-    const allPeople = await getAllPeople(familyId);
     const children = getChildren(person, allPeople);
     if (children.length > 0) {
       const childrenNames = children.map(child => 
@@ -173,21 +226,15 @@ async function loadProfile() {
         editLastName.value = toTitle(data.lastName || "");
     }
 
-    if (editParent1) {
-        editParent1.value = data.parent1 ? toTitle(data.parent1) : "";
-    }
+    const selectedParent1Id = parentIds[0] || resolveLegacyPersonId(data.parent1);
+    const selectedParent2Id = parentIds[1] || resolveLegacyPersonId(data.parent2);
+    const selectedSpouseId = spouseIds[0] || resolveLegacyPersonId(
+      buildFullName(data.spouseFirstName, data.spouseLastName)
+    );
 
-    if (editParent2) {
-        editParent2.value = data.parent2 ? toTitle(data.parent2) : "";
-    }
-
-    if (editSpouse) {
-        const spouseFull = toTitleFullName(
-            data.spouseFirstName || "",
-            data.spouseLastName || ""
-        );
-        editSpouse.value = spouseFull;
-    }
+    fillRelationshipSelect(editParent1, allPeople, selectedParent1Id, "Select Parent 1");
+    fillRelationshipSelect(editParent2, allPeople, selectedParent2Id, "Select Parent 2");
+    fillRelationshipSelect(editSpouse, allPeople, selectedSpouseId, "Select Spouse");
 
     if (editBio) {
         editBio.value = data.bio || "";
@@ -225,9 +272,9 @@ if (editForm) {
     const rawFirstName      = document.getElementById("editFirstName").value.trim();
     const rawMiddleInitial  = document.getElementById("editMiddleInitial").value.trim();
     const rawLastName       = document.getElementById("editLastName").value.trim();
-    const rawSpouse         = document.getElementById("editSpouse").value.trim();
-    const rawParent1        = document.getElementById("editParent1").value.trim();
-    const rawParent2        = document.getElementById("editParent2").value.trim();
+    const parent1Id         = document.getElementById("editParent1").value;
+    const parent2Id         = document.getElementById("editParent2").value;
+    const spouseId          = document.getElementById("editSpouse").value;
     const birthDateRaw      = document.getElementById("editBirthDate").value; // "YYYY-MM-DD"
     const rawBio            = document.getElementById("editBio").value.trim();
     const imageFileInput    = document.getElementById("editImageFile");
@@ -237,17 +284,25 @@ if (editForm) {
     const middleInitial = rawMiddleInitial.toLowerCase();
     const lastName      = rawLastName.toLowerCase();
 
-    const spouseRaw = rawSpouse.toLowerCase();
-    const parent1   = rawParent1.toLowerCase();
-    const parent2   = rawParent2.toLowerCase();
+    const selectedParent1 = allPeople.find(person => person.id === parent1Id);
+    const selectedParent2 = allPeople.find(person => person.id === parent2Id);
+    const selectedSpouse = allPeople.find(person => person.id === spouseId);
+    if (parent1Id && parent2Id && parent1Id === parent2Id) {
+      alert("Choose two different parents, or leave one blank.");
+      return;
+    }
+
+    const parentIds = [...new Set([selectedParent1?.id, selectedParent2?.id].filter(Boolean))];
+    const spouseIds = selectedSpouse ? [selectedSpouse.id] : [];
+    const parent1 = selectedParent1 ? buildFullName(selectedParent1.firstName, selectedParent1.lastName) : "";
+    const parent2 = selectedParent2 ? buildFullName(selectedParent2.firstName, selectedParent2.lastName) : "";
 
     let spouseFirstName = "";
     let spouseLastName  = "";
 
-    if (spouseRaw) {
-      const parts = spouseRaw.split(" ");
-      spouseFirstName = parts[0] || "";
-      spouseLastName  = parts.slice(1).join(" ") || "";
+    if (selectedSpouse) {
+      spouseFirstName = selectedSpouse.firstName || "";
+      spouseLastName  = selectedSpouse.lastName || "";
     }
 
     let birthDate = null;
@@ -265,7 +320,10 @@ if (editForm) {
 
     if (imageFile) {
         try {
-            const imageRef = ref(storage, `people/${personId}/${imageFile.name}`);
+            const imagePath = familyId
+              ? `families/${familyId}/people/${personId}/${imageFile.name}`
+              : `example/${personId}/${imageFile.name}`;
+            const imageRef = ref(storage, imagePath);
             await uploadBytes(imageRef, imageFile);
             imageUrl = await getDownloadURL(imageRef);
         } catch (err) {
@@ -277,19 +335,20 @@ if (editForm) {
     const personData = {
       firstName,
       lastName,
+      middleInitial: middleInitial || deleteField(),
+      birthDate: birthDate || deleteField(),
+      parent1: parent1 || deleteField(),
+      parent2: parent2 || deleteField(),
+      parentIds: parentIds.length ? parentIds : deleteField(),
+      spouseFirstName: spouseFirstName || deleteField(),
+      spouseLastName: spouseLastName || deleteField(),
+      spouseIds: spouseIds.length ? spouseIds : deleteField(),
+      bio: rawBio || deleteField(),
     };
 
-    if (middleInitial)      personData.middleInitial    = middleInitial;
-    if (birthDate)          personData.birthDate        = birthDate;
-    if (parent1)            personData.parent1          = parent1;
-    if (parent2)            personData.parent2          = parent2;
-    if (spouseFirstName)    personData.spouseFirstName  = spouseFirstName;
-    if (spouseLastName)     personData.spouseLastName   = spouseLastName;
-    if (rawBio)             personData.bio              = rawBio;
     if (imageUrl)           personData.image = imageUrl;
 
     try {
-      const collectionName = familyId ? "people" : "example";
       const personRef = doc(db, collectionName, personId);
       await updateDoc(personRef, personData);
 
@@ -303,8 +362,6 @@ if (editForm) {
       alert("Something went wrong while saving changes.");
     }
   });
-} else {
-  console.log("No #editPersonForm on this page, skipping edit setup.");
 }
 
 async function fetchFunFact(birthDate) {
@@ -336,9 +393,6 @@ function setupEditPersonModal() {
   const modal    = document.getElementById("editPersonModal");
   const btn      = document.getElementById("editPersonBtn");
   const closeBtn = document.querySelector(".modal .close");
-  const form     = document.getElementById("editPersonForm");
-
-  console.log(modal, btn, closeBtn);
 
   if (!modal || !btn) return;
 
@@ -372,7 +426,6 @@ document
     if (!confirmDelete) return;
 
     try {
-      const collectionName = familyId ? "people" : "example";
       await deleteDoc(doc(db, collectionName, personId));
       alert("Person removed successfully.");
       const redirectUrl = familyId ? `/tree?familyId=${familyId}` : "/tree";

@@ -3,13 +3,19 @@ import { db } from "./firebase.js";
 import {
   addDoc,
   collection,
+  doc,
   Timestamp,
   query,
   where,
   getDocs,
-  limit
+  getDoc,
+  limit,
+  setDoc,
+  updateDoc,
+  arrayUnion
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import { setFamilyId } from "./helpers.js";
+import { getCurrentUser } from "./auth.js";
 
 const createTreeBtn      = document.getElementById("createTreeBtn");
 const joinTreeBtn        = document.getElementById("joinTreeBtn");
@@ -74,15 +80,31 @@ if (createFamilyForm) {
         try {
             const joinCode = generateJoinCode(6);
 
-            const familiesRef = collection(db, "families");
-            const docRef = await addDoc(familiesRef, {
+            const user = getCurrentUser();
+            const familyData = {
                 name: rawName,
                 description: rawDesc || "",
                 joinCode: joinCode,
                 createdAt: Timestamp.now()
-            });
+            };
+
+            if (user) {
+                familyData.ownerId = user.uid;
+                familyData.memberIds = [user.uid];
+                familyData.memberRoles = {
+                    [user.uid]: "owner"
+                };
+            }
+
+            const familiesRef = collection(db, "families");
+            const docRef = await addDoc(familiesRef, familyData);
 
             const familyId = docRef.id;
+
+            await setDoc(doc(db, "joinCodes", joinCode), {
+                familyId,
+                createdAt: Timestamp.now()
+            });
 
             setFamilyId(familyId);
 
@@ -117,21 +139,41 @@ if (joinFamilyForm) {
 
     try{
       const familiesRef = collection(db, "families");
+      const joinCodeRef = doc(db, "joinCodes", code);
+      const joinCodeSnap = await getDoc(joinCodeRef);
+      let familyId = null;
+
+      if (joinCodeSnap.exists()) {
+        familyId = joinCodeSnap.data().familyId;
+      }
+
+      // Legacy fallback for family trees created before joinCodes existed.
       const q = query(
         familiesRef,
         where("joinCode", "==", code),
         limit(1)
       );
 
-      const snap = await getDocs(q);
+      const snap = familyId ? null : await getDocs(q);
 
-      if (snap.empty) {
+      if (!familyId && snap.empty) {
         alert("No family tree found with that access code. Double-check and try again.");
         return;
       }
 
-      const familyDoc = snap.docs[0];
-      const familyId = familyDoc.id;
+      if (!familyId) {
+        const familyDoc = snap.docs[0];
+        familyId = familyDoc.id;
+      }
+
+      const user = getCurrentUser();
+
+      if (user) {
+        await updateDoc(doc(db, "families", familyId), {
+          memberIds: arrayUnion(user.uid),
+          [`memberRoles.${user.uid}`]: "editor"
+        });
+      }
 
       setFamilyId(familyId);
 

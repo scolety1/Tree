@@ -25,7 +25,6 @@ function setupAddPersonModal() {
   const modal = document.getElementById("addModal");
   const btn = document.getElementById("addPersonBtn");
   const closeBtn = document.querySelector(".modal .close");
-  console.log(modal, btn, closeBtn);
 
   if (!modal || !btn || !closeBtn) return;
 
@@ -43,13 +42,9 @@ function setupAddPersonModal() {
     }
   });
 
-  const form = document.getElementById("addPersonForm");
-  if (form) {
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      modal.style.display = "none";
-    });
-  }
+  window.addEventListener("person-added", () => {
+    modal.style.display = "none";
+  });
 }
 
 /* ---------------------------
@@ -87,7 +82,6 @@ function createPersonCard(person, familyId = null) {
   card.innerHTML = `
     <h3>${fullTitleName}</h3>
     <p>Born: ${formattedDate}</p>
-    <p class="debug-gen">Generation: ${person.generation}</p>
   `;
 
   link.appendChild(card);
@@ -193,7 +187,12 @@ function drawParentChildLines(people) {
 
   // Build fullName -> person map so we can find parents from parent1/parent2 strings
   const nameToPerson = new Map();
+  const idToPerson = new Map();
   people.forEach((p) => {
+    if (p.id) {
+      idToPerson.set(p.id, p);
+    }
+
     const full = buildFullName(p.firstName, p.lastName);
     if (full) {
       nameToPerson.set(full, p);
@@ -204,12 +203,15 @@ function drawParentChildLines(people) {
   const parentGroupMap = new Map();
 
   people.forEach((child) => {
+    const parentIds = Array.isArray(child.parentIds) ? child.parentIds.filter(Boolean) : [];
     const p1 = child.parent1 || "";
     const p2 = child.parent2 || "";
-    if (!p1 && !p2) return; // unknown parents
+    if (!parentIds.length && !p1 && !p2) return; // unknown parents
 
     let key;
-    if (p1 && p2) {
+    if (parentIds.length > 0) {
+      key = parentIds.slice().sort().join("|");
+    } else if (p1 && p2) {
       // sort so (A,B) and (B,A) are the same group
       key = [p1, p2].sort().join("|");
     } else {
@@ -218,6 +220,7 @@ function drawParentChildLines(people) {
 
     if (!parentGroupMap.has(key)) {
       parentGroupMap.set(key, {
+        parentIds,
         parentNames: [p1 || null, p2 || null],
         children: [],
       });
@@ -227,11 +230,24 @@ function drawParentChildLines(people) {
 
   // For each parent group, draw connectors down to their children
   parentGroupMap.forEach((group) => {
+    const parentPersons = [];
+
+    if (Array.isArray(group.parentIds)) {
+      group.parentIds.forEach(parentId => {
+        const parentPerson = idToPerson.get(parentId);
+        if (parentPerson && !parentPersons.includes(parentPerson)) {
+          parentPersons.push(parentPerson);
+        }
+      });
+    }
+
     const [p1Name, p2Name] = group.parentNames;
 
-    const parentPersons = [];
     if (p1Name && nameToPerson.has(p1Name)) {
-      parentPersons.push(nameToPerson.get(p1Name));
+      const parentPerson = nameToPerson.get(p1Name);
+      if (!parentPersons.includes(parentPerson)) {
+        parentPersons.push(parentPerson);
+      }
     }
     if (p2Name && nameToPerson.has(p2Name)) {
       const p2Person = nameToPerson.get(p2Name);
@@ -324,6 +340,15 @@ async function updateTreeTitle(familyId) {
     }
 
     const data = familySnap.data();
+
+    if (data.archivedAt) {
+      titleEl.textContent = "Archived Family Tree";
+      if (joinCodeDisplay) {
+        joinCodeDisplay.style.display = "none";
+      }
+      return;
+    }
+
     titleEl.textContent = data.name || "Family Tree";
 
     // Optional: update browser tab title as well
@@ -345,10 +370,22 @@ async function updateTreeTitle(familyId) {
   }
 }
 
+async function isFamilyArchived(familyId) {
+  if (!familyId) return false;
+
+  try {
+    const familyRef = doc(db, "families", familyId);
+    const familySnap = await getDoc(familyRef);
+    return familySnap.exists() && Boolean(familySnap.data().archivedAt);
+  } catch (err) {
+    console.error("Error checking family archive status:", err);
+    return false;
+  }
+}
+
 async function loadFamilyTree() {
   const treeLayout = document.getElementById("tree-layout");
   if (!treeLayout) {
-    console.error("No #tree-layout div found");
     return;
   }
 
@@ -356,6 +393,11 @@ async function loadFamilyTree() {
 
   // Update the title (family name or example)
   await updateTreeTitle(familyId);
+
+  if (await isFamilyArchived(familyId)) {
+    treeLayout.innerHTML = "<p>This family tree has been archived.</p>";
+    return;
+  }
 
   // Keep the nav "Family Tree" link locked on this family if possible
   if (familyId) {
@@ -369,7 +411,6 @@ async function loadFamilyTree() {
 
   try {
     const allPeople = await getAllPeople(familyId);
-    console.log("All people from Firestore:", allPeople, "for familyId:", familyId);
 
     if (!allPeople || allPeople.length === 0) {
       treeLayout.innerHTML = "<p>No family members found in the database.</p>";
@@ -380,15 +421,10 @@ async function loadFamilyTree() {
     const genMap = groupByGeneration(allPeople);
     const genKeys = sortGenerationKeys(genMap);
 
-    console.log("Generation keys:", genKeys);
-    console.log("Generation map:", genMap);
-
     treeLayout.innerHTML = ""; // clear loading text
 
     genKeys.forEach((genNumber) => {
       const peopleInGen = genMap.get(genNumber) || [];
-      console.log(`Generation ${genNumber} people:`, peopleInGen);
-
       renderGeneration(genNumber, peopleInGen, treeLayout, familyId);
     });
 
@@ -439,6 +475,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setupAddPersonModal();
   setupCopyCode();
   loadFamilyTree();
+
+  window.addEventListener("person-added", () => {
+    loadFamilyTree();
+  });
 
   // Redraw connectors on resize so lines stay aligned
   window.addEventListener("resize", () => {
