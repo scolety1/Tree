@@ -46,21 +46,44 @@ export async function signOutCurrentUser() {
 
 function updateAuthStatus(user) {
   const authStatus = document.getElementById("authStatus");
+  const accountEmail = document.getElementById("accountEmail");
   const authLink = document.getElementById("authLink");
   const signOutBtn = document.getElementById("signOutBtn");
+  const linkText = authLink?.querySelector(".account-link-text");
+  const isSignedIn = Boolean(user);
+  const displayEmail = user?.email || "Family member";
+
+  document.body.classList.toggle("is-signed-in", isSignedIn);
+  document.body.classList.toggle("is-signed-out", !isSignedIn);
 
   if (authStatus) {
-    authStatus.textContent = user ? `Signed in as ${user.email || "Family member"}` : "Browsing as guest";
+    authStatus.textContent = user ? displayEmail : "Browsing as guest";
+  }
+
+  if (accountEmail) {
+    accountEmail.textContent = user ? `Signed in as ${displayEmail}` : "Sign in to manage your family tree account.";
   }
 
   if (authLink) {
-    authLink.textContent = user ? "Dashboard" : "Sign In";
-    authLink.href = user ? "/dashboard" : "/signin";
+    authLink.href = user ? "/account" : "/signin";
+    authLink.setAttribute("aria-label", user ? "Open account settings" : "Sign in");
+  }
+
+  if (linkText) {
+    linkText.textContent = user ? "Account" : "Sign In";
   }
 
   if (signOutBtn) {
     signOutBtn.hidden = !user;
   }
+
+  window.dispatchEvent(new CustomEvent("family-auth-state-changed", {
+    detail: {
+      isSignedIn,
+      email: user?.email || null,
+    },
+  }));
+
 }
 
 async function syncUserProfile(user) {
@@ -142,7 +165,7 @@ function setupAuthForm() {
           await signInWithEmail(email, password);
         }
         setStatus("You're signed in.");
-        window.location.href = "/dashboard";
+        window.location.href = "/account";
       } catch (error) {
         console.error("Auth error:", error);
         setStatus(error.message || "Could not complete sign in.");
@@ -158,7 +181,7 @@ function setupAuthForm() {
       try {
         await signInWithGoogle();
         setStatus("You're signed in.");
-        window.location.href = "/dashboard";
+        window.location.href = "/account";
       } catch (error) {
         console.error("Google sign-in error:", error);
         setStatus(error.message || "Could not sign in with Google.");

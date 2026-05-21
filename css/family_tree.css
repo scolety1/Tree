@@ -52,6 +52,61 @@
     font-size: clamp(2.1rem, 5vw, 4.3rem);
 }
 
+.tree-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: var(--shadow-soft);
+}
+
+.tree-toolbar-label,
+.tree-scroll-hint {
+    margin: 0;
+}
+
+.tree-toolbar-label {
+    color: var(--ink);
+    font-size: 0.92rem;
+    font-weight: 850;
+}
+
+.tree-scroll-hint {
+    color: var(--muted);
+    font-size: 0.84rem;
+}
+
+.tree-density-controls {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #f9fbf7;
+}
+
+.tree-density-controls button {
+    min-height: 34px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.tree-density-controls button:hover,
+.tree-density-controls button[aria-pressed="true"] {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
 .tree-layout {
     position: relative;
     display: flex;
@@ -71,6 +126,12 @@
     box-shadow: var(--shadow);
     overflow: auto;
     scrollbar-color: #9dac99 #eef4ec;
+    --tree-row-gap: 22px;
+    --tree-pair-gap: 14px;
+    --tree-card-min: 178px;
+    --tree-card-max: 220px;
+    --tree-card-padding: 14px;
+    --tree-avatar-size: 52px;
 }
 
 .tree-layout > p {
@@ -82,9 +143,8 @@
 
 .tree-lines {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    left: 0;
     pointer-events: none;
     z-index: 0;
 }
@@ -107,6 +167,9 @@
 }
 
 .generation-title {
+    position: sticky;
+    left: 0;
+    z-index: 2;
     align-self: flex-start;
     margin: 0 0 2px;
     padding: 6px 10px;
@@ -126,7 +189,7 @@
     display: flex;
     flex-wrap: nowrap;
     justify-content: center;
-    gap: 22px;
+    gap: var(--tree-row-gap);
 }
 
 .spouse-pair,
@@ -136,7 +199,7 @@
     display: flex;
     align-items: stretch;
     justify-content: center;
-    gap: 14px;
+    gap: var(--tree-pair-gap);
 }
 
 .spouse-pair::before,
@@ -161,9 +224,9 @@
     z-index: 1;
     display: grid;
     gap: 7px;
-    min-width: 178px;
-    max-width: 220px;
-    padding: 14px;
+    min-width: var(--tree-card-min);
+    max-width: var(--tree-card-max);
+    padding: var(--tree-card-padding);
     border: 1px solid #d6dfd2;
     border-radius: var(--radius);
     background: #ffffff;
@@ -180,8 +243,8 @@
 
 .person-card-media {
     display: grid;
-    width: 52px;
-    height: 52px;
+    width: var(--tree-avatar-size);
+    height: var(--tree-avatar-size);
     place-items: center;
     overflow: hidden;
     border: 1px solid #c0d1ba;
@@ -227,6 +290,58 @@
     font-weight: 800;
 }
 
+.tree-layout.tree-density-dense {
+    gap: 30px;
+    padding: 24px 26px 36px;
+    --tree-row-gap: 16px;
+    --tree-pair-gap: 10px;
+    --tree-card-min: 154px;
+    --tree-card-max: 178px;
+    --tree-card-padding: 12px;
+    --tree-avatar-size: 44px;
+}
+
+.tree-layout.tree-density-dense .person-card h3,
+.tree-layout.tree-density-dense .person-card .name {
+    font-size: 0.94rem;
+}
+
+.tree-layout.tree-density-dense .person-card p,
+.tree-layout.tree-density-dense .person-card .meta {
+    font-size: 0.8rem;
+}
+
+.tree-layout.tree-density-compact {
+    gap: 22px;
+    padding: 20px 22px 30px;
+    background-size: 36px 36px;
+    --tree-row-gap: 10px;
+    --tree-pair-gap: 8px;
+    --tree-card-min: 124px;
+    --tree-card-max: 148px;
+    --tree-card-padding: 10px;
+    --tree-avatar-size: 34px;
+}
+
+.tree-layout.tree-density-compact .generation {
+    gap: 10px;
+    padding: 16px 0;
+}
+
+.tree-layout.tree-density-compact .generation-title {
+    font-size: 0.7rem;
+}
+
+.tree-layout.tree-density-compact .person-card h3,
+.tree-layout.tree-density-compact .person-card .name {
+    font-size: 0.84rem;
+}
+
+.tree-layout.tree-density-compact .person-card p,
+.tree-layout.tree-density-compact .person-card .meta {
+    font-size: 0.72rem;
+}
+
 @media (max-width: 640px) {
     .join-code-display {
         margin: -4px auto 18px;
@@ -234,6 +349,20 @@
 
     .join-code-content {
         flex-direction: column;
+    }
+
+    .tree-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .tree-density-controls {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .tree-density-controls button {
+        padding: 0 6px;
     }
 
     .tree-layout {

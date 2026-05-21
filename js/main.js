@@ -10,16 +10,39 @@ import { getCurrentFamilyId } from "./helpers.js";
 document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname;
     const navLinks = document.querySelectorAll('.nav a');
-    const familyId = getCurrentFamilyId();
-    
+
+    function updateFamilyNavLinks(familyId = getCurrentFamilyId()) {
+        const isSignedIn = document.body.classList.contains("is-signed-in");
+        const isSignedOut = document.body.classList.contains("is-signed-out");
+        document.querySelectorAll(".home-nav-item").forEach((item) => {
+            item.hidden = !isSignedOut || isSignedIn;
+        });
+
+        const treeNavLink = document.getElementById("treeNavLink");
+        const searchNavLink = document.getElementById("searchNavLink");
+
+        if (treeNavLink) {
+            treeNavLink.textContent = isSignedIn ? "Family Tree" : "Example Tree";
+            if (isSignedIn) {
+                treeNavLink.href = familyId
+                    ? `/tree?familyId=${encodeURIComponent(familyId)}`
+                    : "/tree";
+            } else {
+                treeNavLink.href = "/tree";
+            }
+        }
+
+        if (searchNavLink) {
+            searchNavLink.href = isSignedIn && familyId
+                ? `/search?familyId=${encodeURIComponent(familyId)}`
+                : "/search";
+        }
+    }
+
+    updateFamilyNavLinks();
+
     navLinks.forEach(link => {
         const linkPath = new URL(link.href, window.location.origin).pathname;
-        
-        if (familyId && (linkPath === '/tree' || linkPath === '/search')) {
-            const url = new URL(link.href, window.location.origin);
-            url.searchParams.set('familyId', familyId);
-            link.href = url.pathname + url.search;
-        }
         
         if (linkPath === currentPath || 
             (currentPath === '/' && linkPath === '/') ||
@@ -30,16 +53,19 @@ document.addEventListener('DOMContentLoaded', () => {
             link.classList.add('active');
         }
     });
-    
-    if (familyId) {
-        document.querySelectorAll('a[href="/tree"]').forEach((link) => {
-            link.href = `/tree?familyId=${familyId}`;
-        });
 
-        document.querySelectorAll('a[href="/search"]').forEach((link) => {
-            link.href = `/search?familyId=${familyId}`;
-        });
+    const accountLink = document.getElementById('authLink');
+    if (accountLink && currentPath === '/account') {
+        accountLink.setAttribute('aria-current', 'page');
     }
+
+    window.addEventListener("family-id-changed", (event) => {
+        updateFamilyNavLinks(event.detail?.familyId || null);
+    });
+
+    window.addEventListener("family-auth-state-changed", () => {
+        updateFamilyNavLinks();
+    });
     
     const yearElement = document.getElementById('year');
     if (yearElement) {

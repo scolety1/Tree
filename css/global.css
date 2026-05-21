@@ -47,14 +47,18 @@ img {
     max-width: 100%;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 header {
     position: sticky;
     top: 0;
     z-index: 100;
     display: grid;
-    grid-template-columns: auto minmax(320px, 560px) minmax(180px, auto);
+    grid-template-columns: minmax(180px, 1fr) minmax(300px, 560px) minmax(180px, 1fr);
     align-items: center;
-    gap: 18px;
+    gap: 16px;
     padding: 14px max(22px, calc((100vw - var(--content)) / 2));
     background: rgba(255, 255, 255, 0.9);
     border-bottom: 1px solid rgba(216, 224, 213, 0.9);
@@ -63,6 +67,8 @@ header {
 }
 
 header h1 {
+    display: inline-flex;
+    align-items: center;
     margin: 0;
     color: var(--brand-strong);
     font-size: 1.05rem;
@@ -74,13 +80,12 @@ header h1 {
 header h1::before {
     content: "";
     display: inline-block;
-    width: 12px;
-    height: 12px;
-    margin-right: 9px;
-    border-radius: 3px;
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    border-radius: 5px;
     background: url("/assets/logo.svg") center / contain no-repeat;
     box-shadow: none;
-    transform: translateY(-1px);
 }
 
 nav {
@@ -126,28 +131,112 @@ nav {
     color: var(--brand-strong);
 }
 
-.auth-status {
+.account-area {
     grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    min-width: 0;
+}
+
+.auth-status {
+    max-width: min(240px, 26vw);
     margin: 0;
     color: var(--muted);
     font-size: 0.82rem;
     text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.auth-sign-out {
-    grid-column: 3;
-    grid-row: 2;
-    margin: 0;
-    padding: 8px 12px;
+body.is-signed-out .auth-status,
+body.is-signed-in .auth-status {
+    display: none;
+}
+
+.home-nav-item {
+    display: none;
+}
+
+body.is-signed-out .home-nav-item {
+    display: list-item;
+}
+
+.account-link {
+    display: inline-flex;
+    min-width: 42px;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     background: #ffffff;
     color: var(--brand-strong);
-    cursor: pointer;
+    text-decoration: none;
     font-weight: 700;
-    justify-self: end;
+    box-shadow: 0 8px 18px rgba(32, 47, 36, 0.08);
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.account-link:hover,
+.account-link[aria-current="page"] {
+    border-color: #b7c7b3;
+    background: var(--brand-soft);
+    box-shadow: 0 10px 22px rgba(32, 47, 36, 0.1);
+}
+
+.account-icon {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+}
+
+.account-icon::before,
+.account-icon::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: currentColor;
+}
+
+.account-icon::before {
+    top: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+}
+
+.account-icon::after {
+    bottom: 3px;
+    width: 12px;
+    height: 6px;
+    border-radius: 999px 999px 3px 3px;
+}
+
+.account-link-text {
+    white-space: nowrap;
+}
+
+body.is-signed-in .account-link {
+    width: 42px;
+    padding: 0;
+}
+
+body.is-signed-in .account-link-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
 }
 
 main {
@@ -476,6 +565,15 @@ select:disabled {
     gap: 10px;
 }
 
+.section-heading {
+    margin-bottom: 16px;
+}
+
+.section-heading h2,
+.section-heading p {
+    margin-bottom: 8px;
+}
+
 .family-tree-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -744,11 +842,15 @@ select:disabled {
         width: 100%;
     }
 
-    .auth-status,
-    .auth-sign-out {
+    .account-area {
         grid-column: auto;
         grid-row: auto;
         justify-self: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .auth-status {
         text-align: center;
     }
 
@@ -775,12 +877,16 @@ select:disabled {
 
     .nav {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
     }
 
     .nav a {
         min-height: 40px;
         padding: 0 8px;
+    }
+
+    .account-area {
+        flex-direction: column;
     }
 
     .welcome-section {

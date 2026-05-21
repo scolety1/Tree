@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css">
-    <link rel="stylesheet" href="/css/family_tree.css">
+    <link rel="stylesheet" href="/css/global.css?v=20260521-2">
+    <link rel="stylesheet" href="/css/family_tree.css?v=20260521-2">
 
 </head>
 <body>
@@ -15,14 +15,17 @@
         <h1>Family tree</h1>
         <nav aria-label="Main">
             <ul class="nav">
-                <li><a href="/">Home</a></li>
-                <li><a href="/tree">Family Tree</a></li>
-                <li><a href="/search">Search</a></li>
-                <li><a id="authLink" href="/signin">Sign In</a></li>
+                <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
+                <li><a id="searchNavLink" href="/search">Search</a></li>
             </ul>
         </nav>
-        <p id="authStatus" class="auth-status">Checking sign-in...</p>
-        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+        <div class="account-area">
+            <p id="authStatus" class="auth-status">Checking sign-in...</p>
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+                <span class="account-icon" aria-hidden="true"></span>
+                <span class="account-link-text">Sign In</span>
+            </a>
+        </div>
     </header>
 
 
@@ -35,6 +38,18 @@
                 <span id="joinCodeValue" class="join-code-value" title="Click to copy"></span>
             </div>
             <p class="join-code-hint">Click the code to copy it. Share it only with people you want in this tree.</p>
+        </div>
+
+        <div class="tree-toolbar" aria-label="Tree view controls">
+            <div>
+                <p class="tree-toolbar-label">Tree view</p>
+                <p class="tree-scroll-hint">Scroll sideways to see larger families.</p>
+            </div>
+            <div class="tree-density-controls" role="group" aria-label="Tree density">
+                <button type="button" data-tree-density="comfortable" aria-pressed="true">Comfortable</button>
+                <button type="button" data-tree-density="dense" aria-pressed="false">Dense</button>
+                <button type="button" data-tree-density="compact" aria-pressed="false">Compact</button>
+            </div>
         </div>
 
         <div id="tree-layout" class="tree-layout">
@@ -81,6 +96,6 @@
         <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>
 
-    <script type="module" src="/js/main.js"></script>
+    <script type="module" src="/js/main.js?v=20260521-2"></script>
 </body>
 </html>

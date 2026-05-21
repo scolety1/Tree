@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Family Tree</title>
+    <title>Account | Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css">
+    <link rel="stylesheet" href="/css/global.css?v=20260521-2">
 </head>
 <body>
 
@@ -13,31 +13,37 @@
         <h1>Family tree</h1>
         <nav aria-label="Main">
             <ul class="nav">
-                <li><a href="/">Home</a></li>
-                <li><a href="/tree">Family Tree</a></li>
-                <li><a href="/search">Search</a></li>
-                <li><a id="authLink" href="/signin">Sign In</a></li>
+                <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
+                <li><a id="searchNavLink" href="/search">Search</a></li>
             </ul>
         </nav>
-        <p id="authStatus" class="auth-status">Checking sign-in...</p>
-        <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+        <div class="account-area">
+            <p id="authStatus" class="auth-status">Checking sign-in...</p>
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+                <span class="account-icon" aria-hidden="true"></span>
+                <span class="account-link-text">Sign In</span>
+            </a>
+        </div>
     </header>
 
     <main>
         <section class="dashboard-hero">
-            <h2>Your Family Tree</h2>
-            <p>
-                Open the birthday tree, copy its access code, or start another private tree if you ever need one.
-            </p>
+            <div>
+                <h2>Account</h2>
+                <p id="accountEmail">Manage your sign-in and family tree access.</p>
+            </div>
             <div class="dashboard-actions">
-                <a class="button" href="/#createTreeFormCard">Start New Tree</a>
-                <a class="button button-secondary" href="/#joinTreeFormCard">Join with Code</a>
+                <button id="signOutBtn" class="button button-secondary" type="button" hidden>Sign Out</button>
             </div>
         </section>
 
         <section class="dashboard-section">
+            <div class="section-heading">
+                <h2>Your Family Tree</h2>
+                <p>Open the birthday tree, copy its access code, or manage who can use it.</p>
+            </div>
             <div id="dashboardStatus" class="dashboard-status" aria-live="polite">
-                Loading your family trees...
+                Loading your family tree...
             </div>
             <div id="familyTreeList" class="family-tree-list"></div>
         </section>
@@ -47,6 +53,6 @@
         <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>
 
-    <script type="module" src="/js/main.js"></script>
+    <script type="module" src="/js/main.js?v=20260521-2"></script>
 </body>
 </html>

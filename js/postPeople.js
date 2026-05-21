@@ -104,6 +104,14 @@ if (form) {
       setStatus("Could not load relationship options.");
     });
   });
+
+  window.addEventListener("family-id-changed", () => {
+    updateAddFormAvailability(currentUser);
+    refreshRelationshipOptions().catch(error => {
+      console.error("Error loading relationship options:", error);
+      setStatus("Could not load relationship options.");
+    });
+  });
 }
 
 if(form) {

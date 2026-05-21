@@ -20,6 +20,14 @@ export function setFamilyId(familyId) {
   } else {
     sessionStorage.removeItem(FAMILY_ID_STORAGE_KEY);
   }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("family-id-changed", {
+      detail: {
+        familyId: familyId || null,
+      },
+    }));
+  }
 }
 
 

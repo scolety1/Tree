@@ -10,12 +10,14 @@ import {
   sortGenerationKeys,
   areSpouses,
   toTitleFullName,
-  getCurrentFamilyId as getFamilyIdFromHelper,
   buildFullName
 } from "./helpers.js";
+import { resolveCurrentUserFamilyId } from "./familyContext.js";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
+const TREE_DENSITY_STORAGE_KEY = "treeDensity";
+const TREE_DENSITIES = new Set(["comfortable", "dense", "compact"]);
 
 function isLargeDemoMode() {
   return new URLSearchParams(window.location.search).get("demo") === "large";
@@ -304,14 +306,16 @@ function drawParentChildLines(people) {
   if (!people || people.length === 0) return;
 
   const layoutRect = treeLayout.getBoundingClientRect();
+  const canvasWidth = Math.max(treeLayout.scrollWidth, treeLayout.clientWidth);
+  const canvasHeight = Math.max(treeLayout.scrollHeight, treeLayout.clientHeight);
 
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
   svg.setAttribute("id", "tree-lines-svg");
   svg.setAttribute("class", "tree-lines");
-  svg.setAttribute("width", layoutRect.width);
-  svg.setAttribute("height", layoutRect.height);
-  svg.setAttribute("viewBox", `0 0 ${layoutRect.width} ${layoutRect.height}`);
+  svg.setAttribute("width", canvasWidth);
+  svg.setAttribute("height", canvasHeight);
+  svg.setAttribute("viewBox", `0 0 ${canvasWidth} ${canvasHeight}`);
 
   // Map personId -> DOM element + rect info
   const elMap = new Map();
@@ -323,9 +327,9 @@ function drawParentChildLines(people) {
     elMap.set(id, {
       el,
       rect,
-      centerX: rect.left + rect.width / 2 - layoutRect.left,
-      topY: rect.top - layoutRect.top,
-      bottomY: rect.bottom - layoutRect.top,
+      centerX: rect.left + rect.width / 2 - layoutRect.left + treeLayout.scrollLeft,
+      topY: rect.top - layoutRect.top + treeLayout.scrollTop,
+      bottomY: rect.bottom - layoutRect.top + treeLayout.scrollTop,
     });
   });
 
@@ -447,12 +451,36 @@ function drawParentChildLines(people) {
   treeLayout.prepend(svg);
 }
 
-/* ---------------------------
-   MAIN LOAD FUNCTION
---------------------------- */
-function getCurrentFamilyId() {
-  // Use the helper function which checks URL first, then localStorage
-  return getFamilyIdFromHelper();
+function redrawTreeLinesSoon() {
+  if (!lastRenderedPeople || lastRenderedPeople.length === 0) return;
+  requestAnimationFrame(() => drawParentChildLines(lastRenderedPeople));
+}
+
+function setTreeDensity(mode) {
+  const density = TREE_DENSITIES.has(mode) ? mode : "comfortable";
+  const treeLayout = document.getElementById("tree-layout");
+  if (!treeLayout) return;
+
+  treeLayout.classList.toggle("tree-density-dense", density === "dense");
+  treeLayout.classList.toggle("tree-density-compact", density === "compact");
+
+  document.querySelectorAll("[data-tree-density]").forEach((button) => {
+    button.setAttribute("aria-pressed", button.dataset.treeDensity === density ? "true" : "false");
+  });
+
+  localStorage.setItem(TREE_DENSITY_STORAGE_KEY, density);
+  redrawTreeLinesSoon();
+}
+
+function setupTreeDensityControls() {
+  const storedDensity = localStorage.getItem(TREE_DENSITY_STORAGE_KEY) || (isLargeDemoMode() ? "compact" : "comfortable");
+  setTreeDensity(storedDensity);
+
+  document.querySelectorAll("[data-tree-density]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setTreeDensity(button.dataset.treeDensity);
+    });
+  });
 }
 
 async function updateTreeTitle(familyId) {
@@ -542,8 +570,20 @@ async function loadFamilyTree() {
     return;
   }
 
-  const familyId = getCurrentFamilyId();
   const largeDemoMode = isLargeDemoMode();
+  const resolvedFamily = largeDemoMode
+    ? { familyId: null, user: null }
+    : await resolveCurrentUserFamilyId();
+  const familyId = resolvedFamily.familyId;
+
+  if (!largeDemoMode && resolvedFamily.user && !familyId) {
+    const titleEl = document.getElementById("treeTitle");
+    const joinCodeDisplay = document.getElementById("joinCodeDisplay");
+    if (titleEl) titleEl.textContent = "Family Tree";
+    if (joinCodeDisplay) joinCodeDisplay.style.display = "none";
+    setTreeMessage(treeLayout, "No private family tree is connected to this account yet. Open Account to start one or join with a code.");
+    return;
+  }
 
   // Update the title (family name or example)
   await updateTreeTitle(familyId);
@@ -591,7 +631,7 @@ async function loadFamilyTree() {
 
     // cache and draw connectors
     lastRenderedPeople = allPeople;
-    drawParentChildLines(lastRenderedPeople);
+    redrawTreeLinesSoon();
   } catch (err) {
     console.error("Error loading family tree:", err);
     setTreeMessage(treeLayout, "Could not load this family tree. Check your connection and permissions.");
@@ -640,6 +680,7 @@ function setupCopyCode() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupTreeDensityControls();
   setupAddPersonModal();
   setupCopyCode();
   loadFamilyTree();
@@ -651,7 +692,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Redraw connectors on resize so lines stay aligned
   window.addEventListener("resize", () => {
     if (lastRenderedPeople && lastRenderedPeople.length > 0) {
-      drawParentChildLines(lastRenderedPeople);
+      redrawTreeLinesSoon();
     }
   });
 });

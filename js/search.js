@@ -3,8 +3,8 @@ import {
   toTitleFullName,
   normalizeNamePart,
   buildFullName,
-  getCurrentFamilyId,
 } from "./helpers.js";
+import { resolveCurrentUserFamilyId } from "./familyContext.js";
 
 let allPeople = [];
 let currentFamilyId = null;
@@ -130,7 +130,14 @@ async function initSearchPage() {
     return;
   }
 
-  currentFamilyId = getCurrentFamilyId();
+  const resolvedFamily = await resolveCurrentUserFamilyId();
+  currentFamilyId = resolvedFamily.familyId;
+
+  if (resolvedFamily.user && !currentFamilyId) {
+    resultsContainer.replaceChildren();
+    resultsContainer.appendChild(createSearchMessage("No private family tree is connected to this account yet. Open Account to start one or join with a code."));
+    return;
+  }
 
   try {
     allPeople = await getAllPeople(currentFamilyId);

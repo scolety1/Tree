@@ -59,6 +59,29 @@
   color: var(--brand-strong);
 }
 
+.profile-edit-state {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.profile-edit-state.is-editable {
+  border-color: #b7c7b3;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+}
+
+.profile-edit-state.is-read-only {
+  border-color: #ead7b7;
+  background: #fff8eb;
+  color: #735018;
+}
+
 .profile-card strong {
   color: var(--ink);
   font-weight: 850;

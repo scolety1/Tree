@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Family Profile</title>
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/css/global.css">
-  <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/global.css?v=20260521-2">
+    <link rel="stylesheet" href="/css/profile.css?v=20260521-2">
 
 
 </head>
@@ -15,14 +15,17 @@
     <h1>Family tree</h1>
     <nav aria-label="Main">
       <ul class="nav">
-        <li><a href="/">Home</a></li>
-        <li><a href="/tree">Family Tree</a></li>
-        <li><a href="/search">Search</a></li>
-        <li><a id="authLink" href="/signin">Sign In</a></li>
+        <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
+        <li><a id="searchNavLink" href="/search">Search</a></li>
       </ul>
     </nav>
-    <p id="authStatus" class="auth-status">Checking sign-in...</p>
-    <button id="signOutBtn" class="auth-sign-out" hidden>Sign Out</button>
+    <div class="account-area">
+      <p id="authStatus" class="auth-status">Checking sign-in...</p>
+      <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+        <span class="account-icon" aria-hidden="true"></span>
+        <span class="account-link-text">Sign In</span>
+      </a>
+    </div>
   </header>
 
   <div class="profile-page">
@@ -36,6 +39,7 @@
       <div class="profile-details">
         <h1 id="name">Loading...</h1>
         <p id="profileStatus" class="form-status profile-status" aria-live="polite"></p>
+        <p id="profileEditState" class="profile-edit-state">Checking edit access...</p>
 
         <p class="profileInfo">
           <strong>Birthday: </strong>
@@ -71,10 +75,10 @@
           <a id="profileBackLink" href="/tree" class="button profile-btn secondary">
             Back to Family Tree
           </a>
-          <button id="deletePersonBtn" class="button profile-btn danger">
+          <button id="deletePersonBtn" class="button profile-btn danger" hidden>
             Remove This Person
           </button>
-          <button id="editPersonBtn" class="button profile-btn primary">
+          <button id="editPersonBtn" class="button profile-btn primary" hidden>
             Edit Profile
           </button>
         </div>
@@ -138,7 +142,7 @@
     <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
   </footer>
 
-  <script type="module" src="/js/main.js"></script>
+  <script type="module" src="/js/main.js?v=20260521-2"></script>
   <script type="module" src="/js/profile.js"></script>
 </body>
 

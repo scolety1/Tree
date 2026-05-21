@@ -27,9 +27,10 @@ The Spencer Phase happens after most code stabilization/polish work and before f
 ### Firebase Hosting / Deployment
 
 - Confirm Firebase Hosting is enabled for the intended Firebase project.
-- Confirm `firebase deploy --only hosting` deploys the latest local build.
+- Confirm `firebase deploy --only hosting,firestore:rules --project tree-72e80` deploys the latest local build and rules.
 - Confirm the production URL you want to send/open for Dad.
 - Confirm the latest commit is deployed before final QA.
+- Review `/account`, `/tree`, `/tree?demo=large`, `/search`, and at least one real profile after deploy.
 - Treat `/api/funfact` as deferred unless it is moved from Vercel to a Firebase Function.
 
 ### GitHub
@@ -84,6 +85,7 @@ The Spencer Phase happens after most code stabilization/polish work and before f
 
 ### Spencer Wrap-Up: Domain And Launch
 
+- Do this section last, after the Firebase Hosting URL has passed birthday-demo QA.
 - Finish the GoDaddy to Porkbun transfer for `coletys.com`.
 - Recreate the Firebase Hosting DNS records in Porkbun if needed.
 - Connect `coletys.com` and `www.coletys.com` in Firebase Hosting.

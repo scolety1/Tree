@@ -49,6 +49,49 @@ function setEditingAvailable(isAvailable) {
   });
 }
 
+function setProfileEditState({ editable, message }) {
+  const state = document.getElementById("profileEditState");
+  if (!state) return;
+
+  state.textContent = message;
+  state.classList.toggle("is-editable", editable);
+  state.classList.toggle("is-read-only", !editable);
+  setEditingAvailable(editable);
+}
+
+function refreshProfileEditState() {
+  const signedIn = Boolean(currentAuthUser || getCurrentUser());
+
+  if (!personId) {
+    setProfileEditState({
+      editable: false,
+      message: "Open a person profile before editing.",
+    });
+    return;
+  }
+
+  if (!familyId) {
+    setProfileEditState({
+      editable: false,
+      message: "This is the read-only example tree. Open a private family tree to edit people.",
+    });
+    return;
+  }
+
+  if (!signedIn) {
+    setProfileEditState({
+      editable: false,
+      message: "Sign in to edit or remove people in this private family tree.",
+    });
+    return;
+  }
+
+  setProfileEditState({
+    editable: true,
+    message: "You can edit this private family-tree profile.",
+  });
+}
+
 function fillRelationshipSelect(select, people, selectedId, placeholder) {
   if (!select) return;
 
@@ -110,7 +153,7 @@ async function loadProfile() {
   if (!personId) {
     document.getElementById("name").textContent =
       "No person ID provided in URL.";
-    setEditingAvailable(false);
+    refreshProfileEditState();
     return;
   }
 
@@ -124,13 +167,13 @@ async function loadProfile() {
 
       if (!docSnap.exists()) {
         document.getElementById("name").textContent = "Profile not found in this family tree.";
-        setEditingAvailable(false);
+        refreshProfileEditState();
         return;
       }
 
       if (docSnap.exists() && docSnap.data().familyId !== familyId) {
         document.getElementById("name").textContent = "Profile not found in this family tree.";
-        setEditingAvailable(false);
+        refreshProfileEditState();
         return;
       }
     }
@@ -145,7 +188,7 @@ async function loadProfile() {
 
     if (!docSnap.exists()) {
       document.getElementById("name").textContent = "Profile not found.";
-      setEditingAvailable(false);
+      refreshProfileEditState();
       return;
     }
 
@@ -158,7 +201,7 @@ async function loadProfile() {
       updateBackLink();
     }
 
-    setEditingAvailable(Boolean(familyId && (currentAuthUser || getCurrentUser())));
+    refreshProfileEditState();
 
     // NAME
     const fullName = toTitleFullName(data.firstName || "", data.lastName || "");
@@ -309,7 +352,7 @@ async function loadProfile() {
     console.error("Error loading profile:", error);
     document.getElementById("name").textContent =
       "Error loading profile.";
-    setEditingAvailable(false);
+    refreshProfileEditState();
   }
 }
 
@@ -528,5 +571,5 @@ loadProfile();
 setupEditPersonModal();
 watchAuth((user) => {
   currentAuthUser = user;
-  setEditingAvailable(Boolean(familyId && personId && user));
+  refreshProfileEditState();
 });
