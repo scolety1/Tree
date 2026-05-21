@@ -25,14 +25,15 @@
 
     <main>
         <section class="search-section">
-            <h2>Search the family tree</h2>
+            <h2>Find a family member</h2>
+            <p>Search the current tree by first or last name, then open a profile from the results.</p>
 
             <form id="search-form">
                 <label for="search-input">Search by name</label>
                 <input
                     id="search-input"
                     type="text"
-                    placeholder="Enter a first or last name..."
+                    placeholder="Try a first name, last name, or both..."
                     autocomplete="off"
                 />
                 <button type="submit">Search</button>
@@ -43,28 +44,37 @@
             </div>
         </section>
         
-        <button id="addPersonBtn" title="Add Person">+</button>
+        <button id="addPersonBtn" title="Add family member" aria-label="Add family member">+</button>
 
         <div id="addModal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
-                <h2>Add a New Family Member</h2>
+                <h2>Add Family Member</h2>
+                <p class="modal-intro">Add someone without leaving search. The results will refresh after saving.</p>
                 <p id="addPersonStatus" class="form-status" aria-live="polite"></p>
                 <form id="addPersonForm">
-                    <input type="text" id="firstName" placeholder="Enter First Name" aria-label="First name" required><br>
-                    <input type="text" id="middleInitial" placeholder="Enter Middle Initial" aria-label="Middle initial"><br>
-                    <input type="text" id="lastName" placeholder="Enter Last Name" aria-label="Last name" required><br>
-                    <input type="date" id="birthDate" placeholder="Enter Birthdate" aria-label="Birthdate"><br>
-                    <select id="parent1" aria-label="First parent">
-                        <option value="">Select First Parent</option>
-                    </select><br>
-                    <select id="parent2" aria-label="Second parent">
-                        <option value="">Select Second Parent</option>
-                    </select><br>
-                    <select id="spouse" aria-label="Spouse">
-                        <option value="">Select Spouse</option>
-                    </select><br>
-                    <button type="submit">Add</button>
+                    <label for="firstName">First name</label>
+                    <input type="text" id="firstName" placeholder="e.g., John" required>
+                    <label for="middleInitial">Middle initial (optional)</label>
+                    <input type="text" id="middleInitial" placeholder="e.g., A" maxlength="3">
+                    <label for="lastName">Last name</label>
+                    <input type="text" id="lastName" placeholder="e.g., Colety" required>
+                    <label for="birthDate">Birthday (optional)</label>
+                    <input type="date" id="birthDate">
+                    <label for="parent1">Parent one (optional)</label>
+                    <select id="parent1">
+                        <option value="">No parent selected</option>
+                    </select>
+                    <label for="parent2">Parent two (optional)</label>
+                    <select id="parent2">
+                        <option value="">No second parent selected</option>
+                    </select>
+                    <label for="spouse">Spouse or partner (optional)</label>
+                    <select id="spouse">
+                        <option value="">No spouse selected</option>
+                    </select>
+                    <p class="field-note">Parents and spouses only appear here after they have been added to this tree.</p>
+                    <button type="submit">Add Family Member</button>
                 </form>
             </div>
         </div>

@@ -71,6 +71,7 @@ function createTreeCard(tree) {
   nameLabel.append("Tree name");
   const nameInput = document.createElement("input");
   nameInput.name = "name";
+  nameInput.placeholder = "e.g., Colety Family Tree";
   nameInput.value = tree.name || "Untitled Family Tree";
   nameInput.disabled = !isOwner;
   nameLabel.appendChild(nameInput);
@@ -81,6 +82,7 @@ function createTreeCard(tree) {
   const descriptionInput = document.createElement("textarea");
   descriptionInput.name = "description";
   descriptionInput.rows = 3;
+  descriptionInput.placeholder = "Optional note about this branch of the family";
   descriptionInput.value = tree.description || "";
   descriptionInput.disabled = !isOwner;
   descriptionLabel.appendChild(descriptionInput);
@@ -100,7 +102,7 @@ function createTreeCard(tree) {
 
   const meta = document.createElement("p");
   meta.className = "family-tree-meta";
-  meta.textContent = [role ? `Role: ${role}` : "", createdAt ? `Created: ${createdAt}` : ""]
+  meta.textContent = [role ? `Your role: ${role}` : "", createdAt ? `Created ${createdAt}` : ""]
     .filter(Boolean)
     .join(" ");
   detailsWrap.appendChild(meta);
@@ -206,7 +208,7 @@ function createTreeCard(tree) {
   const searchLink = document.createElement("a");
   searchLink.className = "button button-secondary";
   searchLink.href = `/search?familyId=${encodeURIComponent(tree.id)}`;
-  searchLink.textContent = "Search";
+  searchLink.textContent = "Search People";
   actions.appendChild(searchLink);
 
   const dangerButton = document.createElement("button");
@@ -226,6 +228,39 @@ function createTreeCard(tree) {
   setupTreeCardActions(article, tree, isOwner);
 
   return article;
+}
+
+function renderDashboardEmptyState() {
+  if (!listEl) return;
+
+  const empty = document.createElement("article");
+  empty.className = "empty-state";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "No trees yet";
+  empty.appendChild(heading);
+
+  const copy = document.createElement("p");
+  copy.textContent = "Create a private tree or join one with an access code from a relative.";
+  empty.appendChild(copy);
+
+  const actions = document.createElement("div");
+  actions.className = "dashboard-actions";
+
+  const createLink = document.createElement("a");
+  createLink.className = "button";
+  createLink.href = "/#createTreeFormCard";
+  createLink.textContent = "Start New Tree";
+  actions.appendChild(createLink);
+
+  const joinLink = document.createElement("a");
+  joinLink.className = "button button-secondary";
+  joinLink.href = "/#joinTreeFormCard";
+  joinLink.textContent = "Join with Code";
+  actions.appendChild(joinLink);
+
+  empty.appendChild(actions);
+  listEl.appendChild(empty);
 }
 
 function getMemberLabel(memberId, memberProfiles) {
@@ -437,7 +472,8 @@ async function loadFamilyTrees(user) {
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      setStatus("No family trees yet. Create one or join with an access code.");
+      setStatus("");
+      renderDashboardEmptyState();
       return;
     }
 
@@ -446,19 +482,25 @@ async function loadFamilyTrees(user) {
       .map(async docSnap => {
         const data = docSnap.data();
         return {
-        id: docSnap.id,
-        currentUserId: user.uid,
+          id: docSnap.id,
+          currentUserId: user.uid,
           memberProfiles: await loadMemberProfiles(data.memberIds || []),
           ...data,
         };
       }));
 
-    trees
+    const activeTrees = trees
       .filter(tree => !tree.archivedAt)
-      .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
-      .forEach(tree => {
-        listEl.appendChild(createTreeCard(tree));
-      });
+      .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+    if (activeTrees.length === 0) {
+      renderDashboardEmptyState();
+      return;
+    }
+
+    activeTrees.forEach(tree => {
+      listEl.appendChild(createTreeCard(tree));
+    });
   } catch (error) {
     console.error("Error loading dashboard:", error);
     setStatus("Could not load your family trees. Check your connection and permissions.");

@@ -21,8 +21,6 @@ function createResultCard(person, familyId = null) {
   profileUrl += "&from=search";
   link.href = profileUrl;
   link.className = "person-card search-result-card";
-  link.style.textDecoration = "none";
-  link.style.color = "inherit";
 
   let formattedDate = "Unknown";
   if (person.birthDate && typeof person.birthDate.toDate === "function") {
@@ -41,7 +39,7 @@ function createResultCard(person, familyId = null) {
   link.appendChild(heading);
 
   const born = document.createElement("p");
-  born.textContent = `Born: ${formattedDate}`;
+  born.textContent = `Birthday: ${formattedDate}`;
   link.appendChild(born);
 
   if (person.generation != null) {
@@ -61,9 +59,11 @@ function runSearch(rawQuery, resultsContainer) {
 
   const trimmed = rawQuery.trim();
   if (!trimmed) {
-    const empty = document.createElement("p");
-    empty.textContent = "Type a name above to search.";
-    resultsContainer.appendChild(empty);
+    resultsContainer.appendChild(createSearchMessage(
+      allPeople.length === 0
+        ? "No people are available to search yet."
+        : `Search ${allPeople.length} ${allPeople.length === 1 ? "person" : "people"} in this tree.`
+    ));
     return;
   }
 
@@ -76,13 +76,26 @@ function runSearch(rawQuery, resultsContainer) {
 
 
   if (matches.length === 0) {
-    const noResults = document.createElement("p");
+    const noResults = document.createElement("div");
+    noResults.className = "empty-state";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "No matching people";
+    noResults.appendChild(heading);
+
+    const copy = document.createElement("p");
     const strong = document.createElement("strong");
     strong.textContent = trimmed;
-    noResults.append("No results for ", strong, ".");
+    copy.append("No results for ", strong, ". Try a shorter name, a last name, or add the person if they are missing.");
+    noResults.appendChild(copy);
     resultsContainer.appendChild(noResults);
     return;
   }
+
+  const summary = document.createElement("p");
+  summary.className = "search-summary";
+  summary.textContent = `${matches.length} ${matches.length === 1 ? "match" : "matches"} found`;
+  resultsContainer.appendChild(summary);
 
   const list = document.createElement("div");
   list.className = "search-results-list";
@@ -93,6 +106,15 @@ function runSearch(rawQuery, resultsContainer) {
   });
 
   resultsContainer.appendChild(list);
+}
+
+function createSearchMessage(message) {
+  const empty = document.createElement("div");
+  empty.className = "empty-state";
+  const copy = document.createElement("p");
+  copy.textContent = message;
+  empty.appendChild(copy);
+  return empty;
 }
 
 /**
@@ -112,6 +134,7 @@ async function initSearchPage() {
 
   try {
     allPeople = await getAllPeople(currentFamilyId);
+    runSearch(input.value, resultsContainer);
   } catch (err) {
     console.error("Error loading people for search:", err);
     resultsContainer.replaceChildren();

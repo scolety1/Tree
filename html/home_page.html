@@ -24,11 +24,10 @@
 
     <main>
         <section class="welcome-section">
-            <h2>Welcome to the Family Tree App</h2>
+            <h2>Build the family tree without making it a chore</h2>
             <p>
-                Create a private family tree for your relatives, or join a tree that someone in your family has
-                already started. Each tree has its own access code so different branches of the family can stay
-                separate and easy to manage.
+                Create a private tree, invite relatives with a simple access code, and keep the people,
+                relationships, and stories easy to browse.
             </p>
         </section>
 
@@ -37,21 +36,21 @@
 
             <div class="actions-grid">
                 <article class="action-card">
-                    <h3>Create a New Family Tree</h3>
+                    <h3>Start a private tree</h3>
                     <p>
-                        Starting from scratch? Create a tree for your family, get a unique access code, and share
-                        it with relatives so everyone can help add and update members.
+                        Make a dedicated family space with its own access code. You can add people now and
+                        invite others when it feels ready.
                     </p>
                     <button id="createTreeBtn" class="button">
-                        Create Family Tree
+                        Start a Tree
                     </button>
                 </article>
 
                 <article class="action-card">
-                    <h3>Join an Existing Tree</h3>
+                    <h3>Use an access code</h3>
                     <p>
-                        Already have an access code? Use it to jump straight into your family's tree and start
-                        exploring parents, siblings, cousins, and more.
+                        Already have a code from someone else? Join their tree and pick up right where
+                        the family left off.
                     </p>
                     <button id="joinTreeBtn" class="button">
                         Join with Code
@@ -59,10 +58,10 @@
                 </article>
 
                 <article class="action-card">
-                    <h3>View Example Tree</h3>
+                    <h3>Preview the layout</h3>
                     <p>
-                        Want a quick preview? Open our example tree to see how generations, spouses, and children
-                        are laid out before you set up your own.
+                        Not ready to sign in? Open the example tree to see how generations and profile pages
+                        work before adding real family data.
                     </p>
                     <a id="exampleTreeLink" href="/tree?familyId=" class="button">
                         View Example Tree
@@ -74,14 +73,13 @@
         <section class="forms-section">
             <h2 class="forms-title">Create or Join Right Here</h2>
             <p class="forms-subtitle">
-                Sign in first, then create a new tree or join one by access code.
-                You can always come back here later to switch to a different family tree.
+                Sign in first. Then create a new tree or join one with a code from a relative.
             </p>
             <p id="familyFormStatus" class="form-status" aria-live="polite"></p>
 
             <div id="createTreeFormCard" class="form-card">
                 <h3>Create a New Family Tree</h3>
-                <p>Give your tree a name. We'll generate an access code you can share with your family.</p>
+                <p>Use a name your family will recognize. We'll generate the access code after creation.</p>
 
                 <form id="createFamilyForm">
                     <label for="familyName">Family Tree Name</label>
@@ -101,13 +99,13 @@
                         placeholder="A short note about this branch of the family..."
                     ></textarea>
 
-                    <button type="submit" class="button">Create Tree</button>
+                    <button type="submit" class="button">Create Private Tree</button>
                 </form>
             </div>
 
             <div id="joinTreeFormCard" class="form-card">
                 <h3>Join an Existing Family Tree</h3>
-                <p>Enter the access code that was shared with you to open your family's tree.</p>
+                <p>Paste the access code exactly as it was shared. Codes are not case-sensitive.</p>
 
                 <form id="joinFamilyForm">
                     <label for="joinCode">Access Code</label>
@@ -131,9 +129,8 @@
             <div class="instruction-card">
                 <h3>1. Create or Join a Tree</h3>
                 <p>
-                    From this home page, either <strong>create a new tree</strong> for your family
-                    or <strong>join an existing tree</strong> with an access code.
-                    Once you're inside a tree, everything you see is specific to that family only.
+                    Create a private tree or join one with a code. Once you're inside, the tree,
+                    search, and profiles stay focused on that family.
                 </p>
             </div>
 
@@ -149,14 +146,13 @@
             <div class="instruction-card">
                 <h3>3. Add a Family Member</h3>
                 <p>
-                    On the Family Tree page, click the <strong>green "+" button</strong>
-                    in the bottom-right corner to add someone new to this tree.
+                    On the Family Tree page, use the <strong>+</strong> button in the bottom-right corner
+                    to add someone new to the current tree.
                 </p>
                 <ul class="instruction-list">
-                    <li><strong>Required:</strong> First Name and Last Name</li>
-                    <li><strong>Optional:</strong> Middle Initial, Birth Date, Parents, Spouse</li>
-                    <li><strong>Parents:</strong> Enter names as "First Last" (e.g., "John Smith")</li>
-                    <li><strong>Spouse:</strong> Also as "First Last" (e.g., "Jane Doe")</li>
+                    <li><strong>Required:</strong> first and last name.</li>
+                    <li><strong>Optional:</strong> birthday, middle initial, parents, and spouse.</li>
+                    <li><strong>Tip:</strong> add parents first so you can select them from the list.</li>
                 </ul>
             </div>
 
@@ -172,8 +168,8 @@
                     <li>A historical fun fact based on their birthday</li>
                 </ul>
                 <p>
-                    From the profile page, you can <strong>edit</strong> or <strong>remove</strong> that person
-                    from the current family tree.
+                    From the profile page, you can update details after live testing confirms edits
+                    are working in your Firebase project.
                 </p>
             </div>
 
@@ -188,210 +184,6 @@
         </section>
 
     </main>
-
-    <style>
-        .welcome-section {
-            max-width: 800px;
-            margin: 40px auto 30px;
-            padding: 30px 28px;
-            background-color: rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .welcome-section h2 {
-            color: #f9fafb;
-            margin-bottom: 15px;
-        }
-
-        .welcome-section p {
-            color: #e0e0e0;
-            font-size: 1.05rem;
-        }
-
-        .actions-section {
-            max-width: 1000px;
-            margin: 10px auto 30px;
-            padding: 0 20px;
-        }
-
-        .actions-section h2 {
-            color: #f9fafb;
-            margin-bottom: 20px;
-            font-size: 1.9rem;
-            text-align: center;
-        }
-
-        .actions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 20px;
-        }
-
-        .action-card {
-            background-color: rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: left;
-            border-left: 4px solid #4e7cb1;
-        }
-
-        .action-card h3 {
-            color: #f9fafb;
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.4rem;
-        }
-
-        .action-card p {
-            color: #e0e0e0;
-            margin-bottom: 15px;
-        }
-
-        .forms-section {
-            max-width: 1000px;
-            margin: 10px auto 40px;
-            padding: 0 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-        }
-
-        .forms-title {
-            grid-column: 1 / -1;
-            color: #f9fafb;
-            font-size: 1.8rem;
-            margin-bottom: 4px;
-            text-align: center;
-        }
-
-        .forms-subtitle {
-            grid-column: 1 / -1;
-            color: #d1d5db;
-            margin-bottom: 16px;
-            text-align: center;
-            font-size: 0.98rem;
-        }
-
-        .form-card {
-            background-color: rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 20px 22px;
-        }
-
-        .form-card h3 {
-            color: #f9fafb;
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-
-        .form-card p {
-            color: #e0e0e0;
-            margin-bottom: 15px;
-        }
-
-        .form-card label {
-            display: block;
-            color: #f9fafb;
-            margin-bottom: 6px;
-            font-size: 0.95rem;
-        }
-
-        .form-card input,
-        .form-card textarea {
-            width: 100%;
-            border-radius: 6px;
-            border: 1px solid #4e7cb1;
-            padding: 8px 10px;
-            margin-bottom: 12px;
-            font-size: 0.95rem;
-            background-color: rgba(15, 23, 42, 0.8);
-            color: #e0e0e0;
-        }
-
-        .form-card input::placeholder,
-        .form-card textarea::placeholder {
-            color: #9ca3af;
-        }
-
-        .instructions-section {
-            max-width: 900px;
-            margin: 40px auto 30px;
-            padding: 0 20px 40px;
-        }
-
-        .instructions-section h2 {
-            color: #f9fafb;
-            margin-bottom: 30px;
-            font-size: 2rem;
-            text-align: center;
-        }
-
-        .instruction-card {
-            background-color: rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 25px;
-            margin-bottom: 25px;
-            text-align: left;
-            border-left: 4px solid #4e7cb1;
-        }
-
-        .instruction-card h3 {
-            color: #f9fafb;
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.5rem;
-        }
-
-        .instruction-card p {
-            color: #e0e0e0;
-            margin-bottom: 15px;
-        }
-
-        .instruction-list {
-            color: #e0e0e0;
-            margin-left: 20px;
-            line-height: 1.8;
-        }
-
-        .instruction-list li {
-            margin-bottom: 8px;
-        }
-
-        .button {
-            display: inline-block;
-            padding: 10px 18px;
-            border-radius: 999px;
-            border: none;
-            text-decoration: none;
-            font-weight: 600;
-            cursor: pointer;
-            background-color: #4e7cb1;
-            color: #f9fafb;
-        }
-
-        .button-secondary {
-            background-color: #1f2937;
-            border: 1px solid #4e7cb1;
-        }
-
-        .button-ghost {
-            background-color: transparent;
-            border: 1px solid #4e7cb1;
-        }
-
-        .button:hover {
-            opacity: 0.9;
-        }
-
-        footer {
-            text-align: center;
-            padding: 16px 0 24px;
-            font-size: 0.8rem;
-            color: #9ca3af;
-        }
-    </style>
-        
     <footer>
         <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>

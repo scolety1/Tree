@@ -138,6 +138,12 @@ if(form) {
     const selectedParent2 = getSelectedPerson("parent2");
     const birthDateRaw   = document.getElementById("birthDate").value; // "YYYY-MM-DD"
 
+    if (!rawFirstName || !rawLastName) {
+      setStatus("First and last name are required.");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+
     if (selectedParent1 && selectedParent2 && selectedParent1.id === selectedParent2.id) {
       setStatus("Choose two different parents, or leave one blank.");
       if (submitButton) submitButton.disabled = false;
@@ -198,7 +204,7 @@ if(form) {
       await addDoc(collection(db, collectionName), personData);
       form.reset();
       await refreshRelationshipOptions();
-      setStatus("Saved. The tree has been updated.");
+      setStatus(`Saved ${rawFirstName} ${rawLastName}. The tree has been updated.`);
       window.dispatchEvent(new CustomEvent("person-added"));
     } catch (error) {
       console.error("Error adding person:", error);

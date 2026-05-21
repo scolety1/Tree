@@ -30,6 +30,10 @@ function setupAddPersonModal() {
 
   btn.onclick = () => {
     modal.style.display = "block";
+    const firstNameInput = document.getElementById("firstName");
+    if (firstNameInput && !firstNameInput.disabled) {
+      firstNameInput.focus();
+    }
   };
 
   closeBtn.onclick = () => {
@@ -440,7 +444,12 @@ async function loadFamilyTree() {
     const allPeople = await getAllPeople(familyId);
 
     if (!allPeople || allPeople.length === 0) {
-      setTreeMessage(treeLayout, "No family members found in the database.");
+      setTreeMessage(
+        treeLayout,
+        familyId
+          ? "This tree is empty. Use the + button to add the first family member."
+          : "The example tree is empty or unavailable right now."
+      );
       return;
     }
 
@@ -460,7 +469,7 @@ async function loadFamilyTree() {
     drawParentChildLines(lastRenderedPeople);
   } catch (err) {
     console.error("Error loading family tree:", err);
-    setTreeMessage(treeLayout, "Error loading family tree.");
+    setTreeMessage(treeLayout, "Could not load this family tree. Check your connection and permissions.");
   }
 }
 

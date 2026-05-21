@@ -1,13 +1,11 @@
-/* ===== JOIN CODE DISPLAY ===== */
-
 .join-code-display {
-    max-width: 1200px;
-    margin: 20px auto 30px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #4e7cb1 0%, #395a8f 100%);
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    color: #f9fafb;
+    max-width: var(--content);
+    margin: -18px auto 24px;
+    padding: 14px 18px;
+    border: 1px solid #cfdcc9;
+    border-radius: var(--radius);
+    background: #ffffff;
+    box-shadow: var(--shadow-soft);
 }
 
 .join-code-content {
@@ -15,67 +13,73 @@
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-bottom: 6px;
+    color: var(--ink);
 }
 
 .join-code-label {
-    font-size: 1rem;
-    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 750;
 }
 
 .join-code-value {
-    font-size: 1.3rem;
-    font-weight: 600;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 6px 12px;
-    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #b7c7b3;
+    border-radius: var(--radius-sm);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
     cursor: pointer;
-    transition: background-color 0.25s ease;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 1rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
     user-select: none;
 }
 
-.join-code-value:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
 .join-code-hint {
+    margin: 8px 0 0;
+    color: var(--muted);
     text-align: center;
-    font-size: 0.85rem;
-    opacity: 0.9;
-    margin: 0;
-    margin-top: 4px;
+    font-size: 0.86rem;
 }
 
-/* ===== FAMILY TREE PAGE CARD LAYOUT ===== */
+#treeTitle {
+    margin: 12px 0 24px;
+    color: var(--brand-strong);
+    font-size: clamp(2.1rem, 5vw, 4.3rem);
+}
 
 .tree-layout {
     position: relative;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 40px;
-    max-width: 1200px;
-    min-height: 220px;
+    gap: 38px;
+    min-height: 360px;
     margin: 0 auto;
-    padding: 24px 32px 40px;
-    border-radius: 16px;
-    background-color: #f9fafb;
-    color: #111827;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
-    overflow-x: auto;   /* allow horizontal scroll */
-    overflow-y: auto;   /* just in case it gets tall */
-    scrollbar-color: #94a3b8 #e5e7eb;
+    padding: 28px 32px 42px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background:
+        linear-gradient(90deg, rgba(216, 224, 213, 0.35) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(216, 224, 213, 0.35) 1px, transparent 1px),
+        #ffffff;
+    background-size: 44px 44px;
+    box-shadow: var(--shadow);
+    overflow: auto;
+    scrollbar-color: #9dac99 #eef4ec;
 }
 
 .tree-layout > p {
-    color: #374151;
+    max-width: 420px;
+    margin: 72px auto;
+    color: var(--muted);
     text-align: center;
-    margin: 48px auto;
 }
 
-/* SVG layer for parent-to-child connectors */
 .tree-lines {
     position: absolute;
     inset: 0;
@@ -87,165 +91,154 @@
 
 .tree-lines path {
     fill: none;
-    stroke: rgba(30, 64, 175, 0.9); /* deep navy for parent-child lines */
-    stroke-width: 2;
+    stroke: rgba(47, 111, 78, 0.72);
+    stroke-linecap: round;
+    stroke-width: 2.25;
 }
 
-/* One generation block */
 .generation {
     position: relative;
     display: flex;
+    min-width: max-content;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 24px 0;
-    min-width: max-content;
+    gap: 14px;
+    padding: 22px 0;
 }
 
-/* Title above each generation row */
 .generation-title {
     align-self: flex-start;
-    margin: 0 0 4px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background-color: #e0f2fe;
-    color: #075985;
-    font-size: 0.82rem;
-    font-weight: 700;
+    margin: 0 0 2px;
+    padding: 6px 10px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius-sm);
+    background: #fff7e8;
+    color: #6f4811;
+    font-size: 0.78rem;
+    font-weight: 850;
     letter-spacing: 0;
+    text-transform: uppercase;
 }
 
-/* Row that actually holds the cards / spouse pairs */
 .generation-row {
     position: relative;
+    z-index: 1;
     display: flex;
     flex-wrap: nowrap;
-    gap: 24px;
     justify-content: center;
-    z-index: 1; /* keep above SVG lines */
+    gap: 22px;
 }
 
-/* ===== SPOUSE / DIVORCED PAIRS ===== */
-
-/* Married / partner pair: keep cards side-by-side */
-.spouse-pair {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    align-items: stretch;
-    position: relative;
-    z-index: 1;
-}
-
-/* Small connector between spouses (short bar) */
-.spouse-pair::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 40px;
-    height: 0;
-    border-top: 2px solid rgba(249, 115, 22, 0.9); /* warm color for spouse link */
-    transform: translate(-50%, -50%);
-    z-index: 0;
-}
-
-/* Divorced pair: visually separated but still linked */
+.spouse-pair,
 .divorced-pair {
-    display: flex;
-    gap: 24px;
-    justify-content: center;
-    align-items: stretch;
     position: relative;
     z-index: 1;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 14px;
 }
 
+.spouse-pair::before,
 .divorced-pair::before {
     content: "";
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 40px;
-    height: 0;
-    border-top: 2px dashed rgba(239, 68, 68, 0.85); /* red dashed line */
-    transform: translate(-50%, -50%);
     z-index: 0;
+    width: 36px;
+    transform: translate(-50%, -50%);
+    border-top: 2px solid var(--gold);
 }
 
-/* ===== PERSON CARDS ===== */
+.divorced-pair::before {
+    border-top-style: dashed;
+    border-top-color: var(--danger);
+}
 
 .person-card {
     position: relative;
-    z-index: 1; /* sit above connector lines */
-    background: #ffffff;
-    border-radius: 10px;
-    padding: 14px 16px 16px;
-    min-width: 170px;
+    z-index: 1;
+    display: grid;
+    gap: 7px;
+    min-width: 178px;
     max-width: 220px;
+    padding: 14px;
+    border: 1px solid #d6dfd2;
+    border-radius: var(--radius);
+    background: #ffffff;
+    box-shadow: 0 12px 26px rgba(32, 47, 36, 0.1);
     text-align: left;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
-    border: 1px solid #d1d5db;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
 }
 
 .person-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 16px 35px rgba(15, 23, 42, 0.2);
-    border-color: #2563eb;
+    transform: translateY(-3px);
+    border-color: var(--brand);
+    box-shadow: 0 18px 34px rgba(32, 47, 36, 0.16);
 }
 
-/* Name line */
 .person-card-media {
+    display: grid;
     width: 52px;
     height: 52px;
-    margin-bottom: 10px;
-    border-radius: 50%;
-    overflow: hidden;
-    display: grid;
     place-items: center;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    color: #1e3a8a;
-    font-weight: 700;
-    border: 1px solid #bfdbfe;
+    overflow: hidden;
+    border: 1px solid #c0d1ba;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--brand-soft), #fff7e8);
+    color: var(--brand-strong);
+    font-weight: 900;
 }
 
 .person-card-media img {
+    display: block;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
 }
 
 .person-card h3,
 .person-card .name {
-    font-weight: 600;
-    font-size: 1.05rem;
-    color: #111827;
-    margin: 0 0 6px 0;
+    margin: 2px 0 0;
+    color: var(--ink);
+    font-size: 1.02rem;
+    font-weight: 850;
+    line-height: 1.2;
 }
 
-/* Secondary text (dates, notes, etc.) */
 .person-card p,
 .person-card .meta {
-    font-size: 0.9rem;
-    color: #374151;
-    margin: 2px 0;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.4;
+}
+
+.person-card .tag {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    font-size: 0.74rem;
+    font-weight: 800;
 }
 
 @media (max-width: 640px) {
     .join-code-display {
-        margin: 12px auto 20px;
-        padding: 14px;
+        margin: -4px auto 18px;
     }
 
     .join-code-content {
         flex-direction: column;
-        gap: 6px;
     }
 
     .tree-layout {
+        min-height: 320px;
         padding: 18px 16px 28px;
-        border-radius: 10px;
         gap: 24px;
     }
 
@@ -259,30 +252,8 @@
         gap: 14px;
     }
 
-    .spouse-pair {
-        gap: 12px;
-    }
-
     .person-card {
-        min-width: 150px;
+        min-width: 158px;
         max-width: 180px;
-        padding: 14px;
-    }
-
-    .person-card-media {
-        width: 44px;
-        height: 44px;
     }
 }
-
-/* Example of a subtle tag, such as Divorced or Spouse */
-.person-card .tag {
-    display: inline-block;
-    margin-top: 8px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    background-color: #eff6ff;
-    color: #1d4ed8;
-}
-

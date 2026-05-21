@@ -37,7 +37,7 @@
         <p id="profileStatus" class="form-status profile-status" aria-live="polite"></p>
 
         <p class="profileInfo">
-          <strong>Birth Day: </strong>
+          <strong>Birthday: </strong>
           <span id="birthDate"></span>
         </p>
 
@@ -62,7 +62,7 @@
         </p>
 
         <p class="profileInfo">
-          <strong>Fun Fact (from their birthday): </strong>
+          <strong>Birthday fun fact: </strong>
           <span id="funFact">Loading...</span>
         </p>
 
@@ -74,7 +74,7 @@
             Remove This Person
           </button>
           <button id="editPersonBtn" class="button profile-btn primary">
-            Edit This Person
+            Edit Profile
           </button>
         </div>
       </div>
@@ -84,7 +84,7 @@
   <div id="editPersonModal" class="modal">
     <div class="modal-content">
       <span class="close">&times;</span>
-      <h2>Edit Person</h2>
+      <h2>Edit Profile</h2>
       <form id="editPersonForm" enctype="multipart/form-data">
         <label class="form-label">
           First Name
@@ -103,13 +103,13 @@
           <input type="date" id="editBirthDate"><br>
         </label>
         <label class="form-label">
-          Parent One
+          Parent one
           <select id="editParent1">
             <option value="">Select Parent 1</option>
           </select><br>
         </label>
         <label class="form-label">
-          Parent Two
+          Parent two
           <select id="editParent2">
             <option value="">Select Parent 2</option>
           </select><br>
@@ -122,10 +122,10 @@
         </label>
         <label class="form-label">
           Bio
-          <textarea id="editBio" placeholder="Add a Bio" rows="4"></textarea><br>
+          <textarea id="editBio" placeholder="Add a short note, memory, or context..." rows="4"></textarea><br>
         </label>
         <label class="form-label">
-          Profile Image
+          Profile photo
           <input type="file" id="editImageFile" accept="image/*"><br>
         </label>
         <button type="submit">Save</button>
