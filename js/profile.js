@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js";
+import { db, storage } from "./firebase.js?v=20260521-3";
 import {
   doc,
   getDoc,
@@ -24,8 +24,8 @@ import {
   getChildren,
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
-} from "./helpers.js";
-import { getCurrentUser, watchAuth } from "./auth.js";
+} from "./helpers.js?v=20260521-3";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-3";
 
 
 let personId = null;
@@ -541,9 +541,9 @@ function setupEditPersonModal() {
 
 
 // DELETE BUTTON
-document
-  .getElementById("deletePersonBtn")
-  .addEventListener("click", async () => {
+const deletePersonBtn = document.getElementById("deletePersonBtn");
+if (deletePersonBtn) {
+  deletePersonBtn.addEventListener("click", async () => {
     if (!personId) return;
     if (!familyId || !getCurrentUser()) {
       setProfileStatus("Sign in and open a private family tree before removing people.");
@@ -565,11 +565,14 @@ document
       setProfileStatus("Failed to delete this person.");
     }
   });
+}
 
 // Load the profile when the page opens
-loadProfile();
-setupEditPersonModal();
-watchAuth((user) => {
-  currentAuthUser = user;
-  refreshProfileEditState();
-});
+if (document.getElementById("profileCard")) {
+  loadProfile();
+  setupEditPersonModal();
+  watchAuth((user) => {
+    currentAuthUser = user;
+    refreshProfileEditState();
+  });
+}

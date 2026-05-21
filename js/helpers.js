@@ -1,4 +1,4 @@
-import { db } from "./firebase.js";
+import { db } from "./firebase.js?v=20260521-3";
 import {
   collection,
   getDocs,
@@ -15,6 +15,13 @@ const FAMILY_ID_STORAGE_KEY = "currentFamilyId";
 
 
 export function setFamilyId(familyId) {
+  const nextFamilyId = familyId || null;
+  const previousFamilyId = sessionStorage.getItem(FAMILY_ID_STORAGE_KEY);
+
+  if (previousFamilyId === nextFamilyId) {
+    return;
+  }
+
   if (familyId) {
     sessionStorage.setItem(FAMILY_ID_STORAGE_KEY, familyId);
   } else {
@@ -24,7 +31,7 @@ export function setFamilyId(familyId) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("family-id-changed", {
       detail: {
-        familyId: familyId || null,
+        familyId: nextFamilyId,
       },
     }));
   }
@@ -37,7 +44,16 @@ export function getStoredFamilyId() {
 
 
 export function clearFamilyId() {
+  const previousFamilyId = sessionStorage.getItem(FAMILY_ID_STORAGE_KEY);
   sessionStorage.removeItem(FAMILY_ID_STORAGE_KEY);
+
+  if (previousFamilyId && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("family-id-changed", {
+      detail: {
+        familyId: null,
+      },
+    }));
+  }
 }
 
 

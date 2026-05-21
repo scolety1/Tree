@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js";
+import { auth, db } from "./firebase.js?v=20260521-3";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js";
+import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-3";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 

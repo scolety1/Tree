@@ -1,4 +1,4 @@
-import { db } from "./firebase.js";
+import { db } from "./firebase.js?v=20260521-3";
 import {
   addDoc,
   collection,
@@ -9,8 +9,8 @@ import {
   getAllPeople,
   getCurrentFamilyId,
   getDisplayName,
-} from "./helpers.js";
-import { getCurrentUser, watchAuth } from "./auth.js";
+} from "./helpers.js?v=20260521-3";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-3";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");

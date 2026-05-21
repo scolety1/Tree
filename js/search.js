@@ -3,8 +3,8 @@ import {
   toTitleFullName,
   normalizeNamePart,
   buildFullName,
-} from "./helpers.js";
-import { resolveCurrentUserFamilyId } from "./familyContext.js";
+} from "./helpers.js?v=20260521-3";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-3";
 
 let allPeople = [];
 let currentFamilyId = null;

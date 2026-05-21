@@ -25,6 +25,10 @@ service cloud.firestore {
       return signedIn() && familyDoc(familyId).data.ownerId == request.auth.uid;
     }
 
+    function isBirthdayDemoFamily(familyId) {
+      return familyDoc(familyId).data.birthdayDemoTree == true;
+    }
+
     function isLeavingFamily() {
       return signedIn()
         && resource.data.memberIds is list
@@ -38,7 +42,7 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid
         && request.auth.uid in request.resource.data.memberIds;
 
-      allow read: if isFamilyMember(familyId);
+      allow read: if isFamilyMember(familyId) || resource.data.birthdayDemoTree == true;
       allow update: if isFamilyOwner(familyId)
         || isLeavingFamily()
         || (
@@ -71,7 +75,10 @@ service cloud.firestore {
         && request.resource.data.familyId is string
         && isFamilyMember(request.resource.data.familyId);
 
-      allow read, update, delete: if signedIn()
+      allow read: if resource.data.familyId is string
+        && (isFamilyMember(resource.data.familyId) || isBirthdayDemoFamily(resource.data.familyId));
+
+      allow update, delete: if signedIn()
         && resource.data.familyId is string
         && isFamilyMember(resource.data.familyId);
     }

@@ -1,4 +1,4 @@
-import { db } from "./firebase.js";
+import { db } from "./firebase.js?v=20260521-3";
 import {
   doc,
   getDoc
@@ -11,8 +11,8 @@ import {
   areSpouses,
   toTitleFullName,
   buildFullName
-} from "./helpers.js";
-import { resolveCurrentUserFamilyId } from "./familyContext.js";
+} from "./helpers.js?v=20260521-3";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-3";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
