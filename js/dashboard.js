@@ -33,15 +33,6 @@ function setStatus(message) {
   if (statusEl) statusEl.textContent = message;
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function generateJoinCode(length = 6) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -73,58 +64,160 @@ function createTreeCard(tree) {
   const memberCount = Array.isArray(tree.memberIds) ? tree.memberIds.length : 0;
   const memberProfiles = tree.memberProfiles || new Map();
 
-  article.innerHTML = `
-    <form class="family-tree-edit-form">
-      <label>
-        Tree name
-        <input name="name" value="${escapeHtml(tree.name || "Untitled Family Tree")}" ${isOwner ? "" : "disabled"}>
-      </label>
-      <label>
-        Description
-        <textarea name="description" rows="3" ${isOwner ? "" : "disabled"}>${escapeHtml(tree.description || "")}</textarea>
-      </label>
-      ${isOwner ? `<button type="submit" class="button family-tree-save-button">Save Changes</button>` : ""}
-    </form>
-    <div>
-      <p class="family-tree-meta">
-        ${role ? `Role: ${role}` : ""}
-        ${createdAt ? ` Created: ${createdAt}` : ""}
-      </p>
-      <p class="family-tree-meta">${memberCount} ${memberCount === 1 ? "member" : "members"}</p>
-      ${tree.joinCode ? `
-        <p class="family-tree-code">
-          Access code: <strong class="join-code-text">${tree.joinCode}</strong>
-          <button type="button" class="text-action copy-code-button">Copy</button>
-          ${isOwner ? `<button type="button" class="text-action reset-code-button">Reset</button>` : ""}
-        </p>
-      ` : ""}
-      <details class="member-details">
-        <summary>Members</summary>
-        <ul>
-          ${(tree.memberIds || []).map(memberId => `
-            <li>
-              <span>${memberId === tree.ownerId ? "Owner" : "Member"}</span>
-              <strong>${escapeHtml(getMemberLabel(memberId, memberProfiles))}</strong>
-              <code>${escapeHtml(memberId)}</code>
-              ${isOwner && memberId !== tree.ownerId
-                ? `<button type="button" class="text-action remove-member-button" data-member-id="${escapeHtml(memberId)}">Remove</button>`
-                : ""
-              }
-            </li>
-          `).join("") || "<li>No members listed.</li>"}
-        </ul>
-      </details>
-      <p class="family-tree-card-status" aria-live="polite"></p>
-    </div>
-    <div class="family-tree-card-actions">
-      <a class="button" href="/tree?familyId=${encodeURIComponent(tree.id)}">Open Tree</a>
-      <a class="button button-secondary" href="/search?familyId=${encodeURIComponent(tree.id)}">Search</a>
-      ${isOwner
-        ? `<button type="button" class="button danger-button archive-tree-button">Archive</button>`
-        : `<button type="button" class="button danger-button leave-tree-button">Leave</button>`
+  const form = document.createElement("form");
+  form.className = "family-tree-edit-form";
+
+  const nameLabel = document.createElement("label");
+  nameLabel.append("Tree name");
+  const nameInput = document.createElement("input");
+  nameInput.name = "name";
+  nameInput.value = tree.name || "Untitled Family Tree";
+  nameInput.disabled = !isOwner;
+  nameLabel.appendChild(nameInput);
+  form.appendChild(nameLabel);
+
+  const descriptionLabel = document.createElement("label");
+  descriptionLabel.append("Description");
+  const descriptionInput = document.createElement("textarea");
+  descriptionInput.name = "description";
+  descriptionInput.rows = 3;
+  descriptionInput.value = tree.description || "";
+  descriptionInput.disabled = !isOwner;
+  descriptionLabel.appendChild(descriptionInput);
+  form.appendChild(descriptionLabel);
+
+  if (isOwner) {
+    const saveButton = document.createElement("button");
+    saveButton.type = "submit";
+    saveButton.className = "button family-tree-save-button";
+    saveButton.textContent = "Save Changes";
+    form.appendChild(saveButton);
+  }
+
+  article.appendChild(form);
+
+  const detailsWrap = document.createElement("div");
+
+  const meta = document.createElement("p");
+  meta.className = "family-tree-meta";
+  meta.textContent = [role ? `Role: ${role}` : "", createdAt ? `Created: ${createdAt}` : ""]
+    .filter(Boolean)
+    .join(" ");
+  detailsWrap.appendChild(meta);
+
+  const membersMeta = document.createElement("p");
+  membersMeta.className = "family-tree-meta";
+  membersMeta.textContent = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
+  detailsWrap.appendChild(membersMeta);
+
+  if (tree.joinCode) {
+    const code = document.createElement("p");
+    code.className = "family-tree-code";
+    code.append("Access code: ");
+
+    const codeText = document.createElement("strong");
+    codeText.className = "join-code-text";
+    codeText.textContent = tree.joinCode;
+    code.appendChild(codeText);
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "text-action copy-code-button";
+    copyButton.textContent = "Copy";
+    code.append(" ");
+    code.appendChild(copyButton);
+
+    if (isOwner) {
+      const resetButton = document.createElement("button");
+      resetButton.type = "button";
+      resetButton.className = "text-action reset-code-button";
+      resetButton.textContent = "Reset";
+      code.append(" ");
+      code.appendChild(resetButton);
+    }
+
+    detailsWrap.appendChild(code);
+  }
+
+  const memberDetails = document.createElement("details");
+  memberDetails.className = "member-details";
+  const summary = document.createElement("summary");
+  summary.textContent = "Members";
+  memberDetails.appendChild(summary);
+
+  const membersList = document.createElement("ul");
+  const memberIds = tree.memberIds || [];
+
+  if (memberIds.length === 0) {
+    const item = document.createElement("li");
+    item.textContent = "No members listed.";
+    membersList.appendChild(item);
+  } else {
+    memberIds.forEach(memberId => {
+      const item = document.createElement("li");
+
+      const roleLabel = document.createElement("span");
+      roleLabel.textContent = memberId === tree.ownerId ? "Owner" : "Member";
+      item.appendChild(roleLabel);
+
+      const name = document.createElement("strong");
+      name.textContent = getMemberLabel(memberId, memberProfiles);
+      item.append(" ");
+      item.appendChild(name);
+
+      const id = document.createElement("code");
+      id.textContent = memberId;
+      item.append(" ");
+      item.appendChild(id);
+
+      if (isOwner && memberId !== tree.ownerId) {
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "text-action remove-member-button";
+        removeButton.dataset.memberId = memberId;
+        removeButton.textContent = "Remove";
+        item.append(" ");
+        item.appendChild(removeButton);
       }
-    </div>
-  `;
+
+      membersList.appendChild(item);
+    });
+  }
+
+  memberDetails.appendChild(membersList);
+  detailsWrap.appendChild(memberDetails);
+
+  const cardStatus = document.createElement("p");
+  cardStatus.className = "family-tree-card-status";
+  cardStatus.setAttribute("aria-live", "polite");
+  detailsWrap.appendChild(cardStatus);
+
+  article.appendChild(detailsWrap);
+
+  const actions = document.createElement("div");
+  actions.className = "family-tree-card-actions";
+
+  const openLink = document.createElement("a");
+  openLink.className = "button";
+  openLink.href = `/tree?familyId=${encodeURIComponent(tree.id)}`;
+  openLink.textContent = "Open Tree";
+  actions.appendChild(openLink);
+
+  const searchLink = document.createElement("a");
+  searchLink.className = "button button-secondary";
+  searchLink.href = `/search?familyId=${encodeURIComponent(tree.id)}`;
+  searchLink.textContent = "Search";
+  actions.appendChild(searchLink);
+
+  const dangerButton = document.createElement("button");
+  dangerButton.type = "button";
+  dangerButton.className = isOwner
+    ? "button danger-button archive-tree-button"
+    : "button danger-button leave-tree-button";
+  dangerButton.textContent = isOwner ? "Archive" : "Leave";
+  actions.appendChild(dangerButton);
+
+  article.appendChild(actions);
 
   article.querySelectorAll("a").forEach(link => {
     link.addEventListener("click", () => setFamilyId(tree.id));
@@ -329,7 +422,7 @@ function setupTreeCardActions(card, tree, isOwner) {
 async function loadFamilyTrees(user) {
   if (!listEl) return;
   currentUser = user;
-  listEl.innerHTML = "";
+  listEl.replaceChildren();
 
   if (!user) {
     setStatus("Sign in to see your private family trees.");

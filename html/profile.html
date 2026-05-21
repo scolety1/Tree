@@ -34,6 +34,7 @@
       <!-- RIGHT: DETAILS -->
       <div class="profile-details">
         <h1 id="name">Loading...</h1>
+        <p id="profileStatus" class="form-status profile-status" aria-live="polite"></p>
 
         <p class="profileInfo">
           <strong>Birth Day: </strong>
@@ -66,7 +67,7 @@
         </p>
 
         <div class="profile-buttons">
-          <a href="/tree" class="button profile-btn secondary">
+          <a id="profileBackLink" href="/tree" class="button profile-btn secondary">
             Back to Family Tree
           </a>
           <button id="deletePersonBtn" class="button profile-btn danger">

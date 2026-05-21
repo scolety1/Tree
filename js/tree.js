@@ -71,6 +71,7 @@ function createPersonCard(person, familyId = null) {
   if (familyId) {
     profileUrl += `&familyId=${encodeURIComponent(familyId)}`;
   }
+  profileUrl += "&from=tree";
   link.href = profileUrl;
   link.style.textDecoration = "none";
   link.style.color = "inherit";
@@ -79,13 +80,39 @@ function createPersonCard(person, familyId = null) {
   const card = document.createElement("div");
   card.className = "person-card";
 
-  card.innerHTML = `
-    <h3>${fullTitleName}</h3>
-    <p>Born: ${formattedDate}</p>
-  `;
+  const media = document.createElement("div");
+  media.className = "person-card-media";
+
+  if (person.image) {
+    const image = document.createElement("img");
+    image.src = person.image;
+    image.alt = "";
+    image.loading = "lazy";
+    media.appendChild(image);
+  } else {
+    const initials = document.createElement("span");
+    initials.textContent = getInitials(person);
+    media.appendChild(initials);
+  }
+
+  card.appendChild(media);
+
+  const heading = document.createElement("h3");
+  heading.textContent = fullTitleName || "Unnamed";
+  card.appendChild(heading);
+
+  const born = document.createElement("p");
+  born.textContent = `Born: ${formattedDate}`;
+  card.appendChild(born);
 
   link.appendChild(card);
   return link;
+}
+
+function getInitials(person) {
+  const first = person.firstName ? String(person.firstName).trim().charAt(0) : "";
+  const last = person.lastName ? String(person.lastName).trim().charAt(0) : "";
+  return `${first}${last}`.toUpperCase() || "?";
 }
 
 /* ---------------------------
@@ -395,7 +422,7 @@ async function loadFamilyTree() {
   await updateTreeTitle(familyId);
 
   if (await isFamilyArchived(familyId)) {
-    treeLayout.innerHTML = "<p>This family tree has been archived.</p>";
+    setTreeMessage(treeLayout, "This family tree has been archived.");
     return;
   }
 
@@ -407,13 +434,13 @@ async function loadFamilyTree() {
     }
   }
 
-  treeLayout.innerHTML = "<p>Loading family tree...</p>";
+  setTreeMessage(treeLayout, "Loading family tree...");
 
   try {
     const allPeople = await getAllPeople(familyId);
 
     if (!allPeople || allPeople.length === 0) {
-      treeLayout.innerHTML = "<p>No family members found in the database.</p>";
+      setTreeMessage(treeLayout, "No family members found in the database.");
       return;
     }
 
@@ -421,7 +448,7 @@ async function loadFamilyTree() {
     const genMap = groupByGeneration(allPeople);
     const genKeys = sortGenerationKeys(genMap);
 
-    treeLayout.innerHTML = ""; // clear loading text
+    treeLayout.replaceChildren(); // clear loading text
 
     genKeys.forEach((genNumber) => {
       const peopleInGen = genMap.get(genNumber) || [];
@@ -433,8 +460,15 @@ async function loadFamilyTree() {
     drawParentChildLines(lastRenderedPeople);
   } catch (err) {
     console.error("Error loading family tree:", err);
-    treeLayout.innerHTML = "<p>Error loading family tree.</p>";
+    setTreeMessage(treeLayout, "Error loading family tree.");
   }
+}
+
+function setTreeMessage(treeLayout, message) {
+  treeLayout.replaceChildren();
+  const p = document.createElement("p");
+  p.textContent = message;
+  treeLayout.appendChild(p);
 }
 
 /* ---------------------------
@@ -464,7 +498,7 @@ function setupCopyCode() {
           range.selectNode(joinCodeValue);
           window.getSelection().removeAllRanges();
           window.getSelection().addRange(range);
-          alert("Code selected. Press Ctrl+C to copy.");
+          joinCodeValue.title = "Code selected. Press Ctrl+C to copy.";
         }
       }
     });

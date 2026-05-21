@@ -18,6 +18,7 @@ function createResultCard(person, familyId = null) {
   if (familyId) {
     profileUrl += `&familyId=${encodeURIComponent(familyId)}`;
   }
+  profileUrl += "&from=search";
   link.href = profileUrl;
   link.className = "person-card search-result-card";
   link.style.textDecoration = "none";
@@ -35,15 +36,19 @@ function createResultCard(person, familyId = null) {
 
   const fullTitleName = toTitleFullName(person.firstName, person.lastName);
 
-  link.innerHTML = `
-    <h3>${fullTitleName}</h3>
-    <p>Born: ${formattedDate}</p>
-    ${
-      person.generation != null
-        ? `<p>Generation: ${person.generation}</p>`
-        : ""
-    }
-  `;
+  const heading = document.createElement("h3");
+  heading.textContent = fullTitleName || "Unnamed";
+  link.appendChild(heading);
+
+  const born = document.createElement("p");
+  born.textContent = `Born: ${formattedDate}`;
+  link.appendChild(born);
+
+  if (person.generation != null) {
+    const generation = document.createElement("p");
+    generation.textContent = `Generation: ${person.generation}`;
+    link.appendChild(generation);
+  }
 
   return link;
 }
@@ -52,11 +57,13 @@ function createResultCard(person, familyId = null) {
  * Core search logic: filter allPeople and render results.
  */
 function runSearch(rawQuery, resultsContainer) {
-  resultsContainer.innerHTML = "";
+  resultsContainer.replaceChildren();
 
   const trimmed = rawQuery.trim();
   if (!trimmed) {
-    resultsContainer.innerHTML = "<p>Type a name above to search.</p>";
+    const empty = document.createElement("p");
+    empty.textContent = "Type a name above to search.";
+    resultsContainer.appendChild(empty);
     return;
   }
 
@@ -69,7 +76,11 @@ function runSearch(rawQuery, resultsContainer) {
 
 
   if (matches.length === 0) {
-    resultsContainer.innerHTML = `<p>No results for "<strong>${trimmed}</strong>".</p>`;
+    const noResults = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = trimmed;
+    noResults.append("No results for ", strong, ".");
+    resultsContainer.appendChild(noResults);
     return;
   }
 
@@ -103,7 +114,10 @@ async function initSearchPage() {
     allPeople = await getAllPeople(currentFamilyId);
   } catch (err) {
     console.error("Error loading people for search:", err);
-    resultsContainer.innerHTML = "<p>Error loading search data.</p>";
+    resultsContainer.replaceChildren();
+    const error = document.createElement("p");
+    error.textContent = "Error loading search data.";
+    resultsContainer.appendChild(error);
     return;
   }
 

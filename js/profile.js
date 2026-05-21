@@ -25,17 +25,38 @@ import {
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
 } from "./helpers.js";
+import { getCurrentUser, watchAuth } from "./auth.js";
 
 
 let personId = null;
 let familyId = null;
 let collectionName = "example";
 let allPeople = [];
+let currentAuthUser = getCurrentUser();
+let profileSource = "tree";
+
+function setProfileStatus(message) {
+  const status = document.getElementById("profileStatus");
+  if (status) status.textContent = message;
+}
+
+function setEditingAvailable(isAvailable) {
+  const editBtn = document.getElementById("editPersonBtn");
+  const deleteBtn = document.getElementById("deletePersonBtn");
+
+  [editBtn, deleteBtn].forEach(button => {
+    if (button) button.hidden = !isAvailable;
+  });
+}
 
 function fillRelationshipSelect(select, people, selectedId, placeholder) {
   if (!select) return;
 
-  select.innerHTML = `<option value="">${placeholder}</option>`;
+  select.replaceChildren();
+  const emptyOption = document.createElement("option");
+  emptyOption.value = "";
+  emptyOption.textContent = placeholder;
+  select.appendChild(emptyOption);
 
   people
     .filter(person => person.id !== personId)
@@ -53,15 +74,43 @@ function resolveLegacyPersonId(name) {
   return findPersonByNameString(name, allPeople)?.id || "";
 }
 
+function getDirectParentIds(person) {
+  if (!person) return [];
+
+  const parentIds = Array.isArray(person.parentIds) ? person.parentIds.filter(Boolean) : [];
+  if (parentIds.length > 0) return parentIds;
+
+  return [person.parent1, person.parent2]
+    .filter(Boolean)
+    .map(parentName => resolveLegacyPersonId(parentName))
+    .filter(Boolean);
+}
+
+function isDescendantOf(candidateId, ancestorId, visited = new Set()) {
+  if (!candidateId || !ancestorId || visited.has(candidateId)) return false;
+  visited.add(candidateId);
+
+  const candidate = allPeople.find(person => person.id === candidateId);
+  if (!candidate) return false;
+
+  const parentIds = getDirectParentIds(candidate);
+  if (parentIds.includes(ancestorId)) return true;
+
+  return parentIds.some(parentId => isDescendantOf(parentId, ancestorId, visited));
+}
+
 async function loadProfile() {
   const params = new URLSearchParams(window.location.search);
   personId = params.get("person");
+  profileSource = params.get("from") === "search" ? "search" : "tree";
   
   familyId = params.get("familyId") || getFamilyIdFromHelper();
+  updateBackLink();
 
   if (!personId) {
     document.getElementById("name").textContent =
       "No person ID provided in URL.";
+    setEditingAvailable(false);
     return;
   }
 
@@ -75,11 +124,13 @@ async function loadProfile() {
 
       if (!docSnap.exists()) {
         document.getElementById("name").textContent = "Profile not found in this family tree.";
+        setEditingAvailable(false);
         return;
       }
 
       if (docSnap.exists() && docSnap.data().familyId !== familyId) {
         document.getElementById("name").textContent = "Profile not found in this family tree.";
+        setEditingAvailable(false);
         return;
       }
     }
@@ -94,6 +145,7 @@ async function loadProfile() {
 
     if (!docSnap.exists()) {
       document.getElementById("name").textContent = "Profile not found.";
+      setEditingAvailable(false);
       return;
     }
 
@@ -103,7 +155,10 @@ async function loadProfile() {
 
     if (!familyId && data.familyId) {
       familyId = data.familyId;
+      updateBackLink();
     }
+
+    setEditingAvailable(Boolean(familyId && (currentAuthUser || getCurrentUser())));
 
     // NAME
     const fullName = toTitleFullName(data.firstName || "", data.lastName || "");
@@ -254,7 +309,21 @@ async function loadProfile() {
     console.error("Error loading profile:", error);
     document.getElementById("name").textContent =
       "Error loading profile.";
+    setEditingAvailable(false);
   }
+}
+
+function updateBackLink() {
+  const backLink = document.getElementById("profileBackLink");
+  if (!backLink) return;
+
+  const path = profileSource === "search" ? "/search" : "/tree";
+  const label = profileSource === "search" ? "Back to Search" : "Back to Family Tree";
+
+  backLink.textContent = label;
+  backLink.href = familyId
+    ? `${path}?familyId=${encodeURIComponent(familyId)}`
+    : path;
 }
 
 
@@ -266,6 +335,11 @@ if (editForm) {
     e.preventDefault();
     if (!personId) {
       console.error("No personId set for editing");
+      return;
+    }
+
+    if (!familyId || !getCurrentUser()) {
+      setProfileStatus("Sign in and open a private family tree before editing people.");
       return;
     }
 
@@ -288,7 +362,15 @@ if (editForm) {
     const selectedParent2 = allPeople.find(person => person.id === parent2Id);
     const selectedSpouse = allPeople.find(person => person.id === spouseId);
     if (parent1Id && parent2Id && parent1Id === parent2Id) {
-      alert("Choose two different parents, or leave one blank.");
+      setProfileStatus("Choose two different parents, or leave one blank.");
+      return;
+    }
+
+    if (
+      (parent1Id && isDescendantOf(parent1Id, personId)) ||
+      (parent2Id && isDescendantOf(parent2Id, personId))
+    ) {
+      setProfileStatus("Choose someone who is not already this person's child or descendant.");
       return;
     }
 
@@ -328,7 +410,7 @@ if (editForm) {
             imageUrl = await getDownloadURL(imageRef);
         } catch (err) {
             console.error("Error uploading image:", err);
-            alert("Image upload failed, but other changes will still be saved.");
+            setProfileStatus("Image upload failed, but the rest of the profile can still be saved.");
         }
     }
 
@@ -349,17 +431,18 @@ if (editForm) {
     if (imageUrl)           personData.image = imageUrl;
 
     try {
+      setProfileStatus("Saving profile...");
       const personRef = doc(db, collectionName, personId);
       await updateDoc(personRef, personData);
 
-      alert("Person updated! Reloading profile...");
+      setProfileStatus("Profile saved. Reloading...");
       const modal = document.getElementById("editPersonModal");
       if (modal) modal.style.display = "none";
 
       window.location.reload();
     } catch (error) {
       console.error("Error updating person:", error);
-      alert("Something went wrong while saving changes.");
+      setProfileStatus("Something went wrong while saving changes.");
     }
   });
 }
@@ -419,6 +502,10 @@ document
   .getElementById("deletePersonBtn")
   .addEventListener("click", async () => {
     if (!personId) return;
+    if (!familyId || !getCurrentUser()) {
+      setProfileStatus("Sign in and open a private family tree before removing people.");
+      return;
+    }
 
     const confirmDelete = confirm(
       "Are you sure you want to delete this person? This action cannot be undone."
@@ -426,16 +513,20 @@ document
     if (!confirmDelete) return;
 
     try {
+      setProfileStatus("Removing person...");
       await deleteDoc(doc(db, collectionName, personId));
-      alert("Person removed successfully.");
       const redirectUrl = familyId ? `/tree?familyId=${familyId}` : "/tree";
       window.location.href = redirectUrl;
     } catch (error) {
       console.error("Error deleting person:", error);
-      alert("Failed to delete this person.");
+      setProfileStatus("Failed to delete this person.");
     }
   });
 
 // Load the profile when the page opens
 loadProfile();
 setupEditPersonModal();
+watchAuth((user) => {
+  currentAuthUser = user;
+  setEditingAvailable(Boolean(familyId && personId && user));
+});

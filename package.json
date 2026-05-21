@@ -1,0 +1,15 @@
+{
+  "name": "family-tree-birthday-release",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static Firebase-powered family tree app for the birthday release.",
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "check:js": "node scripts/check.mjs --js",
+    "check:safety": "node scripts/check.mjs --safety"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

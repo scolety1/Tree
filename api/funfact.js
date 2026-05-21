@@ -23,14 +23,17 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Parse and validate month and day as integers
-    const monthNum = parseInt(month, 10);
-    const dayNum = parseInt(day, 10);
+    // Parse and validate month and day as exact integers.
+    const monthText = String(month);
+    const dayText = String(day);
 
-    if (isNaN(monthNum) || isNaN(dayNum)) {
-      res.status(400).json({ error: 'Month and day must be valid numbers' });
+    if (!/^\d+$/.test(monthText) || !/^\d+$/.test(dayText)) {
+      res.status(400).json({ error: 'Month and day must be whole numbers' });
       return;
     }
+
+    const monthNum = Number(monthText);
+    const dayNum = Number(dayText);
 
     if (monthNum < 1 || monthNum > 12) {
       res.status(400).json({ error: 'Month must be between 1 and 12' });
@@ -39,6 +42,15 @@ export default async function handler(req, res) {
 
     if (dayNum < 1 || dayNum > 31) {
       res.status(400).json({ error: 'Day must be between 1 and 31' });
+      return;
+    }
+
+    const testDate = new Date(Date.UTC(2024, monthNum - 1, dayNum));
+    if (
+      testDate.getUTCMonth() !== monthNum - 1 ||
+      testDate.getUTCDate() !== dayNum
+    ) {
+      res.status(400).json({ error: 'Month and day must form a real calendar date' });
       return;
     }
 

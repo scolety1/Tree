@@ -10,10 +10,45 @@ import {
   getCurrentFamilyId,
   getDisplayName,
 } from "./helpers.js";
+import { getCurrentUser, watchAuth } from "./auth.js";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
 let peopleOptions = [];
+let currentUser = getCurrentUser();
+
+function setStatus(message) {
+  if (statusEl) statusEl.textContent = message;
+}
+
+function setAddFormDisabled(disabled) {
+  if (!form) return;
+  form.querySelectorAll("input, select, button").forEach(control => {
+    control.disabled = disabled;
+  });
+}
+
+function updateAddFormAvailability(user = getCurrentUser()) {
+  if (!form) return;
+
+  currentUser = user;
+  const familyId = getCurrentFamilyId();
+
+  if (!familyId) {
+    setAddFormDisabled(true);
+    setStatus("The example tree is read-only. Sign in and open a private tree to add people.");
+    return;
+  }
+
+  if (!user) {
+    setAddFormDisabled(true);
+    setStatus("Sign in to add people to this family tree.");
+    return;
+  }
+
+  setAddFormDisabled(false);
+  setStatus("");
+}
 
 function getSelectedPerson(selectId) {
   const select = document.getElementById(selectId);
@@ -29,7 +64,12 @@ function populateRelationshipSelects(people) {
   selects.forEach(select => {
     const currentValue = select.value;
     const placeholder = select.querySelector("option[value='']")?.textContent || "Select Person";
-    select.innerHTML = `<option value="">${placeholder}</option>`;
+    select.replaceChildren();
+
+    const emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = placeholder;
+    select.appendChild(emptyOption);
 
     people.forEach(person => {
       const option = document.createElement("option");
@@ -45,13 +85,26 @@ function populateRelationshipSelects(people) {
 async function refreshRelationshipOptions() {
   if (!form) return;
   const familyId = getCurrentFamilyId();
+  if (!familyId) {
+    peopleOptions = [];
+    populateRelationshipSelects(peopleOptions);
+    return;
+  }
+
   peopleOptions = await getAllPeople(familyId);
   populateRelationshipSelects(peopleOptions);
 }
 
-refreshRelationshipOptions().catch(error => {
-  console.error("Error loading relationship options:", error);
-});
+if (form) {
+  updateAddFormAvailability(currentUser);
+  watchAuth((user) => {
+    updateAddFormAvailability(user);
+    refreshRelationshipOptions().catch(error => {
+      console.error("Error loading relationship options:", error);
+      setStatus("Could not load relationship options.");
+    });
+  });
+}
 
 if(form) {
   form.addEventListener("submit", async (e) => {
@@ -62,6 +115,19 @@ if(form) {
 
     // Get familyId from URL if present
     const familyId = getCurrentFamilyId();
+    const user = currentUser || getCurrentUser();
+
+    if (!familyId) {
+      setStatus("The example tree is read-only. Open a private tree to add people.");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+
+    if (!user) {
+      setStatus("Sign in to add people to this family tree.");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
 
     // ----- GET & CLEAN INPUT VALUES -----
     const rawFirstName   = document.getElementById("firstName").value.trim();
@@ -73,7 +139,7 @@ if(form) {
     const birthDateRaw   = document.getElementById("birthDate").value; // "YYYY-MM-DD"
 
     if (selectedParent1 && selectedParent2 && selectedParent1.id === selectedParent2.id) {
-      if (statusEl) statusEl.textContent = "Choose two different parents, or leave one blank.";
+      setStatus("Choose two different parents, or leave one blank.");
       if (submitButton) submitButton.disabled = false;
       return;
     }
@@ -132,14 +198,14 @@ if(form) {
       await addDoc(collection(db, collectionName), personData);
       form.reset();
       await refreshRelationshipOptions();
-      if (statusEl) statusEl.textContent = "Saved. The tree has been updated.";
+      setStatus("Saved. The tree has been updated.");
       window.dispatchEvent(new CustomEvent("person-added"));
     } catch (error) {
       console.error("Error adding person:", error);
-      if (statusEl) statusEl.textContent = "Something went wrong while saving.";
-      alert("Something went wrong while saving to Firestore.");
+      setStatus("Something went wrong while saving. Check that you are signed in and have access to this tree.");
     } finally {
       if (submitButton) submitButton.disabled = false;
+      updateAddFormAvailability();
     }
   });
   

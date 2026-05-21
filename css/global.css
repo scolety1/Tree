@@ -9,6 +9,10 @@ body {
     text-align: center;
 }
 
+* {
+    box-sizing: border-box;
+}
+
 
 /* ===== HEADER & NAVIGATION ===== */
 
@@ -143,10 +147,21 @@ p {
     text-decoration: none;
     border-radius: 6px;
     transition: background-color 0.25s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .button:hover {
     background-color: #395a8f;
+}
+
+.button:disabled,
+button:disabled,
+input:disabled,
+textarea:disabled,
+select:disabled {
+    cursor: not-allowed;
+    opacity: 0.68;
 }
 
 .danger-button {
@@ -208,7 +223,7 @@ p {
     margin: auto;
     padding: 20px;
     border-radius: 10px;
-    width: 320px;
+    width: min(92vw, 360px);
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     position: relative;
 }
@@ -474,6 +489,85 @@ p {
 .form-status {
     min-height: 1.2rem;
     margin: 0 0 12px;
-    color: #374151;
+    color: #dbeafe;
     font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.family-tree-card .form-status,
+.modal-content .form-status {
+    color: #374151;
+}
+
+@media (max-width: 640px) {
+    body {
+        text-align: left;
+    }
+
+    header,
+    footer,
+    .auth-status {
+        text-align: center;
+    }
+
+    header {
+        position: static;
+    }
+
+    .nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 0 12px;
+    }
+
+    .nav a {
+        width: 100%;
+        min-width: 0;
+        padding: 10px 8px;
+    }
+
+    main {
+        padding: 18px 12px;
+    }
+
+    .button {
+        margin: 10px 0;
+        text-align: center;
+    }
+
+    #addPersonBtn {
+        width: 52px;
+        height: 52px;
+        font-size: 30px;
+        right: 14px;
+        bottom: 14px;
+    }
+
+    .dashboard-hero,
+    .dashboard-section {
+        margin: 12px auto 24px;
+    }
+
+    .dashboard-hero {
+        padding: 20px;
+    }
+
+    .dashboard-actions,
+    .family-tree-card-actions {
+        flex-direction: column;
+    }
+
+    .dashboard-actions .button,
+    .family-tree-card-actions .button,
+    .family-tree-card-actions button {
+        width: 100%;
+    }
+
+    .family-tree-list {
+        grid-template-columns: 1fr;
+    }
+
+    .family-tree-card {
+        padding: 18px;
+    }
 }

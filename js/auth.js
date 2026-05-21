@@ -87,7 +87,8 @@ function setupSignOutButton() {
       await signOutCurrentUser();
     } catch (error) {
       console.error("Error signing out:", error);
-      alert("Could not sign out. Please try again.");
+      const authStatus = document.getElementById("authStatus");
+      if (authStatus) authStatus.textContent = "Could not sign out. Please try again.";
     }
   });
 }

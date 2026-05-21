@@ -1,4 +1,70 @@
 {
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "api/**",
+      "scripts/**",
+      "*.md",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "storage.rules",
+      "package.json",
+      "package-lock.json",
+      "vercel.json"
+    ],
+    "rewrites": [
+      {
+        "source": "/",
+        "destination": "/html/home_page.html"
+      },
+      {
+        "source": "/home",
+        "destination": "/html/home_page.html"
+      },
+      {
+        "source": "/tree",
+        "destination": "/html/tree_page.html"
+      },
+      {
+        "source": "/search",
+        "destination": "/html/search_page.html"
+      },
+      {
+        "source": "/profile",
+        "destination": "/html/profile.html"
+      },
+      {
+        "source": "/signin",
+        "destination": "/html/signin.html"
+      },
+      {
+        "source": "/dashboard",
+        "destination": "/html/dashboard.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "X-XSS-Protection",
+            "value": "1; mode=block"
+          }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
