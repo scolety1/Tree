@@ -1,15 +1,11 @@
 // js/home.js
-import { db } from "./firebase.js?v=20260521-5";
+import { db } from "./firebase.js?v=20260521-6";
 import {
   addDoc,
   collection,
   doc,
   Timestamp,
-  query,
-  where,
-  getDocs,
   getDoc,
-  limit,
   setDoc,
   updateDoc,
   arrayUnion
@@ -19,8 +15,8 @@ import {
     generateAccessCode,
     normalizeAccessCode,
     setFamilyId,
-} from "./helpers.js?v=20260521-5";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
+} from "./helpers.js?v=20260521-6";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-6";
 
 const createTreeBtn      = document.getElementById("createTreeBtn");
 const joinTreeBtn        = document.getElementById("joinTreeBtn");
@@ -195,7 +191,6 @@ if (joinFamilyForm) {
     try{
       setFormBusy(joinFamilyForm, true);
       setFamilyFormStatus("Checking that access code...");
-      const familiesRef = collection(db, "families");
       const joinCodeRef = doc(db, "joinCodes", code);
       const joinCodeSnap = await getDoc(joinCodeRef);
       let familyId = null;
@@ -204,28 +199,13 @@ if (joinFamilyForm) {
         familyId = joinCodeSnap.data().familyId;
       }
 
-      // Legacy fallback for family trees created before joinCodes existed.
-      const q = query(
-        familiesRef,
-        where("joinCode", "==", code),
-        limit(1)
-      );
-
-      const snap = familyId ? null : await getDocs(q);
-
-      if (!familyId && snap.empty) {
+      if (!familyId) {
         setFamilyFormStatus("No family tree found with that access code. Double-check it and try again.");
         return;
       }
 
-      if (!familyId) {
-        const familyDoc = snap.docs[0];
-        familyId = familyDoc.id;
-      }
-
       await updateDoc(doc(db, "families", familyId), {
-        memberIds: arrayUnion(user.uid),
-        [`memberRoles.${user.uid}`]: "editor"
+        memberIds: arrayUnion(user.uid)
       });
 
       setFamilyId(familyId);

@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-5";
+import { db } from "./firebase.js?v=20260521-6";
 import {
   addDoc,
   collection,
@@ -16,13 +16,15 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260521-5";
+import { watchAuth } from "./auth.js?v=20260521-6";
 import {
   ACCESS_CODE_LENGTH,
+  canEditFamily,
   generateAccessCode,
+  getFamilyRole,
   getStoredFamilyId,
   setFamilyId,
-} from "./helpers.js?v=20260521-5";
+} from "./helpers.js?v=20260521-6";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
@@ -44,6 +46,18 @@ function setStatus(message) {
   if (statusEl) statusEl.textContent = message;
 }
 
+function getRoleLabel(role) {
+  if (role === "owner") return "Owner";
+  if (role === "editor") return "Editor";
+  if (role === "viewer" || role === "member") return "Viewer";
+  return "Guest";
+}
+
+function getMemberRole(tree, memberId) {
+  if (memberId === tree.ownerId) return "owner";
+  return tree.memberRoles?.[memberId] === "editor" ? "editor" : "viewer";
+}
+
 async function generateAvailableJoinCode() {
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = generateAccessCode(ACCESS_CODE_LENGTH);
@@ -60,9 +74,11 @@ function createTreeCard(tree) {
   article.dataset.familyId = tree.id;
 
   const createdAt = formatDate(tree.createdAt);
-  const role = tree.memberRoles?.[tree.currentUserId] || (tree.ownerId === tree.currentUserId ? "owner" : "member");
+  const role = getFamilyRole(tree, { uid: tree.currentUserId });
   const isOwner = role === "owner" || tree.ownerId === tree.currentUserId;
+  const canEdit = canEditFamily(tree, { uid: tree.currentUserId });
   const memberCount = tree.memberIds.length;
+  const peopleCount = Number.isInteger(tree.peopleCount) ? tree.peopleCount : null;
   const memberProfiles = tree.memberProfiles || new Map();
 
   const form = document.createElement("form");
@@ -103,17 +119,27 @@ function createTreeCard(tree) {
 
   const meta = document.createElement("p");
   meta.className = "family-tree-meta";
-  meta.textContent = [role ? `Your role: ${role}` : "", createdAt ? `Created ${createdAt}` : ""]
+  meta.textContent = [role ? `Your role: ${getRoleLabel(role)}` : "", createdAt ? `Created ${createdAt}` : ""]
     .filter(Boolean)
     .join(" ");
   detailsWrap.appendChild(meta);
 
+  const accessMeta = document.createElement("p");
+  accessMeta.className = "family-tree-meta";
+  accessMeta.textContent = canEdit
+    ? "Editing enabled for this account."
+    : "View-only access for this account.";
+  detailsWrap.appendChild(accessMeta);
+
   const membersMeta = document.createElement("p");
   membersMeta.className = "family-tree-meta";
-  membersMeta.textContent = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
+  membersMeta.textContent = [
+    `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
+    peopleCount == null ? "" : `${peopleCount} ${peopleCount === 1 ? "person" : "people"}`,
+  ].filter(Boolean).join(" · ");
   detailsWrap.appendChild(membersMeta);
 
-  if (tree.joinCode) {
+  if (isOwner && tree.joinCode) {
     const code = document.createElement("p");
     code.className = "family-tree-code";
     code.append("Access code: ");
@@ -130,14 +156,12 @@ function createTreeCard(tree) {
     code.append(" ");
     code.appendChild(copyButton);
 
-    if (isOwner) {
-      const resetButton = document.createElement("button");
-      resetButton.type = "button";
-      resetButton.className = "text-action reset-code-button";
-      resetButton.textContent = "Reset";
-      code.append(" ");
-      code.appendChild(resetButton);
-    }
+    const resetButton = document.createElement("button");
+    resetButton.type = "button";
+    resetButton.className = "text-action reset-code-button";
+    resetButton.textContent = "Reset";
+    code.append(" ");
+    code.appendChild(resetButton);
 
     detailsWrap.appendChild(code);
   }
@@ -159,8 +183,9 @@ function createTreeCard(tree) {
     memberIds.forEach(memberId => {
       const item = document.createElement("li");
 
+      const memberRole = getMemberRole(tree, memberId);
       const roleLabel = document.createElement("span");
-      roleLabel.textContent = memberId === tree.ownerId ? "Owner" : "Member";
+      roleLabel.textContent = getRoleLabel(memberRole);
       item.appendChild(roleLabel);
 
       const name = document.createElement("strong");
@@ -168,10 +193,25 @@ function createTreeCard(tree) {
       item.append(" ");
       item.appendChild(name);
 
-      const id = document.createElement("code");
-      id.textContent = memberId;
-      item.append(" ");
-      item.appendChild(id);
+      if (isOwner && memberId !== tree.ownerId) {
+        const roleSelect = document.createElement("select");
+        roleSelect.className = "member-role-select";
+        roleSelect.dataset.memberId = memberId;
+        roleSelect.setAttribute("aria-label", `Access for ${getMemberLabel(memberId, memberProfiles)}`);
+
+        [
+          ["viewer", "Can view only"],
+          ["editor", "Can edit people and photos"],
+        ].forEach(([value, label]) => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = label;
+          roleSelect.appendChild(option);
+        });
+
+        roleSelect.value = memberRole === "editor" ? "editor" : "viewer";
+        item.appendChild(roleSelect);
+      }
 
       if (isOwner && memberId !== tree.ownerId) {
         const removeButton = document.createElement("button");
@@ -212,13 +252,15 @@ function createTreeCard(tree) {
   searchLink.textContent = "Search People";
   actions.appendChild(searchLink);
 
-  const dangerButton = document.createElement("button");
-  dangerButton.type = "button";
-  dangerButton.className = isOwner
-    ? "button danger-button archive-tree-button"
-    : "button danger-button leave-tree-button";
-  dangerButton.textContent = isOwner ? "Archive" : "Leave";
-  actions.appendChild(dangerButton);
+  if (isOwner || role !== "guest") {
+    const dangerButton = document.createElement("button");
+    dangerButton.type = "button";
+    dangerButton.className = isOwner
+      ? "button danger-button archive-tree-button"
+      : "button danger-button leave-tree-button";
+    dangerButton.textContent = isOwner ? "Archive" : "Leave";
+    actions.appendChild(dangerButton);
+  }
 
   article.appendChild(actions);
 
@@ -306,6 +348,21 @@ async function loadMemberProfiles(memberIds) {
   return new Map(entries);
 }
 
+async function loadPeopleCount(familyId) {
+  if (!familyId) return null;
+
+  try {
+    const peopleSnap = await getDocs(query(
+      collection(db, "people"),
+      where("familyId", "==", familyId)
+    ));
+    return peopleSnap.size;
+  } catch (error) {
+    console.warn("Could not load people count:", error);
+    return null;
+  }
+}
+
 function normalizeMemberIds(data, user) {
   const ids = new Set(Array.isArray(data.memberIds) ? data.memberIds : []);
 
@@ -335,6 +392,10 @@ async function createTreeFromDoc(docSnap, user) {
   const data = docSnap.data();
   const memberIds = normalizeMemberIds(data, user);
   const memberRoles = normalizeMemberRoles(data, user);
+  const [memberProfiles, peopleCount] = await Promise.all([
+    loadMemberProfiles(memberIds),
+    loadPeopleCount(docSnap.id),
+  ]);
 
   return {
     ...data,
@@ -342,7 +403,8 @@ async function createTreeFromDoc(docSnap, user) {
     currentUserId: user.uid,
     memberIds,
     memberRoles,
-    memberProfiles: await loadMemberProfiles(memberIds),
+    memberProfiles,
+    peopleCount,
     needsMembershipRepair: data.ownerId === user.uid && !Array.isArray(data.memberIds),
     needsRoleRepair: data.ownerId === user.uid && data.memberRoles?.[user.uid] !== "owner",
     needsJoinCodeRepair: data.ownerId === user.uid && !data.joinCode,
@@ -565,6 +627,34 @@ async function removeMember(card, tree, memberId) {
   }
 }
 
+async function updateMemberRole(card, tree, memberId, role) {
+  if (!currentUser || tree.ownerId !== currentUser.uid || memberId === tree.ownerId) return;
+
+  const nextRole = role === "editor" ? "editor" : "viewer";
+  setCardStatus(card, "Updating access...");
+
+  try {
+    await updateDoc(doc(db, "families", tree.id), {
+      [`memberRoles.${memberId}`]: nextRole === "editor" ? "editor" : deleteField(),
+    });
+
+    tree.memberRoles = tree.memberRoles || {};
+    if (nextRole === "editor") {
+      tree.memberRoles[memberId] = "editor";
+    } else {
+      delete tree.memberRoles[memberId];
+    }
+
+    const item = card.querySelector(`[data-member-id="${CSS.escape(memberId)}"]`)?.closest("li");
+    const label = item?.querySelector("span");
+    if (label) label.textContent = getRoleLabel(nextRole);
+    setCardStatus(card, nextRole === "editor" ? "Editor access granted." : "Changed to view-only access.");
+  } catch (error) {
+    console.error("Error updating member role:", error);
+    setCardStatus(card, "Could not update access.");
+  }
+}
+
 function setupTreeCardActions(card, tree, isOwner) {
   const form = card.querySelector(".family-tree-edit-form");
   const copyBtn = card.querySelector(".copy-code-button");
@@ -572,6 +662,7 @@ function setupTreeCardActions(card, tree, isOwner) {
   const archiveBtn = card.querySelector(".archive-tree-button");
   const leaveBtn = card.querySelector(".leave-tree-button");
   const removeMemberBtns = card.querySelectorAll(".remove-member-button");
+  const roleSelects = card.querySelectorAll(".member-role-select");
 
   if (form && isOwner) {
     form.addEventListener("submit", (event) => {
@@ -599,6 +690,10 @@ function setupTreeCardActions(card, tree, isOwner) {
   removeMemberBtns.forEach(button => {
     button.addEventListener("click", () => removeMember(card, tree, button.dataset.memberId));
   });
+
+  roleSelects.forEach(select => {
+    select.addEventListener("change", () => updateMemberRole(card, tree, select.dataset.memberId, select.value));
+  });
 }
 
 async function loadFamilyTrees(user) {
@@ -617,12 +712,26 @@ async function loadFamilyTrees(user) {
     const familiesRef = collection(db, "families");
     const memberQuery = query(familiesRef, where("memberIds", "array-contains", user.uid));
     const ownerQuery = query(familiesRef, where("ownerId", "==", user.uid));
-    const [memberSnapshot, ownerSnapshot] = await Promise.all([
+    const queryResults = await Promise.allSettled([
       getDocs(memberQuery),
       getDocs(ownerQuery),
     ]);
 
-    const docs = dedupeTrees([...memberSnapshot.docs, ...ownerSnapshot.docs]);
+    const successfulSnapshots = queryResults
+      .filter(result => result.status === "fulfilled")
+      .map(result => result.value);
+
+    queryResults.forEach(result => {
+      if (result.status === "rejected") {
+        console.warn("Family tree account query failed:", result.reason);
+      }
+    });
+
+    if (successfulSnapshots.length === 0) {
+      throw new Error("No family tree queries were allowed.");
+    }
+
+    const docs = dedupeTrees(successfulSnapshots.flatMap(snapshot => snapshot.docs));
     const storedFamilyId = getStoredFamilyId();
 
     if (storedFamilyId && !docs.some(docSnap => docSnap.id === storedFamilyId)) {

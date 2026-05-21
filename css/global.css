@@ -580,6 +580,36 @@ select:disabled {
     gap: 16px;
 }
 
+.account-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.account-tool-card {
+    min-height: 180px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: var(--shadow-soft);
+}
+
+.account-tool-card::before {
+    content: "";
+    display: block;
+    width: 34px;
+    height: 5px;
+    margin-bottom: 14px;
+    border-radius: 999px;
+    background: var(--gold);
+}
+
+.account-tool-card h3,
+.account-tool-card p {
+    margin-bottom: 10px;
+}
+
 .empty-state {
     display: grid;
     gap: 10px;
@@ -650,6 +680,11 @@ select:disabled {
     gap: 4px;
     padding: 9px 0;
     border-top: 1px solid var(--line);
+}
+
+.member-role-select {
+    width: min(100%, 260px);
+    margin: 4px 0;
 }
 
 .member-details code {
@@ -855,6 +890,7 @@ select:disabled {
     }
 
     .actions-grid,
+    .account-tool-grid,
     .forms-section,
     .instructions-section,
     .dashboard-hero {
@@ -894,6 +930,7 @@ select:disabled {
     }
 
     .action-card,
+    .account-tool-card,
     .instruction-card,
     .form-card,
     .dashboard-hero,

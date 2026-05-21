@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260521-5";
+import { auth, db } from "./firebase.js?v=20260521-6";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-5";
+import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-6";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 
@@ -44,12 +44,20 @@ async function getUserFamilyDocs(user) {
   const familiesRef = collection(db, "families");
   const memberQuery = query(familiesRef, where("memberIds", "array-contains", user.uid));
   const ownerQuery = query(familiesRef, where("ownerId", "==", user.uid));
-  const [memberSnapshot, ownerSnapshot] = await Promise.all([
+  const queryResults = await Promise.allSettled([
     getDocs(memberQuery),
     getDocs(ownerQuery),
   ]);
 
-  const docs = dedupeDocSnaps([...memberSnapshot.docs, ...ownerSnapshot.docs]);
+  queryResults.forEach(result => {
+    if (result.status === "rejected") {
+      console.warn("Family context query failed:", result.reason);
+    }
+  });
+
+  const docs = dedupeDocSnaps(queryResults
+    .filter(result => result.status === "fulfilled")
+    .flatMap(result => result.value.docs));
   const storedFamilyId = getStoredFamilyId();
 
   if (storedFamilyId && !docs.some((docSnap) => docSnap.id === storedFamilyId)) {

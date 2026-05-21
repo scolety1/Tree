@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-5";
+import { db } from "./firebase.js?v=20260521-6";
 import {
   collection,
   getDocs,
@@ -102,6 +102,34 @@ export function normalizeAccessCode(code) {
   return String(code || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
+}
+
+export function normalizeImageUrl(url) {
+  const rawUrl = String(url || "").trim();
+  if (!rawUrl) return "";
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    return parsedUrl.protocol === "https:" ? parsedUrl.toString() : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+export function getFamilyRole(family, user) {
+  if (!family || !user?.uid) return "guest";
+  if (family.ownerId === user.uid) return "owner";
+
+  const role = family.memberRoles?.[user.uid];
+  if (role === "editor") return "editor";
+
+  const memberIds = Array.isArray(family.memberIds) ? family.memberIds : [];
+  return memberIds.includes(user.uid) ? "viewer" : "guest";
+}
+
+export function canEditFamily(family, user) {
+  const role = getFamilyRole(family, user);
+  return role === "owner" || role === "editor";
 }
 
 /* -----------------------------------

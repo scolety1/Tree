@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260521-5">
-    <link rel="stylesheet" href="/css/family_tree.css?v=20260521-5">
+    <link rel="stylesheet" href="/css/global.css?v=20260521-6">
+    <link rel="stylesheet" href="/css/family_tree.css?v=20260521-6">
 
 </head>
 <body>
@@ -73,6 +73,12 @@
                     <input type="text" id="lastName" placeholder="e.g., Colety" required>
                     <label for="birthDate">Birthday (optional)</label>
                     <input type="date" id="birthDate">
+                    <label for="personBio">Bio note (optional)</label>
+                    <textarea id="personBio" rows="3" placeholder="A short memory, nickname, or context for this person"></textarea>
+                    <label for="personImageUrl">Photo URL (optional)</label>
+                    <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg">
+                    <label for="personImageFile">Upload photo (optional)</label>
+                    <input type="file" id="personImageFile" accept="image/*">
                     <label for="parent1">Parent one (optional)</label>
                     <select id="parent1">
                         <option value="">No parent selected</option>
@@ -96,6 +102,6 @@
         <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>
 
-    <script type="module" src="/js/main.js?v=20260521-5"></script>
+    <script type="module" src="/js/main.js?v=20260521-6"></script>
 </body>
 </html>

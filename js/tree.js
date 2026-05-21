@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-5";
+import { db } from "./firebase.js?v=20260521-6";
 import {
   doc,
   getDoc
@@ -6,13 +6,14 @@ import {
 
 import {
   getAllPeople,
+  getFamilyRole,
   groupByGeneration,
   sortGenerationKeys,
   areSpouses,
   toTitleFullName,
   buildFullName
-} from "./helpers.js?v=20260521-5";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-5";
+} from "./helpers.js?v=20260521-6";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-6";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
@@ -483,7 +484,7 @@ function setupTreeDensityControls() {
   });
 }
 
-async function updateTreeTitle(familyId) {
+async function updateTreeTitle(familyId, user = null) {
   const titleEl = document.getElementById("treeTitle");
   const joinCodeDisplay = document.getElementById("joinCodeDisplay");
   const joinCodeValue = document.getElementById("joinCodeValue");
@@ -535,8 +536,10 @@ async function updateTreeTitle(familyId) {
     // Optional: update browser tab title as well
     document.title = data.name || "Our Family Tree";
     
-    // Display join code if available
-    if (joinCodeDisplay && joinCodeValue && data.joinCode) {
+    const canManageInvite = getFamilyRole(data, user) === "owner";
+
+    // Display join code only to the owner. Viewers should not be able to re-share access.
+    if (joinCodeDisplay && joinCodeValue && data.joinCode && canManageInvite) {
       joinCodeValue.textContent = data.joinCode;
       joinCodeDisplay.style.display = "block";
     } else if (joinCodeDisplay) {
@@ -595,7 +598,7 @@ async function loadFamilyTree() {
   }
 
   // Update the title (family name or example)
-  await updateTreeTitle(familyId);
+  await updateTreeTitle(familyId, resolvedFamily.user);
 
   if (!largeDemoMode && await isFamilyArchived(familyId)) {
     setTreeMessage(treeLayout, "This family tree has been archived.");

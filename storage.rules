@@ -12,14 +12,27 @@ service firebase.storage {
 
     function isFamilyMember(familyId) {
       return signedIn()
-        && familyDoc(familyId).data.memberIds is list
-        && request.auth.uid in familyDoc(familyId).data.memberIds;
+        && (
+          familyDoc(familyId).data.ownerId == request.auth.uid
+          || (
+            familyDoc(familyId).data.memberIds is list
+            && request.auth.uid in familyDoc(familyId).data.memberIds
+          )
+        );
+    }
+
+    function isFamilyEditor(familyId) {
+      return signedIn()
+        && (
+          familyDoc(familyId).data.ownerId == request.auth.uid
+          || familyDoc(familyId).data.memberRoles[request.auth.uid] == 'editor'
+        );
     }
 
     match /families/{familyId}/people/{personId}/{fileName} {
       allow read: if isFamilyMember(familyId);
       allow write: if signedIn()
-        && isFamilyMember(familyId)
+        && isFamilyEditor(familyId)
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }

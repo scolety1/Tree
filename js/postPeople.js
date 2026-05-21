@@ -1,16 +1,26 @@
-import { db } from "./firebase.js?v=20260521-5";
+import { db, storage } from "./firebase.js?v=20260521-6";
 import {
   addDoc,
   collection,
+  doc,
+  getDoc,
+  setDoc,
   Timestamp
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/11.9.0/firebase-storage.js";
+import {
   buildFullName,
+  canEditFamily,
   getAllPeople,
   getCurrentFamilyId,
   getDisplayName,
-} from "./helpers.js?v=20260521-5";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
+  normalizeImageUrl,
+} from "./helpers.js?v=20260521-6";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-6";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -23,12 +33,31 @@ function setStatus(message) {
 
 function setAddFormDisabled(disabled) {
   if (!form) return;
-  form.querySelectorAll("input, select, button").forEach(control => {
+  form.querySelectorAll("input, select, textarea, button").forEach(control => {
     control.disabled = disabled;
   });
 }
 
-function updateAddFormAvailability(user = getCurrentUser()) {
+function setAddButtonAvailable(isAvailable) {
+  const addPersonBtn = document.getElementById("addPersonBtn");
+  if (!addPersonBtn) return;
+  addPersonBtn.hidden = !isAvailable;
+  addPersonBtn.disabled = !isAvailable;
+}
+
+async function userCanEditCurrentTree(user, familyId) {
+  if (!user || !familyId) return false;
+
+  try {
+    const familySnap = await getDoc(doc(db, "families", familyId));
+    return familySnap.exists() && canEditFamily(familySnap.data(), user);
+  } catch (error) {
+    console.error("Error checking tree edit access:", error);
+    return false;
+  }
+}
+
+async function updateAddFormAvailability(user = getCurrentUser()) {
   if (!form) return;
 
   currentUser = user;
@@ -36,18 +65,37 @@ function updateAddFormAvailability(user = getCurrentUser()) {
 
   if (!familyId) {
     setAddFormDisabled(true);
+    setAddButtonAvailable(false);
     setStatus("The example tree is read-only. Sign in and open a private tree to add people.");
     return;
   }
 
   if (!user) {
     setAddFormDisabled(true);
+    setAddButtonAvailable(false);
     setStatus("Sign in to add people to this family tree.");
     return;
   }
 
-  setAddFormDisabled(false);
+  const canEdit = await userCanEditCurrentTree(user, familyId);
+  setAddFormDisabled(!canEdit);
+  setAddButtonAvailable(canEdit);
+
+  if (!canEdit) {
+    setStatus("You can view this tree. Ask the owner for editor access before adding people.");
+    return;
+  }
+
   setStatus("");
+}
+
+function refreshAddFormAvailability(user = currentUser) {
+  updateAddFormAvailability(user).catch(error => {
+    console.error("Error updating add form availability:", error);
+    setAddFormDisabled(true);
+    setAddButtonAvailable(false);
+    setStatus("Could not confirm edit access for this tree.");
+  });
 }
 
 function getSelectedPerson(selectId) {
@@ -95,10 +143,23 @@ async function refreshRelationshipOptions() {
   populateRelationshipSelects(peopleOptions);
 }
 
+function safeFileName(fileName) {
+  return String(fileName || "profile-photo")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .slice(0, 90);
+}
+
+async function uploadPersonImage(familyId, personId, imageFile) {
+  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeFileName(imageFile.name)}`;
+  const imageRef = ref(storage, imagePath);
+  await uploadBytes(imageRef, imageFile);
+  return getDownloadURL(imageRef);
+}
+
 if (form) {
-  updateAddFormAvailability(currentUser);
+  refreshAddFormAvailability(currentUser);
   watchAuth((user) => {
-    updateAddFormAvailability(user);
+    refreshAddFormAvailability(user);
     refreshRelationshipOptions().catch(error => {
       console.error("Error loading relationship options:", error);
       setStatus("Could not load relationship options.");
@@ -106,7 +167,7 @@ if (form) {
   });
 
   window.addEventListener("family-id-changed", () => {
-    updateAddFormAvailability(currentUser);
+    refreshAddFormAvailability(currentUser);
     refreshRelationshipOptions().catch(error => {
       console.error("Error loading relationship options:", error);
       setStatus("Could not load relationship options.");
@@ -137,6 +198,12 @@ if(form) {
       return;
     }
 
+    if (!await userCanEditCurrentTree(user, familyId)) {
+      setStatus("You can view this tree, but only the owner and editors can add people.");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+
     // ----- GET & CLEAN INPUT VALUES -----
     const rawFirstName   = document.getElementById("firstName").value.trim();
     const rawMiddleInitial = document.getElementById("middleInitial").value.trim();
@@ -145,6 +212,9 @@ if(form) {
     const selectedParent1 = getSelectedPerson("parent1");
     const selectedParent2 = getSelectedPerson("parent2");
     const birthDateRaw   = document.getElementById("birthDate").value; // "YYYY-MM-DD"
+    const rawBio         = document.getElementById("personBio")?.value.trim() || "";
+    const rawImageUrl    = document.getElementById("personImageUrl")?.value.trim() || "";
+    const imageFile      = document.getElementById("personImageFile")?.files?.[0] || null;
 
     if (!rawFirstName || !rawLastName) {
       setStatus("First and last name are required.");
@@ -166,6 +236,13 @@ if(form) {
     const spouseIds = selectedSpouse ? [selectedSpouse.id] : [];
     const parent1 = selectedParent1 ? buildFullName(selectedParent1.firstName, selectedParent1.lastName) : "";
     const parent2 = selectedParent2 ? buildFullName(selectedParent2.firstName, selectedParent2.lastName) : "";
+    const imageUrl = normalizeImageUrl(rawImageUrl);
+
+    if (rawImageUrl && !imageUrl) {
+      setStatus("Use a secure https:// photo URL, or upload an image file instead.");
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
     
     let spouseFirstName = "";
     let spouseLastName = "";
@@ -201,6 +278,8 @@ if(form) {
     if (spouseFirstName)  personData.spouseFirstName  = spouseFirstName;
     if (spouseLastName)   personData.spouseLastName   = spouseLastName;
     if (spouseIds.length) personData.spouseIds        = spouseIds;
+    if (rawBio)           personData.bio              = rawBio;
+    if (imageUrl)         personData.image            = imageUrl;
     
     if (familyId) {
       personData.familyId = familyId;
@@ -209,7 +288,18 @@ if(form) {
     // ----- SAVE TO FIRESTORE -----
     try {
       const collectionName = familyId ? "people" : "example";
-      await addDoc(collection(db, collectionName), personData);
+      if (imageFile) {
+        const personRef = doc(collection(db, collectionName));
+        try {
+          personData.image = await uploadPersonImage(familyId, personRef.id, imageFile);
+        } catch (error) {
+          console.error("Error uploading person photo:", error);
+          setStatus("Photo upload failed, so the profile is being saved without the photo.");
+        }
+        await setDoc(personRef, personData);
+      } else {
+        await addDoc(collection(db, collectionName), personData);
+      }
       form.reset();
       await refreshRelationshipOptions();
       setStatus(`Saved ${rawFirstName} ${rawLastName}. The tree has been updated.`);
@@ -219,7 +309,7 @@ if(form) {
       setStatus("Something went wrong while saving. Check that you are signed in and have access to this tree.");
     } finally {
       if (submitButton) submitButton.disabled = false;
-      updateAddFormAvailability();
+      refreshAddFormAvailability();
     }
   });
   

@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260521-5";
+import { db, storage } from "./firebase.js?v=20260521-6";
 import {
   doc,
   getDoc,
@@ -17,6 +17,7 @@ import {
 
 import { 
   buildFullName,
+  canEditFamily,
   findPersonByNameString,
   getDisplayName,
   toTitleFullName, 
@@ -24,8 +25,9 @@ import {
   getChildren,
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
-} from "./helpers.js?v=20260521-5";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
+  normalizeImageUrl,
+} from "./helpers.js?v=20260521-6";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-6";
 
 
 let personId = null;
@@ -34,6 +36,7 @@ let collectionName = "example";
 let allPeople = [];
 let currentAuthUser = getCurrentUser();
 let profileSource = "tree";
+let profileCanEdit = false;
 
 function setProfileStatus(message) {
   const status = document.getElementById("profileStatus");
@@ -59,10 +62,23 @@ function setProfileEditState({ editable, message }) {
   setEditingAvailable(editable);
 }
 
+async function currentUserCanEditProfile(user, currentFamilyId) {
+  if (!user || !currentFamilyId) return false;
+
+  try {
+    const familySnap = await getDoc(doc(db, "families", currentFamilyId));
+    return familySnap.exists() && canEditFamily(familySnap.data(), user);
+  } catch (error) {
+    console.error("Error checking profile edit access:", error);
+    return false;
+  }
+}
+
 function refreshProfileEditState() {
   const signedIn = Boolean(currentAuthUser || getCurrentUser());
 
   if (!personId) {
+    profileCanEdit = false;
     setProfileEditState({
       editable: false,
       message: "Open a person profile before editing.",
@@ -71,6 +87,7 @@ function refreshProfileEditState() {
   }
 
   if (!familyId) {
+    profileCanEdit = false;
     setProfileEditState({
       editable: false,
       message: "This is the read-only example tree. Open a private family tree to edit people.",
@@ -79,6 +96,7 @@ function refreshProfileEditState() {
   }
 
   if (!signedIn) {
+    profileCanEdit = false;
     setProfileEditState({
       editable: false,
       message: "Sign in to edit or remove people in this private family tree.",
@@ -87,8 +105,25 @@ function refreshProfileEditState() {
   }
 
   setProfileEditState({
-    editable: true,
-    message: "You can edit this private family-tree profile.",
+    editable: false,
+    message: "Checking edit access...",
+  });
+
+  currentUserCanEditProfile(currentAuthUser || getCurrentUser(), familyId).then((canEdit) => {
+    profileCanEdit = canEdit;
+    setProfileEditState({
+      editable: canEdit,
+      message: canEdit
+        ? "You can edit this profile because this account has owner or editor access."
+        : "You can view this profile. Ask the owner for editor access before changing people or photos.",
+    });
+  }).catch((error) => {
+    console.error("Error refreshing edit state:", error);
+    profileCanEdit = false;
+    setProfileEditState({
+      editable: false,
+      message: "Could not confirm edit access for this profile.",
+    });
   });
 }
 
@@ -311,6 +346,8 @@ async function loadProfile() {
     const editParent2    = document.getElementById("editParent2");
     const editSpouse     = document.getElementById("editSpouse");
     const editBio        = document.getElementById("editBio");
+    const editImageUrl   = document.getElementById("editImageUrl");
+    const removeImage    = document.getElementById("removeImage");
 
     if (editFirstName) {
         editFirstName.value = toTitle(data.firstName || "");
@@ -336,6 +373,14 @@ async function loadProfile() {
 
     if (editBio) {
         editBio.value = data.bio || "";
+    }
+
+    if (editImageUrl) {
+        editImageUrl.value = data.image || "";
+    }
+
+    if (removeImage) {
+        removeImage.checked = false;
     }
 
     // Birthdate
@@ -386,6 +431,14 @@ if (editForm) {
       return;
     }
 
+    const canEditNow = profileCanEdit || await currentUserCanEditProfile(getCurrentUser(), familyId);
+
+    if (!canEditNow) {
+      setProfileStatus("Only the owner and editors can change people or photos.");
+      refreshProfileEditState();
+      return;
+    }
+
     const rawFirstName      = document.getElementById("editFirstName").value.trim();
     const rawMiddleInitial  = document.getElementById("editMiddleInitial").value.trim();
     const rawLastName       = document.getElementById("editLastName").value.trim();
@@ -394,6 +447,8 @@ if (editForm) {
     const spouseId          = document.getElementById("editSpouse").value;
     const birthDateRaw      = document.getElementById("editBirthDate").value; // "YYYY-MM-DD"
     const rawBio            = document.getElementById("editBio").value.trim();
+    const rawImageUrl       = document.getElementById("editImageUrl")?.value.trim() || "";
+    const removeImage       = document.getElementById("removeImage")?.checked || false;
     const imageFileInput    = document.getElementById("editImageFile");
     const imageFile         = imageFileInput && imageFileInput.files[0];
 
@@ -421,6 +476,12 @@ if (editForm) {
     const spouseIds = selectedSpouse ? [selectedSpouse.id] : [];
     const parent1 = selectedParent1 ? buildFullName(selectedParent1.firstName, selectedParent1.lastName) : "";
     const parent2 = selectedParent2 ? buildFullName(selectedParent2.firstName, selectedParent2.lastName) : "";
+    const normalizedImageUrl = normalizeImageUrl(rawImageUrl);
+
+    if (rawImageUrl && !normalizedImageUrl) {
+      setProfileStatus("Use a secure https:// photo URL, or upload an image file instead.");
+      return;
+    }
 
     let spouseFirstName = "";
     let spouseLastName  = "";
@@ -441,7 +502,7 @@ if (editForm) {
       birthDate = Timestamp.fromDate(jsDate);
     }
 
-    let imageUrl = null;
+    let imageUrl = removeImage ? null : normalizedImageUrl || null;
 
     if (imageFile) {
         try {
@@ -471,7 +532,11 @@ if (editForm) {
       bio: rawBio || deleteField(),
     };
 
-    if (imageUrl)           personData.image = imageUrl;
+    if (imageUrl) {
+      personData.image = imageUrl;
+    } else if (removeImage) {
+      personData.image = deleteField();
+    }
 
     try {
       setProfileStatus("Saving profile...");
@@ -547,6 +612,13 @@ if (deletePersonBtn) {
     if (!personId) return;
     if (!familyId || !getCurrentUser()) {
       setProfileStatus("Sign in and open a private family tree before removing people.");
+      return;
+    }
+
+    const canEditNow = profileCanEdit || await currentUserCanEditProfile(getCurrentUser(), familyId);
+    if (!canEditNow) {
+      setProfileStatus("Only the owner and editors can remove people.");
+      refreshProfileEditState();
       return;
     }
 
