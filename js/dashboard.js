@@ -11,6 +11,7 @@ import {
   updateDoc,
   where,
   arrayRemove,
+  arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import { watchAuth } from "./auth.js";
@@ -61,7 +62,9 @@ function createTreeCard(tree) {
   const createdAt = formatDate(tree.createdAt);
   const role = tree.memberRoles?.[tree.currentUserId] || (tree.ownerId === tree.currentUserId ? "owner" : "member");
   const isOwner = role === "owner" || tree.ownerId === tree.currentUserId;
-  const memberCount = Array.isArray(tree.memberIds) ? tree.memberIds.length : 0;
+  const memberCount = Array.isArray(tree.memberIds)
+    ? tree.memberIds.length
+    : (tree.ownerId ? 1 : 0);
   const memberProfiles = tree.memberProfiles || new Map();
 
   const form = document.createElement("form");
@@ -148,7 +151,9 @@ function createTreeCard(tree) {
   memberDetails.appendChild(summary);
 
   const membersList = document.createElement("ul");
-  const memberIds = tree.memberIds || [];
+  const memberIds = Array.isArray(tree.memberIds)
+    ? tree.memberIds
+    : [tree.ownerId].filter(Boolean);
 
   if (memberIds.length === 0) {
     const item = document.createElement("li");
@@ -228,6 +233,15 @@ function createTreeCard(tree) {
   setupTreeCardActions(article, tree, isOwner);
 
   return article;
+}
+
+function dedupeTrees(trees) {
+  const byId = new Map();
+  trees.forEach(tree => {
+    if (!tree?.id || byId.has(tree.id)) return;
+    byId.set(tree.id, tree);
+  });
+  return [...byId.values()];
 }
 
 function renderDashboardEmptyState() {
@@ -468,23 +482,35 @@ async function loadFamilyTrees(user) {
 
   try {
     const familiesRef = collection(db, "families");
-    const q = query(familiesRef, where("memberIds", "array-contains", user.uid));
-    const snapshot = await getDocs(q);
+    const memberQuery = query(familiesRef, where("memberIds", "array-contains", user.uid));
+    const ownerQuery = query(familiesRef, where("ownerId", "==", user.uid));
+    const [memberSnapshot, ownerSnapshot] = await Promise.all([
+      getDocs(memberQuery),
+      getDocs(ownerQuery),
+    ]);
 
-    if (snapshot.empty) {
+    const docs = dedupeTrees([...memberSnapshot.docs, ...ownerSnapshot.docs]);
+
+    if (docs.length === 0) {
       setStatus("");
       renderDashboardEmptyState();
       return;
     }
 
     setStatus("");
-    const trees = await Promise.all(snapshot.docs
+    const trees = await Promise.all(docs
       .map(async docSnap => {
         const data = docSnap.data();
+        const memberIds = Array.isArray(data.memberIds)
+          ? data.memberIds
+          : [data.ownerId].filter(Boolean);
+
         return {
           id: docSnap.id,
           currentUserId: user.uid,
-          memberProfiles: await loadMemberProfiles(data.memberIds || []),
+          memberIds,
+          memberRoles: data.memberRoles || (data.ownerId === user.uid ? { [user.uid]: "owner" } : {}),
+          memberProfiles: await loadMemberProfiles(memberIds),
           ...data,
         };
       }));
@@ -499,11 +525,28 @@ async function loadFamilyTrees(user) {
     }
 
     activeTrees.forEach(tree => {
+      repairLegacyTreeMembership(tree);
+    });
+
+    activeTrees.forEach(tree => {
       listEl.appendChild(createTreeCard(tree));
     });
   } catch (error) {
     console.error("Error loading dashboard:", error);
     setStatus("Could not load your family trees. Check your connection and permissions.");
+  }
+}
+
+async function repairLegacyTreeMembership(tree) {
+  if (!currentUser || tree.ownerId !== currentUser.uid || Array.isArray(tree.memberIds)) return;
+
+  try {
+    await updateDoc(doc(db, "families", tree.id), {
+      memberIds: arrayUnion(currentUser.uid),
+      [`memberRoles.${currentUser.uid}`]: "owner",
+    });
+  } catch (error) {
+    console.warn("Could not repair legacy tree membership:", error);
   }
 }
 

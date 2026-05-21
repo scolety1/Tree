@@ -17,6 +17,119 @@ import {
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
 
+function isLargeDemoMode() {
+  return new URLSearchParams(window.location.search).get("demo") === "large";
+}
+
+function fakeBirthDate(year, month, day) {
+  return {
+    toDate() {
+      return new Date(year, month - 1, day);
+    }
+  };
+}
+
+function createDemoPerson(id, firstName, lastName, birthYear, parentIds = [], spouseIds = []) {
+  return {
+    id,
+    firstName: firstName.toLowerCase(),
+    lastName: lastName.toLowerCase(),
+    birthDate: fakeBirthDate(birthYear, ((birthYear + id.length) % 12) + 1, ((birthYear + id.length) % 24) + 1),
+    parentIds,
+    spouseIds,
+  };
+}
+
+function generateLargeDemoTree() {
+  const people = [];
+  const add = (...args) => {
+    const person = createDemoPerson(...args);
+    people.push(person);
+    return person;
+  };
+
+  const founders = [
+    [add("demo-g1-01", "Rose", "Colety", 1931), add("demo-g1-02", "Frank", "Colety", 1929)],
+    [add("demo-g1-03", "Evelyn", "Marsh", 1934), add("demo-g1-04", "Arthur", "Marsh", 1930)],
+    [add("demo-g1-05", "June", "Rivera", 1936), add("demo-g1-06", "Mateo", "Rivera", 1933)],
+    [add("demo-g1-07", "Clara", "Bennett", 1938), add("demo-g1-08", "Walter", "Bennett", 1935)],
+  ];
+
+  founders.forEach(([a, b]) => {
+    a.spouseIds = [b.id];
+    b.spouseIds = [a.id];
+  });
+
+  const generationTwo = [];
+  founders.forEach(([parentA, parentB], familyIndex) => {
+    for (let i = 0; i < 4; i++) {
+      generationTwo.push(add(
+        `demo-g2-${familyIndex + 1}${i + 1}`,
+        ["Tim", "Nora", "Cal", "Mara", "Lou", "Iris", "Ben", "Tess", "Sam", "Lena", "Dean", "Ruth", "Max", "Vera", "Owen", "Nell"][familyIndex * 4 + i],
+        parentA.lastName,
+        1957 + familyIndex * 4 + i,
+        [parentA.id, parentB.id]
+      ));
+    }
+  });
+
+  const pairings = [
+    [generationTwo[0], generationTwo[5]],
+    [generationTwo[1], generationTwo[8]],
+    [generationTwo[2], generationTwo[12]],
+    [generationTwo[3], generationTwo[9]],
+    [generationTwo[4], generationTwo[13]],
+    [generationTwo[6], generationTwo[10]],
+    [generationTwo[7], generationTwo[15]],
+  ];
+
+  pairings.forEach(([a, b]) => {
+    a.spouseIds = [b.id];
+    b.spouseIds = [a.id];
+  });
+
+  const generationThree = [];
+  pairings.forEach(([parentA, parentB], pairIndex) => {
+    const childCount = pairIndex % 2 === 0 ? 4 : 3;
+    for (let i = 0; i < childCount; i++) {
+      generationThree.push(add(
+        `demo-g3-${pairIndex + 1}${i + 1}`,
+        ["Alex", "Jamie", "Casey", "Morgan", "Taylor", "Jordan", "Riley", "Quinn", "Avery", "Parker", "Rowan", "Hayden", "Emery", "Reese", "Finley", "Sage", "Drew", "Blair", "Kai", "Remy", "Lane", "Noel", "Skye", "Arden", "Wren"][generationThree.length],
+        parentA.lastName,
+        1982 + pairIndex * 2 + i,
+        [parentA.id, parentB.id]
+      ));
+    }
+  });
+
+  const generationFourParents = [
+    [generationThree[0], generationThree[6]],
+    [generationThree[2], generationThree[10]],
+    [generationThree[4], generationThree[12]],
+    [generationThree[7], generationThree[15]],
+    [generationThree[9], generationThree[18]],
+  ];
+
+  generationFourParents.forEach(([a, b]) => {
+    a.spouseIds = [b.id];
+    b.spouseIds = [a.id];
+  });
+
+  generationFourParents.forEach(([parentA, parentB], pairIndex) => {
+    for (let i = 0; i < 3; i++) {
+      add(
+        `demo-g4-${pairIndex + 1}${i + 1}`,
+        ["Milo", "Ivy", "Theo", "Ada", "Ezra", "Cleo", "Leo", "Mae", "Otis", "Faye", "Hugo", "Mina", "Jude", "Elle", "Arlo"][pairIndex * 3 + i],
+        parentA.lastName,
+        2011 + pairIndex + i,
+        [parentA.id, parentB.id]
+      );
+    }
+  });
+
+  return people;
+}
+
 /* ---------------------------
    MODAL: ADD PERSON (UI ONLY)
 --------------------------- */
@@ -55,7 +168,7 @@ function setupAddPersonModal() {
    CARD CREATION
 --------------------------- */
 
-function createPersonCard(person, familyId = null) {
+function createPersonCard(person, familyId = null, options = {}) {
   // birthDate is likely a Firestore Timestamp
   let formattedDate = "Unknown";
   if (person.birthDate && typeof person.birthDate.toDate === "function") {
@@ -69,16 +182,16 @@ function createPersonCard(person, familyId = null) {
 
   const fullTitleName = toTitleFullName(person.firstName, person.lastName);
 
-  const link = document.createElement("a");
+  const link = document.createElement(options.noProfileLinks ? "span" : "a");
   // Include familyId in profile link if it exists
   let profileUrl = `/profile?person=${encodeURIComponent(person.id)}`;
   if (familyId) {
     profileUrl += `&familyId=${encodeURIComponent(familyId)}`;
   }
   profileUrl += "&from=tree";
-  link.href = profileUrl;
-  link.style.textDecoration = "none";
-  link.style.color = "inherit";
+  if (!options.noProfileLinks) {
+    link.href = profileUrl;
+  }
   link.dataset.personId = person.id; // for connector calculations
 
   const card = document.createElement("div");
@@ -123,7 +236,7 @@ function getInitials(person) {
    RENDER ONE GENERATION ROW
 --------------------------- */
 
-function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null) {
+function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null, options = {}) {
   const genContainer = document.createElement("div");
   genContainer.className = "generation";
   genContainer.id = `gen-${genNumber}`;
@@ -152,8 +265,8 @@ function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null) {
       const pairContainer = document.createElement("div");
       pairContainer.className = "spouse-pair";
 
-      const personCard = createPersonCard(person, familyId);
-      const spouseCard = createPersonCard(spouse, familyId);
+      const personCard = createPersonCard(person, familyId, options);
+      const spouseCard = createPersonCard(spouse, familyId, options);
 
       pairContainer.appendChild(personCard);
       pairContainer.appendChild(spouseCard);
@@ -164,7 +277,7 @@ function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null) {
       usedIds.add(spouse.id);
     } else {
       // single person
-      const card = createPersonCard(person, familyId);
+      const card = createPersonCard(person, familyId, options);
       row.appendChild(card);
       usedIds.add(person.id);
     }
@@ -349,6 +462,15 @@ async function updateTreeTitle(familyId) {
   
   if (!titleEl) return;
 
+  if (isLargeDemoMode()) {
+    titleEl.textContent = "Large Demo Family Tree";
+    document.title = "Large Demo Family Tree";
+    if (joinCodeDisplay) {
+      joinCodeDisplay.style.display = "none";
+    }
+    return;
+  }
+
   // Example tree: no familyId → keep default title and hide join code
   if (!familyId) {
     titleEl.textContent = "Example Family Tree";
@@ -421,17 +543,18 @@ async function loadFamilyTree() {
   }
 
   const familyId = getCurrentFamilyId();
+  const largeDemoMode = isLargeDemoMode();
 
   // Update the title (family name or example)
   await updateTreeTitle(familyId);
 
-  if (await isFamilyArchived(familyId)) {
+  if (!largeDemoMode && await isFamilyArchived(familyId)) {
     setTreeMessage(treeLayout, "This family tree has been archived.");
     return;
   }
 
   // Keep the nav "Family Tree" link locked on this family if possible
-  if (familyId) {
+  if (familyId && !largeDemoMode) {
     const navTreeLink = document.querySelector('nav a[href="/tree"]');
     if (navTreeLink) {
       navTreeLink.href = `/tree?familyId=${familyId}`;
@@ -441,7 +564,7 @@ async function loadFamilyTree() {
   setTreeMessage(treeLayout, "Loading family tree...");
 
   try {
-    const allPeople = await getAllPeople(familyId);
+    const allPeople = largeDemoMode ? generateLargeDemoTree() : await getAllPeople(familyId);
 
     if (!allPeople || allPeople.length === 0) {
       setTreeMessage(
@@ -461,7 +584,9 @@ async function loadFamilyTree() {
 
     genKeys.forEach((genNumber) => {
       const peopleInGen = genMap.get(genNumber) || [];
-      renderGeneration(genNumber, peopleInGen, treeLayout, familyId);
+      renderGeneration(genNumber, peopleInGen, treeLayout, familyId, {
+        noProfileLinks: largeDemoMode,
+      });
     });
 
     // cache and draw connectors

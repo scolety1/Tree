@@ -12,8 +12,13 @@ service cloud.firestore {
 
     function isFamilyMember(familyId) {
       return signedIn()
-        && familyDoc(familyId).data.memberIds is list
-        && request.auth.uid in familyDoc(familyId).data.memberIds;
+        && (
+          familyDoc(familyId).data.ownerId == request.auth.uid
+          || (
+            familyDoc(familyId).data.memberIds is list
+            && request.auth.uid in familyDoc(familyId).data.memberIds
+          )
+        );
     }
 
     function isFamilyOwner(familyId) {

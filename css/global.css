@@ -52,7 +52,7 @@ header {
     top: 0;
     z-index: 100;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(320px, 560px) minmax(180px, auto);
     align-items: center;
     gap: 18px;
     padding: 14px max(22px, calc((100vw - var(--content)) / 2));
@@ -78,14 +78,14 @@ header h1::before {
     height: 12px;
     margin-right: 9px;
     border-radius: 3px;
-    background: var(--gold);
-    box-shadow: 7px 7px 0 var(--brand);
+    background: url("/assets/logo.svg") center / contain no-repeat;
+    box-shadow: none;
     transform: translateY(-1px);
 }
 
 nav {
     justify-self: center;
-    width: min(100%, 560px);
+    width: 100%;
 }
 
 .nav {
@@ -127,14 +127,18 @@ nav {
 }
 
 .auth-status {
-    grid-column: 1 / -1;
-    justify-self: center;
-    margin: -6px 0 0;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    margin: 0;
     color: var(--muted);
     font-size: 0.82rem;
+    text-align: right;
 }
 
 .auth-sign-out {
+    grid-column: 3;
+    grid-row: 2;
     margin: 0;
     padding: 8px 12px;
     border: 1px solid var(--line);
@@ -143,6 +147,7 @@ nav {
     color: var(--brand-strong);
     cursor: pointer;
     font-weight: 700;
+    justify-self: end;
 }
 
 main {
@@ -737,6 +742,14 @@ select:disabled {
 
     nav {
         width: 100%;
+    }
+
+    .auth-status,
+    .auth-sign-out {
+        grid-column: auto;
+        grid-row: auto;
+        justify-self: center;
+        text-align: center;
     }
 
     .actions-grid,
