@@ -33,8 +33,7 @@ service firebase.storage {
       allow read: if isFamilyMember(familyId);
       allow write: if signedIn()
         && isFamilyEditor(familyId)
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
+        && request.resource.size < 5 * 1024 * 1024;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase.js?v=20260521-7";
+import { db, storage } from "./firebase.js?v=20260521-8";
 import {
   addDoc,
   collection,
@@ -18,11 +18,14 @@ import {
   getAllPeople,
   getCurrentFamilyId,
   getDisplayName,
+  getImageFileExtension,
+  getImageUploadMetadata,
   normalizeImageUrl,
+  prepareImageDataUrl,
   prepareImageFileForUpload,
   safeImageFileName,
-} from "./helpers.js?v=20260521-7";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-7";
+} from "./helpers.js?v=20260521-8";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-8";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -147,10 +150,16 @@ async function refreshRelationshipOptions() {
 
 async function uploadPersonImage(familyId, personId, imageFile) {
   const preparedFile = await prepareImageFileForUpload(imageFile);
-  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeImageFileName(preparedFile.name)}`;
+  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
-  await uploadBytes(imageRef, preparedFile);
-  return getDownloadURL(imageRef);
+
+  try {
+    await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
+    return getDownloadURL(imageRef);
+  } catch (error) {
+    console.warn("Storage upload failed; using embedded profile image fallback.", error);
+    return prepareImageDataUrl(preparedFile);
+  }
 }
 
 if (form) {

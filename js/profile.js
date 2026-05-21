@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260521-7";
+import { db, storage } from "./firebase.js?v=20260521-8";
 import {
   doc,
   getDoc,
@@ -25,11 +25,14 @@ import {
   getChildren,
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
+  getImageFileExtension,
+  getImageUploadMetadata,
   normalizeImageUrl,
+  prepareImageDataUrl,
   prepareImageFileForUpload,
   safeImageFileName,
-} from "./helpers.js?v=20260521-7";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-7";
+} from "./helpers.js?v=20260521-8";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-8";
 
 
 let personId = null;
@@ -418,10 +421,16 @@ function updateBackLink() {
 
 async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
   const preparedFile = await prepareImageFileForUpload(imageFile);
-  const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/${Date.now()}-${safeImageFileName(preparedFile.name)}`;
+  const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
-  await uploadBytes(imageRef, preparedFile);
-  return getDownloadURL(imageRef);
+
+  try {
+    await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
+    return getDownloadURL(imageRef);
+  } catch (error) {
+    console.warn("Storage upload failed; using embedded profile image fallback.", error);
+    return prepareImageDataUrl(preparedFile);
+  }
 }
 
 
