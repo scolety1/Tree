@@ -129,6 +129,4 @@ Before the final demo, run through `DEPLOYMENT_CHECKLIST.md` and confirm the Spe
 ## **Team Members**
 
 * **Spencer Colety**
-* **Hugh Frampton**
-
 
