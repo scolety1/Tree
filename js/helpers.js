@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-6";
+import { db } from "./firebase.js?v=20260521-7";
 import {
   collection,
   getDocs,
@@ -114,6 +114,92 @@ export function normalizeImageUrl(url) {
   } catch (error) {
     return "";
   }
+}
+
+export function safeImageFileName(fileName) {
+  return String(fileName || "profile-photo")
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80) || "profile-photo";
+}
+
+function loadImageElement(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read that image file."));
+    };
+
+    image.src = url;
+  });
+}
+
+function canvasToBlob(canvas, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("Could not prepare that image for upload."));
+      }
+    }, "image/jpeg", quality);
+  });
+}
+
+export async function prepareImageFileForUpload(file, options = {}) {
+  if (!file) return null;
+  if (!String(file.type || "").startsWith("image/")) {
+    throw new Error("Choose an image file, like a JPG or PNG.");
+  }
+
+  const maxBytes = options.maxBytes || 4 * 1024 * 1024;
+  const maxDimension = options.maxDimension || 1800;
+
+  if (file.size <= maxBytes && file.type !== "image/heic" && file.type !== "image/heif") {
+    return file;
+  }
+
+  const image = await loadImageElement(file);
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Could not prepare that image for upload.");
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+
+  let quality = 0.84;
+  let blob = await canvasToBlob(canvas, quality);
+
+  while (blob.size > maxBytes && quality > 0.52) {
+    quality -= 0.08;
+    blob = await canvasToBlob(canvas, quality);
+  }
+
+  if (blob.size > maxBytes) {
+    throw new Error("That photo is still too large. Try a smaller image.");
+  }
+
+  return new File([blob], `${safeImageFileName(file.name)}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
 }
 
 export function getFamilyRole(family, user) {

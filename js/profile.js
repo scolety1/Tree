@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260521-6";
+import { db, storage } from "./firebase.js?v=20260521-7";
 import {
   doc,
   getDoc,
@@ -26,8 +26,10 @@ import {
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
   normalizeImageUrl,
-} from "./helpers.js?v=20260521-6";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-6";
+  prepareImageFileForUpload,
+  safeImageFileName,
+} from "./helpers.js?v=20260521-7";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-7";
 
 
 let personId = null;
@@ -414,6 +416,14 @@ function updateBackLink() {
     : path;
 }
 
+async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
+  const preparedFile = await prepareImageFileForUpload(imageFile);
+  const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/${Date.now()}-${safeImageFileName(preparedFile.name)}`;
+  const imageRef = ref(storage, imagePath);
+  await uploadBytes(imageRef, preparedFile);
+  return getDownloadURL(imageRef);
+}
+
 
 
 const editForm = document.getElementById("editPersonForm");
@@ -421,13 +431,22 @@ const editForm = document.getElementById("editPersonForm");
 if (editForm) {
   editForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const submitButton = editForm.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+
+    function finishSubmit() {
+      if (submitButton) submitButton.disabled = false;
+    }
+
     if (!personId) {
       console.error("No personId set for editing");
+      finishSubmit();
       return;
     }
 
     if (!familyId || !getCurrentUser()) {
       setProfileStatus("Sign in and open a private family tree before editing people.");
+      finishSubmit();
       return;
     }
 
@@ -436,6 +455,7 @@ if (editForm) {
     if (!canEditNow) {
       setProfileStatus("Only the owner and editors can change people or photos.");
       refreshProfileEditState();
+      finishSubmit();
       return;
     }
 
@@ -461,6 +481,7 @@ if (editForm) {
     const selectedSpouse = allPeople.find(person => person.id === spouseId);
     if (parent1Id && parent2Id && parent1Id === parent2Id) {
       setProfileStatus("Choose two different parents, or leave one blank.");
+      finishSubmit();
       return;
     }
 
@@ -469,6 +490,7 @@ if (editForm) {
       (parent2Id && isDescendantOf(parent2Id, personId))
     ) {
       setProfileStatus("Choose someone who is not already this person's child or descendant.");
+      finishSubmit();
       return;
     }
 
@@ -480,6 +502,7 @@ if (editForm) {
 
     if (rawImageUrl && !normalizedImageUrl) {
       setProfileStatus("Use a secure https:// photo URL, or upload an image file instead.");
+      finishSubmit();
       return;
     }
 
@@ -505,17 +528,15 @@ if (editForm) {
     let imageUrl = removeImage ? null : normalizedImageUrl || null;
 
     if (imageFile) {
-        try {
-            const imagePath = familyId
-              ? `families/${familyId}/people/${personId}/${imageFile.name}`
-              : `example/${personId}/${imageFile.name}`;
-            const imageRef = ref(storage, imagePath);
-            await uploadBytes(imageRef, imageFile);
-            imageUrl = await getDownloadURL(imageRef);
-        } catch (err) {
-            console.error("Error uploading image:", err);
-            setProfileStatus("Image upload failed, but the rest of the profile can still be saved.");
-        }
+      try {
+        setProfileStatus("Uploading photo...");
+        imageUrl = await uploadProfileImage(familyId, personId, imageFile);
+      } catch (err) {
+        console.error("Error uploading image:", err);
+        setProfileStatus(err.message || "Photo upload failed. Try a smaller JPG/PNG or paste a secure photo URL.");
+        finishSubmit();
+        return;
+      }
     }
 
     const personData = {
@@ -551,6 +572,7 @@ if (editForm) {
     } catch (error) {
       console.error("Error updating person:", error);
       setProfileStatus("Something went wrong while saving changes.");
+      finishSubmit();
     }
   });
 }

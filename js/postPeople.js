@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase.js?v=20260521-6";
+import { db, storage } from "./firebase.js?v=20260521-7";
 import {
   addDoc,
   collection,
@@ -19,8 +19,10 @@ import {
   getCurrentFamilyId,
   getDisplayName,
   normalizeImageUrl,
-} from "./helpers.js?v=20260521-6";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-6";
+  prepareImageFileForUpload,
+  safeImageFileName,
+} from "./helpers.js?v=20260521-7";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-7";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -143,16 +145,11 @@ async function refreshRelationshipOptions() {
   populateRelationshipSelects(peopleOptions);
 }
 
-function safeFileName(fileName) {
-  return String(fileName || "profile-photo")
-    .replace(/[^a-zA-Z0-9._-]/g, "-")
-    .slice(0, 90);
-}
-
 async function uploadPersonImage(familyId, personId, imageFile) {
-  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeFileName(imageFile.name)}`;
+  const preparedFile = await prepareImageFileForUpload(imageFile);
+  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeImageFileName(preparedFile.name)}`;
   const imageRef = ref(storage, imagePath);
-  await uploadBytes(imageRef, imageFile);
+  await uploadBytes(imageRef, preparedFile);
   return getDownloadURL(imageRef);
 }
 
@@ -294,7 +291,8 @@ if(form) {
           personData.image = await uploadPersonImage(familyId, personRef.id, imageFile);
         } catch (error) {
           console.error("Error uploading person photo:", error);
-          setStatus("Photo upload failed, so the profile is being saved without the photo.");
+          setStatus(error.message || "Photo upload failed. Try a smaller JPG/PNG or paste a secure photo URL.");
+          return;
         }
         await setDoc(personRef, personData);
       } else {
