@@ -1,5 +1,5 @@
 // js/home.js
-import { db } from "./firebase.js?v=20260521-3";
+import { db } from "./firebase.js?v=20260521-5";
 import {
   addDoc,
   collection,
@@ -14,8 +14,13 @@ import {
   updateDoc,
   arrayUnion
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { setFamilyId } from "./helpers.js?v=20260521-3";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-3";
+import {
+    ACCESS_CODE_LENGTH,
+    generateAccessCode,
+    normalizeAccessCode,
+    setFamilyId,
+} from "./helpers.js?v=20260521-5";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
 
 const createTreeBtn      = document.getElementById("createTreeBtn");
 const joinTreeBtn        = document.getElementById("joinTreeBtn");
@@ -26,23 +31,9 @@ const joinFormCard       = document.getElementById("joinTreeFormCard");
 const familyFormStatus   = document.getElementById("familyFormStatus");
 let signedInUser = getCurrentUser();
 
-/* -----------------------------------
-   HELPER: JOIN CODE GENERATOR
------------------------------------ */
-
-function generateJoinCode(length = 6) {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "";
-    for (let i = 0; i < length; i++) {
-        const idx = Math.floor(Math.random() * chars.length);
-        code += chars[idx];
-    }
-    return code;
-}
-
-async function generateAvailableJoinCode(length = 6) {
+async function generateAvailableJoinCode(length = ACCESS_CODE_LENGTH) {
     for (let attempt = 0; attempt < 8; attempt++) {
-        const code = generateJoinCode(length);
+        const code = generateAccessCode(length);
         const codeSnap = await getDoc(doc(db, "joinCodes", code));
         if (!codeSnap.exists()) return code;
     }
@@ -139,7 +130,7 @@ if (createFamilyForm) {
         try {
             setFormBusy(createFamilyForm, true);
             setFamilyFormStatus("Creating your family tree...");
-            const joinCode = await generateAvailableJoinCode(6);
+            const joinCode = await generateAvailableJoinCode();
             const familyData = {
                 name: rawName,
                 description: rawDesc || "",
@@ -194,7 +185,7 @@ if (joinFamilyForm) {
       document.getElementById("joinCode")
     );
     const rawCode = codeInput?.value || "";
-    const code = rawCode.trim().toUpperCase();
+    const code = normalizeAccessCode(rawCode);
 
     if (!code) {
       setFamilyFormStatus("Enter the access code first.");

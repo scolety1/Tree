@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260521-3";
+import { auth, db } from "./firebase.js?v=20260521-5";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-3";
+import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-5";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 
@@ -71,10 +71,11 @@ export async function resolveCurrentUserFamilyId() {
   const urlFamilyId = params.get("familyId");
 
   if (urlFamilyId) {
+    const user = await getAuthUserOnce();
     setFamilyId(urlFamilyId);
     return {
       familyId: urlFamilyId,
-      user: auth.currentUser,
+      user,
       source: "url",
     };
   }

@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260521-3";
+import { db, storage } from "./firebase.js?v=20260521-5";
 import {
   doc,
   getDoc,
@@ -24,8 +24,8 @@ import {
   getChildren,
   getAllPeople,
   getCurrentFamilyId as getFamilyIdFromHelper,
-} from "./helpers.js?v=20260521-3";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-3";
+} from "./helpers.js?v=20260521-5";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
 
 
 let personId = null;

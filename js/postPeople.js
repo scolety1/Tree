@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-3";
+import { db } from "./firebase.js?v=20260521-5";
 import {
   addDoc,
   collection,
@@ -9,8 +9,8 @@ import {
   getAllPeople,
   getCurrentFamilyId,
   getDisplayName,
-} from "./helpers.js?v=20260521-3";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-3";
+} from "./helpers.js?v=20260521-5";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-5";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -85,7 +85,7 @@ function populateRelationshipSelects(people) {
 async function refreshRelationshipOptions() {
   if (!form) return;
   const familyId = getCurrentFamilyId();
-  if (!familyId) {
+  if (!familyId || !currentUser) {
     peopleOptions = [];
     populateRelationshipSelects(peopleOptions);
     return;

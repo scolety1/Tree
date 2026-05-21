@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-3";
+import { db } from "./firebase.js?v=20260521-5";
 import {
   addDoc,
   collection,
@@ -16,8 +16,13 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260521-3";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-3";
+import { watchAuth } from "./auth.js?v=20260521-5";
+import {
+  ACCESS_CODE_LENGTH,
+  generateAccessCode,
+  getStoredFamilyId,
+  setFamilyId,
+} from "./helpers.js?v=20260521-5";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
@@ -39,19 +44,9 @@ function setStatus(message) {
   if (statusEl) statusEl.textContent = message;
 }
 
-function generateJoinCode(length = 6) {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < length; i++) {
-    const idx = Math.floor(Math.random() * chars.length);
-    code += chars[idx];
-  }
-  return code;
-}
-
 async function generateAvailableJoinCode() {
   for (let attempt = 0; attempt < 8; attempt++) {
-    const code = generateJoinCode();
+    const code = generateAccessCode(ACCESS_CODE_LENGTH);
     const codeSnap = await getDoc(doc(db, "joinCodes", code));
     if (!codeSnap.exists()) return code;
   }

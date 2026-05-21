@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-3";
+import { db } from "./firebase.js?v=20260521-5";
 import {
   collection,
   getDocs,
@@ -12,6 +12,8 @@ import {
 ----------------------------------- */
 
 const FAMILY_ID_STORAGE_KEY = "currentFamilyId";
+const ACCESS_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const ACCESS_CODE_LENGTH = 10;
 
 
 export function setFamilyId(familyId) {
@@ -77,6 +79,29 @@ export function getCurrentFamilyId(useStored = true) {
   }
   
   return null;
+}
+
+export function generateAccessCode(length = ACCESS_CODE_LENGTH) {
+  const codeLength = Number.isInteger(length) && length > 0 ? length : ACCESS_CODE_LENGTH;
+  let code = "";
+
+  if (!globalThis.crypto?.getRandomValues) {
+    throw new Error("Secure random access-code generation is unavailable in this browser.");
+  }
+
+  const values = new Uint32Array(codeLength);
+  globalThis.crypto.getRandomValues(values);
+  values.forEach((value) => {
+    code += ACCESS_CODE_ALPHABET[value % ACCESS_CODE_ALPHABET.length];
+  });
+
+  return code;
+}
+
+export function normalizeAccessCode(code) {
+  return String(code || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
 }
 
 /* -----------------------------------
@@ -458,7 +483,7 @@ function alignSpouseGenerations(people) {
     } else if (!pHasParents && sHasParents) {
       targetGen = spouse.generation;
     } else {
-      // Both have (or both don't have) parents → keep kids below them, so use the higher gen
+      // Both have (or both don't have) parents Ã¢â€ â€™ keep kids below them, so use the higher gen
       targetGen = Math.max(
         typeof p.generation === "number" ? p.generation : 1,
         typeof spouse.generation === "number" ? spouse.generation : 1
@@ -569,7 +594,7 @@ function assignGenerationsBFS(people) {
     children.forEach(child => {
       const proposedGen = (current.generation || 1) + 1;
 
-      // 🔑 Allow child to "upgrade" to a higher generation if a later parent is deeper
+      // Ã°Å¸â€â€˜ Allow child to "upgrade" to a higher generation if a later parent is deeper
       if (
         typeof child.generation !== "number" ||
         child.generation < proposedGen
@@ -645,7 +670,7 @@ export function groupByGeneration(people) {
       const idxDiff = ai - bi;
       if (idxDiff !== 0) return idxDiff;
 
-      // same BFS cluster → use birthdate to order siblings from oldest to youngest if possible
+      // same BFS cluster Ã¢â€ â€™ use birthdate to order siblings from oldest to youngest if possible
       const ta = a.birthDate && typeof a.birthDate.toDate === "function"
         ? a.birthDate.toDate().getTime()
         : null;

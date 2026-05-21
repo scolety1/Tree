@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-3";
+import { db } from "./firebase.js?v=20260521-5";
 import {
   doc,
   getDoc
@@ -11,8 +11,8 @@ import {
   areSpouses,
   toTitleFullName,
   buildFullName
-} from "./helpers.js?v=20260521-3";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-3";
+} from "./helpers.js?v=20260521-5";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260521-5";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
@@ -290,7 +290,7 @@ function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null, o
 }
 
 /* ---------------------------
-   PARENT → CHILD CONNECTOR LINES
+   PARENT Ã¢â€ â€™ CHILD CONNECTOR LINES
 --------------------------- */
 
 function drawParentChildLines(people) {
@@ -499,7 +499,7 @@ async function updateTreeTitle(familyId) {
     return;
   }
 
-  // Example tree: no familyId → keep default title and hide join code
+  // Example tree: no familyId Ã¢â€ â€™ keep default title and hide join code
   if (!familyId) {
     titleEl.textContent = "Example Family Tree";
     if (joinCodeDisplay) {
@@ -575,6 +575,15 @@ async function loadFamilyTree() {
     ? { familyId: null, user: null }
     : await resolveCurrentUserFamilyId();
   const familyId = resolvedFamily.familyId;
+
+  if (!largeDemoMode && familyId && !resolvedFamily.user) {
+    const titleEl = document.getElementById("treeTitle");
+    const joinCodeDisplay = document.getElementById("joinCodeDisplay");
+    if (titleEl) titleEl.textContent = "Family Tree";
+    if (joinCodeDisplay) joinCodeDisplay.style.display = "none";
+    setTreeMessage(treeLayout, "Sign in to view this private family tree.");
+    return;
+  }
 
   if (!largeDemoMode && resolvedFamily.user && !familyId) {
     const titleEl = document.getElementById("treeTitle");
