@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260521-8";
+import { db } from "./firebase.js?v=20260522-11";
 import {
   collection,
   getDocs,
@@ -14,6 +14,21 @@ import {
 const FAMILY_ID_STORAGE_KEY = "currentFamilyId";
 const ACCESS_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const ACCESS_CODE_LENGTH = 10;
+export const PROFILE_IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif";
+export const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const PROFILE_IMAGE_ALLOWED_TYPES = new Set([
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const PROFILE_IMAGE_TYPE_BY_EXTENSION = {
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
 
 
 export function setFamilyId(familyId) {
@@ -137,19 +152,46 @@ export function getImageFileExtension(file) {
   return ["png", "webp", "gif", "jpeg", "jpg"].includes(extension) ? (extension === "jpeg" ? "jpg" : extension) : "jpg";
 }
 
+function getRawImageFileExtension(file) {
+  const nameMatch = String(file?.name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+  return nameMatch?.[1] || "";
+}
+
+function getProfileImageContentType(file) {
+  const type = String(file?.type || "").toLowerCase();
+  const extension = getRawImageFileExtension(file);
+  return type || PROFILE_IMAGE_TYPE_BY_EXTENSION[extension] || "";
+}
+
+export function validateProfileImageFile(file, options = {}) {
+  if (!file) return;
+
+  const type = String(file.type || "").toLowerCase();
+  const extension = getRawImageFileExtension(file);
+  const contentType = getProfileImageContentType(file);
+  const maxBytes = options.maxBytes || PROFILE_IMAGE_MAX_BYTES;
+
+  if (type.includes("heic") || type.includes("heif") || ["heic", "heif"].includes(extension)) {
+    throw new Error("HEIC photos are not supported yet. Export the photo as JPG, PNG, WebP, or GIF and try again.");
+  }
+
+  if (!PROFILE_IMAGE_ALLOWED_TYPES.has(contentType)) {
+    throw new Error("Choose a JPG, PNG, WebP, or GIF photo.");
+  }
+
+  if (file.size > maxBytes) {
+    throw new Error("That photo is over 5 MB. Choose a smaller image before uploading.");
+  }
+}
+
 export function getImageUploadMetadata(file) {
   const extension = getImageFileExtension(file);
-  const contentTypeByExtension = {
-    gif: "image/gif",
-    jpg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-  };
+  const contentType = getProfileImageContentType(file);
 
   return {
-    contentType: String(file?.type || "").startsWith("image/")
-      ? file.type
-      : contentTypeByExtension[extension] || "image/jpeg",
+    contentType: PROFILE_IMAGE_ALLOWED_TYPES.has(contentType)
+      ? contentType
+      : PROFILE_IMAGE_TYPE_BY_EXTENSION[extension] || "image/jpeg",
   };
 }
 
@@ -203,14 +245,12 @@ function getImageCanvas(image, maxDimension) {
 
 export async function prepareImageFileForUpload(file, options = {}) {
   if (!file) return null;
-  if (!String(file.type || "").startsWith("image/")) {
-    throw new Error("Choose an image file, like a JPG or PNG.");
-  }
+  validateProfileImageFile(file, options);
 
-  const maxBytes = options.maxBytes || 4 * 1024 * 1024;
+  const maxBytes = options.maxBytes || PROFILE_IMAGE_MAX_BYTES;
   const maxDimension = options.maxDimension || 1800;
 
-  if (file.size <= maxBytes && file.type !== "image/heic" && file.type !== "image/heif") {
+  if (file.size <= maxBytes) {
     return file;
   }
 
@@ -306,6 +346,99 @@ export function findPersonByNameString(name, allPeople) {
   const cleanName = normalizeNamePart(name);
   if (!cleanName || !Array.isArray(allPeople)) return null;
   return allPeople.find(person => getPersonNameKey(person) === cleanName) || null;
+}
+
+function getRelationshipLookups(allPeople) {
+  const people = Array.isArray(allPeople) ? allPeople : [];
+  const idToPerson = new Map();
+  const nameToPerson = new Map();
+
+  people.forEach(person => {
+    if (person?.id) {
+      idToPerson.set(person.id, person);
+    }
+
+    const nameKey = getPersonNameKey(person);
+    if (nameKey && !nameToPerson.has(nameKey)) {
+      nameToPerson.set(nameKey, person);
+    }
+  });
+
+  return { people, idToPerson, nameToPerson };
+}
+
+function addKnownId(idSet, id, idToPerson) {
+  if (!id) return;
+  if (idToPerson.size > 0 && !idToPerson.has(id)) return;
+  idSet.add(id);
+}
+
+function addLegacyNameMatch(idSet, name, nameToPerson) {
+  if (!name) return;
+  const matchedPerson = nameToPerson.get(normalizeNamePart(name));
+  if (matchedPerson?.id) {
+    idSet.add(matchedPerson.id);
+  }
+}
+
+export function resolvePersonParentIds(person, allPeople) {
+  if (!person) return [];
+
+  const { idToPerson, nameToPerson } = getRelationshipLookups(allPeople);
+  const parentIds = new Set();
+
+  if (Array.isArray(person.parentIds)) {
+    person.parentIds.forEach(parentId => addKnownId(parentIds, parentId, idToPerson));
+  }
+
+  [person.parent1, person.parent2].forEach(parentName => {
+    addLegacyNameMatch(parentIds, parentName, nameToPerson);
+  });
+
+  return [...parentIds];
+}
+
+export function resolvePersonSpouseIds(person, allPeople) {
+  if (!person) return [];
+
+  const { people, idToPerson, nameToPerson } = getRelationshipLookups(allPeople);
+  const spouseIds = new Set();
+  const personName = getPersonNameKey(person);
+
+  if (Array.isArray(person.spouseIds)) {
+    person.spouseIds.forEach(spouseId => addKnownId(spouseIds, spouseId, idToPerson));
+  }
+
+  addLegacyNameMatch(
+    spouseIds,
+    buildFullName(person.spouseFirstName, person.spouseLastName),
+    nameToPerson
+  );
+
+  people.forEach(candidate => {
+    if (!candidate?.id || candidate.id === person.id) return;
+
+    if (Array.isArray(candidate.spouseIds) && candidate.spouseIds.includes(person.id)) {
+      spouseIds.add(candidate.id);
+      return;
+    }
+
+    const candidateSpouseName = buildFullName(candidate.spouseFirstName, candidate.spouseLastName);
+    if (personName && candidateSpouseName === personName) {
+      spouseIds.add(candidate.id);
+    }
+  });
+
+  return [...spouseIds];
+}
+
+export function derivePersonChildren(person, allPeople) {
+  if (!person || !Array.isArray(allPeople)) return [];
+
+  return allPeople.filter(candidate => (
+    candidate?.id !== person.id &&
+    resolvePersonParentIds(candidate, allPeople).includes(person.id)
+  ));
 }
 
 /* -----------------------------------
@@ -413,12 +546,7 @@ export function hasTwoParents(person) {
 
 export function getChildren(person, allPeople) {
   if (!person) return [];
-  const fullName = buildFullName(person.firstName, person.lastName);
-
-  return allPeople.filter(p =>
-    (Array.isArray(p.parentIds) && p.parentIds.includes(person.id)) ||
-    p.parent1 === fullName || p.parent2 === fullName
-  );
+  return derivePersonChildren(person, allPeople);
 }
 
 export function getSiblings(person, allPeople) {

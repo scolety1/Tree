@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260521-8">
-    <link rel="stylesheet" href="/css/family_tree.css?v=20260521-8">
+    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
+    <link rel="stylesheet" href="/css/family_tree.css?v=20260522-11">
 
 </head>
 <body>
 
     <header>
-        <h1>Family tree</h1>
+        <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
         <nav aria-label="Main">
             <ul class="nav">
+                <li class="home-nav-item"><a href="/">Home</a></li>
                 <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
-                <li><a id="searchNavLink" href="/search">Search</a></li>
             </ul>
         </nav>
         <div class="account-area">
@@ -29,39 +29,133 @@
     </header>
 
 
-    <main>
+    <main class="tree-main">
         <h1 id="treeTitle">Family Tree</h1>
         
         <div id="joinCodeDisplay" class="join-code-display" style="display: none;">
             <div class="join-code-content">
                 <span class="join-code-label">Access Code:</span>
-                <span id="joinCodeValue" class="join-code-value" title="Click to copy"></span>
+                <span id="joinCodeValue" class="join-code-value" role="button" tabindex="0" aria-label="Copy access code" title="Click or press Enter to copy"></span>
             </div>
-            <p class="join-code-hint">Click the code to copy it. Share it only with people you want in this tree.</p>
+            <p class="join-code-hint">Click the code, or focus it and press Enter, to copy it. Share it only with people you want in this tree.</p>
         </div>
 
-        <div class="tree-toolbar" aria-label="Tree view controls">
-            <div>
-                <p class="tree-toolbar-label">Tree view</p>
-                <p class="tree-scroll-hint">Scroll sideways to see larger families.</p>
-            </div>
-            <div class="tree-density-controls" role="group" aria-label="Tree density">
-                <button type="button" data-tree-density="comfortable" aria-pressed="true">Comfortable</button>
-                <button type="button" data-tree-density="dense" aria-pressed="false">Dense</button>
-                <button type="button" data-tree-density="compact" aria-pressed="false">Compact</button>
-            </div>
-        </div>
+        <section class="tree-workspace" aria-label="Family tree workspace">
+            <aside class="tree-toolbar" aria-label="Family map tools">
+                <div class="tree-tool-section">
+                    <p class="tree-toolbar-label">Family map</p>
+                    <p class="tree-scroll-hint">Pan, zoom, or search to move through the tree.</p>
+                </div>
+                <form id="treeFocusForm" class="tree-focus-controls" role="search" aria-label="Find a person in this tree">
+                    <label for="treeFocusInput">Find person</label>
+                    <div class="tree-focus-row">
+                        <input id="treeFocusInput" type="search" list="treePersonList" placeholder="Type a name">
+                        <button type="submit">Find</button>
+                        <button id="treeFocusPrevious" type="button" class="tree-focus-step" aria-label="Previous match">Prev</button>
+                        <button id="treeFocusNext" type="button" class="tree-focus-step" aria-label="Next match">Next</button>
+                    </div>
+                    <p id="treeFocusStatus" class="tree-focus-status" aria-live="polite">Search this tree by name.</p>
+                    <datalist id="treePersonList"></datalist>
+                </form>
+                <div class="tree-view-actions" aria-label="Map actions">
+                    <button id="treeFullscreenBtn" class="button button-secondary" type="button">
+                        Full Screen
+                    </button>
+                    <p id="treeFullscreenStatus" class="tree-focus-status" aria-live="polite"></p>
+                </div>
+                <details class="tree-relationship-tool">
+                    <summary>Find relationship</summary>
+                    <form id="relationshipFinderForm" class="relationship-finder-form">
+                        <label for="relationshipPersonA">Person one</label>
+                        <input id="relationshipPersonA" type="search" list="treePersonList" placeholder="Type a name">
+                        <label for="relationshipPersonB">Person two</label>
+                        <input id="relationshipPersonB" type="search" list="treePersonList" placeholder="Type a name">
+                        <button class="button" type="submit">Find Relationship</button>
+                    </form>
+                    <div id="relationshipFinderResult" class="relationship-finder-result" aria-live="polite">
+                        Choose two people to see how they connect.
+                    </div>
+                </details>
+                <details class="tree-birthday-tool">
+                    <summary>Birthdays</summary>
+                    <div id="birthdayCalendarPanel" class="birthday-calendar-panel" aria-live="polite">
+                        Load a tree to see birthdays.
+                    </div>
+                </details>
+                <details class="tree-missing-info-tool">
+                    <summary>Missing info</summary>
+                    <div id="missingInfoPanel" class="missing-info-panel" aria-live="polite">
+                        Load a tree to see what needs filling in.
+                    </div>
+                </details>
+                <details class="tree-stats-tool">
+                    <summary>Family stats</summary>
+                    <div id="familyStatsPanel" class="family-stats-panel" aria-live="polite">
+                        Load a tree to see family stats.
+                    </div>
+                </details>
+                <details class="tree-key">
+                    <summary>Key</summary>
+                    <dl>
+                        <div>
+                            <dt>Lines</dt>
+                            <dd>Parents, partners, and children connected across generations.</dd>
+                        </div>
+                        <div>
+                            <dt>C1, C2</dt>
+                            <dd>Child-branch markers. They show which couple or parent group a child branch belongs to.</dd>
+                        </div>
+                        <div>
+                            <dt>Highlight</dt>
+                            <dd>Selected people and close family get a stronger outline.</dd>
+                        </div>
+                    </dl>
+                </details>
+                <details class="tree-advanced-tools">
+                    <summary>Display options</summary>
+                    <div class="tree-density-controls" role="group" aria-label="Card spacing">
+                        <button type="button" data-tree-density="comfortable" aria-pressed="true" aria-label="Comfortable spacing">Comfortable</button>
+                        <button type="button" data-tree-density="dense" aria-pressed="false" aria-label="Dense spacing">Dense</button>
+                        <button type="button" data-tree-density="compact" aria-pressed="false" aria-label="Compact spacing">Compact</button>
+                    </div>
+                    <div class="tree-view-switch" role="group" aria-label="Tree display mode">
+                        <button type="button" data-tree-view="chart" aria-pressed="false" aria-label="Show family map">Family map</button>
+                        <button type="button" data-tree-view="cards" aria-pressed="true" aria-label="Show card list view">Card list</button>
+                    </div>
+                </details>
+            </aside>
 
-        <div id="tree-layout" class="tree-layout">
-        </div>
+            <section class="tree-canvas-panel" aria-label="Family tree canvas">
+                <p class="tree-mobile-scroll-cue" aria-live="polite">
+                    Swipe sideways to see more relatives in fallback cards.
+                </p>
+
+                <div id="tree-layout" class="tree-layout">
+                </div>
+
+                <section id="treeChartView" class="tree-chart-view" hidden aria-label="Connected family chart view">
+                    <div id="treeChartStatus" class="tree-chart-status" role="status" aria-live="polite">
+                        <strong id="treeChartStatusTitle">Loading connected chart</strong>
+                        <span id="treeChartStatusMessage">Building the family map...</span>
+                        <button id="treeChartFallbackBtn" class="button button-secondary" type="button" hidden>
+                            Open fallback cards
+                        </button>
+                    </div>
+                    <iframe id="treeChartFrame" class="tree-chart-frame" title="Connected family chart" src="about:blank"></iframe>
+                </section>
+            </section>
+        </section>
 
 
-        <button id="addPersonBtn" title="Add family member" aria-label="Add family member">+</button>
+        <button id="addPersonBtn" title="Add family member" aria-label="Add family member" hidden disabled>
+            <span aria-hidden="true">+</span>
+            <span>Add Person</span>
+        </button>
 
-        <div id="addModal" class="modal">
-            <div class="modal-content">
-                <span class="close">&times;</span>
-                <h2>Add Family Member</h2>
+        <div id="addModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addPersonModalTitle" hidden>
+            <div class="modal-content" tabindex="-1">
+                <button class="close" type="button" aria-label="Close add family member form">&times;</button>
+                <h2 id="addPersonModalTitle">Add Family Member</h2>
                 <p class="modal-intro">Start with the basics. You can always open their profile later to add more detail.</p>
                 <p id="addPersonStatus" class="form-status" aria-live="polite"></p>
                 <form id="addPersonForm">
@@ -78,20 +172,24 @@
                     <label for="personImageUrl">Photo URL (optional)</label>
                     <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg">
                     <label for="personImageFile">Upload photo (optional)</label>
-                    <input type="file" id="personImageFile" accept="image/*">
-                    <label for="parent1">Parent one (optional)</label>
-                    <select id="parent1">
-                        <option value="">No parent selected</option>
-                    </select>
-                    <label for="parent2">Parent two (optional)</label>
-                    <select id="parent2">
-                        <option value="">No second parent selected</option>
-                    </select>
-                    <label for="spouse">Spouse or partner (optional)</label>
-                    <select id="spouse">
-                        <option value="">No spouse selected</option>
-                    </select>
-                    <p class="field-note">Parents and spouses only appear here after they have been added to this tree.</p>
+                    <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
+                    <p class="field-note">Photos must be JPG, PNG, WebP, or GIF and under 5 MB.</p>
+                    <fieldset class="form-fieldset">
+                        <legend>Relationships</legend>
+                        <p id="relationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person has not been added yet. Add parents first when you can.</p>
+                        <label for="parent1">Parent one (optional)</label>
+                        <select id="parent1" aria-describedby="relationshipHelp">
+                            <option value="">Unknown / not listed yet</option>
+                        </select>
+                        <label for="parent2">Parent two (optional)</label>
+                        <select id="parent2" aria-describedby="relationshipHelp">
+                            <option value="">Unknown / not listed yet</option>
+                        </select>
+                        <label for="spouse">Spouse or partner (optional)</label>
+                        <select id="spouse" aria-describedby="relationshipHelp">
+                            <option value="">No spouse or not listed yet</option>
+                        </select>
+                    </fieldset>
                     <button type="submit">Add Family Member</button>
                 </form>
             </div>
@@ -102,6 +200,6 @@
         <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
     </footer>
 
-    <script type="module" src="/js/main.js?v=20260521-8"></script>
+    <script type="module" src="/js/main.js?v=20260522-11"></script>
 </body>
 </html>

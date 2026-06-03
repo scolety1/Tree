@@ -1,5 +1,5 @@
 // js/home.js
-import { db } from "./firebase.js?v=20260521-8";
+import { db } from "./firebase.js?v=20260522-11";
 import {
   addDoc,
   collection,
@@ -8,15 +8,16 @@ import {
   getDoc,
   setDoc,
   updateDoc,
-  arrayUnion
+  arrayUnion,
+  deleteField
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import {
     ACCESS_CODE_LENGTH,
     generateAccessCode,
     normalizeAccessCode,
     setFamilyId,
-} from "./helpers.js?v=20260521-8";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-8";
+} from "./helpers.js?v=20260522-11";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
 
 const createTreeBtn      = document.getElementById("createTreeBtn");
 const joinTreeBtn        = document.getElementById("joinTreeBtn");
@@ -25,6 +26,7 @@ const joinFamilyForm     = document.getElementById("joinFamilyForm");
 const createFormCard     = document.getElementById("createTreeFormCard");
 const joinFormCard       = document.getElementById("joinTreeFormCard");
 const familyFormStatus   = document.getElementById("familyFormStatus");
+const formsSubtitle      = document.querySelector(".forms-subtitle");
 let signedInUser = getCurrentUser();
 
 async function generateAvailableJoinCode(length = ACCESS_CODE_LENGTH) {
@@ -56,6 +58,41 @@ function setFormDisabled(form, disabled) {
     });
 }
 
+function getCurrentReturnPath(hash = "") {
+    const currentPath = `${window.location.pathname}${window.location.search}${hash || window.location.hash}`;
+    return currentPath || "/";
+}
+
+function getSignInUrl(hash = "") {
+    return `/signin?redirect=${encodeURIComponent(getCurrentReturnPath(hash))}`;
+}
+
+function setCardAuthNote(card, message, hash) {
+    if (!card) return;
+
+    let note = card.querySelector(".auth-required-note");
+    if (!message) {
+        note?.remove();
+        card.classList.remove("requires-auth");
+        return;
+    }
+
+    if (!note) {
+        note = document.createElement("p");
+        note.className = "auth-required-note";
+        card.appendChild(note);
+    }
+
+    note.replaceChildren();
+    note.append(`${message} `);
+    const link = document.createElement("a");
+    link.href = getSignInUrl(hash);
+    link.textContent = "Sign in";
+    note.appendChild(link);
+    note.append(" and this section will reopen.");
+    card.classList.add("requires-auth");
+}
+
 function updateFamilyFormsForAuth(user) {
     signedInUser = user;
     const mustSignIn = !user;
@@ -64,18 +101,28 @@ function updateFamilyFormsForAuth(user) {
     setFormDisabled(joinFamilyForm, mustSignIn);
 
     if (mustSignIn) {
+        if (createTreeBtn) createTreeBtn.textContent = "Sign In to Start";
+        if (joinTreeBtn) joinTreeBtn.textContent = "Sign In to Join";
+        if (formsSubtitle) formsSubtitle.textContent = "Sign in first. We'll bring you back here to create a new tree or join one with a code.";
+        setCardAuthNote(createFormCard, "Private family trees need an account.", "#createTreeFormCard");
+        setCardAuthNote(joinFormCard, "Access codes are private.", "#joinTreeFormCard");
         setFamilyFormStatus("Sign in to create or join a private family tree.");
     } else {
+        if (createTreeBtn) createTreeBtn.textContent = "Start a Tree";
+        if (joinTreeBtn) joinTreeBtn.textContent = "Join with Code";
+        if (formsSubtitle) formsSubtitle.textContent = "You are signed in. Create a new tree or join one with a code from a relative.";
+        setCardAuthNote(createFormCard, "");
+        setCardAuthNote(joinFormCard, "");
         setFamilyFormStatus("");
     }
 }
 
-function requireSignedInForFamilyAction() {
+function requireSignedInForFamilyAction(hash = "") {
     const user = signedInUser || getCurrentUser();
     if (user) return user;
 
     setFamilyFormStatus("Please sign in first. Then come back here to create or join a tree.");
-    window.location.href = "/signin";
+    window.location.href = getSignInUrl(hash);
     return null;
 }
 
@@ -85,12 +132,20 @@ function requireSignedInForFamilyAction() {
 
 if (createTreeBtn && createFormCard) {
     createTreeBtn.addEventListener("click", () => {
+        if (!signedInUser && !getCurrentUser()) {
+            requireSignedInForFamilyAction("#createTreeFormCard");
+            return;
+        }
         createFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 }
 
 if (joinTreeBtn && joinFormCard) {
     joinTreeBtn.addEventListener("click", () => {
+        if (!signedInUser && !getCurrentUser()) {
+            requireSignedInForFamilyAction("#joinTreeFormCard");
+            return;
+        }
         joinFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 }
@@ -105,7 +160,7 @@ if (createFamilyForm) {
 
     createFamilyForm.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const user = requireSignedInForFamilyAction();
+        const user = requireSignedInForFamilyAction("#createTreeFormCard");
         if (!user) return;
 
         const nameInput = /** @type {HTMLInputElement} */ (
@@ -174,7 +229,7 @@ if (joinFamilyForm) {
 
   joinFamilyForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const user = requireSignedInForFamilyAction();
+    const user = requireSignedInForFamilyAction("#joinTreeFormCard");
     if (!user) return;
 
     const codeInput = /** @type {HTMLInputElement} */ (
@@ -205,7 +260,14 @@ if (joinFamilyForm) {
       }
 
       await updateDoc(doc(db, "families", familyId), {
-        memberIds: arrayUnion(user.uid)
+        memberIds: arrayUnion(user.uid),
+        joinCodeAttempt: code
+      });
+
+      await updateDoc(doc(db, "families", familyId), {
+        joinCodeAttempt: deleteField()
+      }).catch((error) => {
+        console.warn("Could not clear join-code attempt marker:", error);
       });
 
       setFamilyId(familyId);

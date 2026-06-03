@@ -29,11 +29,18 @@ service firebase.storage {
         );
     }
 
+    function isSafeProfileImage(fileName) {
+      return fileName.matches('^[A-Za-z0-9._-]{1,140}\\.(jpg|jpeg|png|webp|gif)$')
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
     match /families/{familyId}/people/{personId}/{fileName} {
       allow read: if isFamilyMember(familyId);
-      allow write: if signedIn()
+      allow create, update: if signedIn()
         && isFamilyEditor(familyId)
-        && request.resource.size < 5 * 1024 * 1024;
+        && isSafeProfileImage(fileName);
+      allow delete: if isFamilyEditor(familyId);
     }
   }
 }

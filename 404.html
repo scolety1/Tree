@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account | Family Tree</title>
+    <title>Page Not Found | Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/global.css?v=20260522-11">
 </head>
 <body>
-
     <header>
         <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
         <nav aria-label="Main">
@@ -27,27 +26,14 @@
     </header>
 
     <main>
-        <section class="dashboard-hero">
-            <div>
-                <h2>Account</h2>
-                <p id="accountEmail">Manage your sign-in and family tree access.</p>
-            </div>
+        <section class="empty-page">
+            <h2>That page is not in the family tree.</h2>
+            <p>The link may be old, mistyped, or meant for a private tree that needs sign-in first.</p>
             <div class="dashboard-actions">
-                <button id="signOutBtn" class="button button-secondary" type="button" hidden>Sign Out</button>
+                <a class="button" href="/">Go Home</a>
+                <a class="button button-secondary" href="/signin">Sign In</a>
             </div>
         </section>
-
-        <section class="dashboard-section">
-            <div class="section-heading">
-                <h2>Your family tree</h2>
-                <p>This tree is private. Share the access code only with relatives you want to invite.</p>
-            </div>
-            <div id="dashboardStatus" class="dashboard-status" aria-live="polite">
-                Loading your family tree...
-            </div>
-            <div id="familyTreeList" class="family-tree-list"></div>
-        </section>
-
     </main>
 
     <footer>

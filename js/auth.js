@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260521-8";
+import { auth, db } from "./firebase.js?v=20260522-11";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
@@ -15,6 +15,16 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
 const provider = new GoogleAuthProvider();
+const SAFE_REDIRECT_PATHS = new Set([
+  "/",
+  "/home",
+  "/account",
+  "/dashboard",
+  "/tree",
+  "/tree-spike",
+  "/search",
+  "/profile",
+]);
 
 export function watchAuth(callback) {
   return onAuthStateChanged(auth, callback);
@@ -44,6 +54,50 @@ export async function signOutCurrentUser() {
   return signOut(auth);
 }
 
+function getSafeRedirectTarget() {
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+  if (!redirect) return "/account";
+
+  try {
+    const parsed = new URL(redirect, window.location.origin);
+    if (parsed.origin !== window.location.origin) return "/account";
+    if (!SAFE_REDIRECT_PATHS.has(parsed.pathname)) return "/account";
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || "/account";
+  } catch (error) {
+    return "/account";
+  }
+}
+
+function getFriendlyAuthError(error, createMode = false) {
+  const code = error?.code || "";
+
+  if (code === "auth/weak-password") {
+    return "Password must be at least 6 characters.";
+  }
+  if (code === "auth/email-already-in-use") {
+    return "That email already has an account. Try signing in instead.";
+  }
+  if (code === "auth/invalid-email") {
+    return "Enter a valid email address.";
+  }
+  if (code === "auth/missing-password") {
+    return "Enter your password.";
+  }
+  if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+    return "Email or password does not match an account.";
+  }
+  if (code === "auth/popup-closed-by-user") {
+    return "Google sign-in was closed before it finished.";
+  }
+  if (code === "auth/network-request-failed") {
+    return "Network connection failed. Check your connection and try again.";
+  }
+
+  return createMode
+    ? "Could not create the account. Check the details and try again."
+    : "Could not sign in. Check the details and try again.";
+}
+
 function updateAuthStatus(user) {
   const authStatus = document.getElementById("authStatus");
   const accountEmail = document.getElementById("accountEmail");
@@ -67,6 +121,7 @@ function updateAuthStatus(user) {
   if (authLink) {
     authLink.href = user ? "/account" : "/signin";
     authLink.setAttribute("aria-label", user ? "Open account settings" : "Sign in");
+    authLink.hidden = !user && window.location.pathname === "/signin";
   }
 
   if (linkText) {
@@ -165,10 +220,10 @@ function setupAuthForm() {
           await signInWithEmail(email, password);
         }
         setStatus("You're signed in.");
-        window.location.href = "/account";
+        window.location.href = getSafeRedirectTarget();
       } catch (error) {
         console.error("Auth error:", error);
-        setStatus(error.message || "Could not complete sign in.");
+        setStatus(getFriendlyAuthError(error, createMode));
       } finally {
         if (submitBtn) submitBtn.disabled = false;
       }
@@ -181,10 +236,10 @@ function setupAuthForm() {
       try {
         await signInWithGoogle();
         setStatus("You're signed in.");
-        window.location.href = "/account";
+        window.location.href = getSafeRedirectTarget();
       } catch (error) {
         console.error("Google sign-in error:", error);
-        setStatus(error.message || "Could not sign in with Google.");
+        setStatus(getFriendlyAuthError(error));
       }
     });
   }
@@ -202,7 +257,7 @@ function setupAuthForm() {
         setStatus("Password reset email sent.");
       } catch (error) {
         console.error("Password reset error:", error);
-        setStatus(error.message || "Could not send password reset email.");
+        setStatus(getFriendlyAuthError(error));
       }
     });
   }

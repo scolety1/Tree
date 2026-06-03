@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Family Profile</title>
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260521-8">
-    <link rel="stylesheet" href="/css/profile.css?v=20260521-8">
+    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
+    <link rel="stylesheet" href="/css/profile.css?v=20260522-11">
 
 
 </head>
 <body>
   <header>
-    <h1>Family tree</h1>
+    <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
     <nav aria-label="Main">
       <ul class="nav">
+        <li class="home-nav-item"><a href="/">Home</a></li>
         <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
-        <li><a id="searchNavLink" href="/search">Search</a></li>
       </ul>
     </nav>
     <div class="account-area">
@@ -86,10 +86,10 @@
     </section>
   </div>
 
-  <div id="editPersonModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h2>Edit Profile</h2>
+  <div id="editPersonModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editPersonModalTitle" hidden>
+    <div class="modal-content" tabindex="-1">
+      <button class="close" type="button" aria-label="Close edit profile form">&times;</button>
+      <h2 id="editPersonModalTitle">Edit Profile</h2>
       <form id="editPersonForm" enctype="multipart/form-data">
         <label class="form-label">
           First Name
@@ -107,24 +107,28 @@
           Person's Birthday
           <input type="date" id="editBirthDate"><br>
         </label>
-        <label class="form-label">
-          Parent one
-          <select id="editParent1">
-            <option value="">Select Parent 1</option>
-          </select><br>
-        </label>
-        <label class="form-label">
-          Parent two
-          <select id="editParent2">
-            <option value="">Select Parent 2</option>
-          </select><br>
-        </label>
-        <label class="form-label">
-          Spouse
-          <select id="editSpouse">
-            <option value="">Select Spouse</option>
-          </select><br>
-        </label>
+        <fieldset class="form-fieldset">
+          <legend>Relationships</legend>
+          <p id="editRelationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person is not in this tree yet.</p>
+          <label class="form-label">
+            Parent one
+            <select id="editParent1" aria-describedby="editRelationshipHelp">
+              <option value="">Unknown / not listed yet</option>
+            </select><br>
+          </label>
+          <label class="form-label">
+            Parent two
+            <select id="editParent2" aria-describedby="editRelationshipHelp">
+              <option value="">Unknown / not listed yet</option>
+            </select><br>
+          </label>
+          <label class="form-label">
+            Spouse or partner
+            <select id="editSpouse" aria-describedby="editRelationshipHelp">
+              <option value="">No spouse or not listed yet</option>
+            </select><br>
+          </label>
+        </fieldset>
         <label class="form-label">
           Bio
           <textarea id="editBio" placeholder="Add a short note, memory, or context..." rows="4"></textarea><br>
@@ -135,7 +139,8 @@
         </label>
         <label class="form-label">
           Upload profile photo
-          <input type="file" id="editImageFile" accept="image/*"><br>
+          <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"><br>
+          <span class="field-note">Use JPG, PNG, WebP, or GIF under 5 MB. HEIC photos need to be exported first.</span>
         </label>
         <label class="form-label checkbox-label">
           <input type="checkbox" id="removeImage">
@@ -150,8 +155,8 @@
     <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
   </footer>
 
-  <script type="module" src="/js/main.js?v=20260521-8"></script>
-  <script type="module" src="/js/profile.js?v=20260521-8"></script>
+  <script type="module" src="/js/main.js?v=20260522-11"></script>
+  <script type="module" src="/js/profile.js?v=20260522-11"></script>
 </body>
 
 </html>

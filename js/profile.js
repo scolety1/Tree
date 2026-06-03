@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260521-8";
+import { db, storage } from "./firebase.js?v=20260522-11";
 import {
   doc,
   getDoc,
@@ -13,6 +13,7 @@ import {
   ref,
   uploadBytes,
   getDownloadURL,
+  deleteObject,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-storage.js";
 
 import { 
@@ -28,11 +29,13 @@ import {
   getImageFileExtension,
   getImageUploadMetadata,
   normalizeImageUrl,
-  prepareImageDataUrl,
   prepareImageFileForUpload,
+  resolvePersonParentIds,
+  resolvePersonSpouseIds,
   safeImageFileName,
-} from "./helpers.js?v=20260521-8";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-8";
+} from "./helpers.js?v=20260522-11";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
+import { getAuthUserOnce } from "./familyContext.js?v=20260522-11";
 
 
 let personId = null;
@@ -42,10 +45,74 @@ let allPeople = [];
 let currentAuthUser = getCurrentUser();
 let profileSource = "tree";
 let profileCanEdit = false;
+let currentProfileImageUrl = "";
+
+const PROFILE_SOURCE_ROUTES = {
+  search: {
+    path: "/search",
+    label: "Back to People",
+  },
+  tree: {
+    path: "/tree",
+    label: "Back to Family Tree",
+  },
+};
+
+function getProfileSourceFromParams(params = new URLSearchParams(window.location.search)) {
+  return params.get("from") === "search" ? "search" : "tree";
+}
+
+function getReturnTreeView() {
+  const view = new URLSearchParams(window.location.search).get("view");
+  return view === "chart" || view === "cards" ? view : "";
+}
 
 function setProfileStatus(message) {
   const status = document.getElementById("profileStatus");
   if (status) status.textContent = message;
+}
+
+function setProfileText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
+function clearProfilePhoto() {
+  const profileImgEl = document.getElementById("profileImage");
+  const profileCardEl = document.getElementById("profileCard");
+  if (profileImgEl) {
+    profileImgEl.removeAttribute("src");
+    profileImgEl.style.display = "none";
+  }
+  if (profileCardEl) profileCardEl.classList.add("no-photo");
+  currentProfileImageUrl = "";
+}
+
+function setProfileUnavailable({
+  title,
+  status = "",
+  editMessage = "Open a person from Family Tree to view profile details.",
+  birthday = "-",
+  parents = "-",
+  spouse = "-",
+  children = "-",
+  bio = "-",
+  funFact = "-",
+} = {}) {
+  setProfileText("name", title || "Profile unavailable");
+  setProfileStatus(status);
+  setProfileText("birthDate", birthday);
+  setProfileText("parents", parents);
+  setProfileText("spouse", spouse);
+  setProfileText("children", children);
+  setProfileText("bio", bio);
+  setProfileText("funFact", funFact);
+  clearProfilePhoto();
+  profileCanEdit = false;
+  setProfileEditState({
+    editable: false,
+    message: editMessage,
+  });
 }
 
 function setEditingAvailable(isAvailable) {
@@ -158,15 +225,7 @@ function resolveLegacyPersonId(name) {
 }
 
 function getDirectParentIds(person) {
-  if (!person) return [];
-
-  const parentIds = Array.isArray(person.parentIds) ? person.parentIds.filter(Boolean) : [];
-  if (parentIds.length > 0) return parentIds;
-
-  return [person.parent1, person.parent2]
-    .filter(Boolean)
-    .map(parentName => resolveLegacyPersonId(parentName))
-    .filter(Boolean);
+  return resolvePersonParentIds(person, allPeople);
 }
 
 function isDescendantOf(candidateId, ancestorId, visited = new Set()) {
@@ -185,19 +244,41 @@ function isDescendantOf(candidateId, ancestorId, visited = new Set()) {
 async function loadProfile() {
   const params = new URLSearchParams(window.location.search);
   personId = params.get("person");
-  profileSource = params.get("from") === "search" ? "search" : "tree";
+  profileSource = getProfileSourceFromParams(params);
   
   familyId = params.get("familyId") || getFamilyIdFromHelper();
   updateBackLink();
 
   if (!personId) {
-    document.getElementById("name").textContent =
-      "No person ID provided in URL.";
-    refreshProfileEditState();
+    setProfileUnavailable({
+      title: "Choose a family member",
+      status: "This profile link is missing a person. Go back and open someone from the tree or search results.",
+      editMessage: "Open a person profile before editing.",
+      bio: "No profile is selected yet.",
+      funFact: "Open a family member to see their birthday note.",
+    });
     return;
   }
 
   try {
+    if (familyId) {
+      currentAuthUser = await getAuthUserOnce();
+      if (!currentAuthUser) {
+        setProfileUnavailable({
+          title: "Sign in to view this profile",
+          status: "This person belongs to a private family tree.",
+          editMessage: "Sign in with an invited account before viewing or editing this private profile.",
+          birthday: "Private",
+          parents: "Sign in to continue.",
+          spouse: "Private",
+          children: "Private",
+          bio: "This profile belongs to a private family tree.",
+          funFact: "Sign in with an invited account to see the full profile.",
+        });
+        return;
+      }
+    }
+
     let docRef;
     let docSnap;
     
@@ -206,14 +287,22 @@ async function loadProfile() {
       docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
-        document.getElementById("name").textContent = "Profile not found in this family tree.";
-        refreshProfileEditState();
+        setProfileUnavailable({
+          title: "Profile not found",
+          status: "That person is not in this family tree, or the profile was removed.",
+          editMessage: "Open another person from Family Tree.",
+          bio: "No matching profile was found in this family tree.",
+        });
         return;
       }
 
       if (docSnap.exists() && docSnap.data().familyId !== familyId) {
-        document.getElementById("name").textContent = "Profile not found in this family tree.";
-        refreshProfileEditState();
+        setProfileUnavailable({
+          title: "Profile not found",
+          status: "That person does not belong to the selected family tree.",
+          editMessage: "Return to the family tree and open a person from that tree.",
+          bio: "This profile link does not match the selected family tree.",
+        });
         return;
       }
     }
@@ -227,13 +316,18 @@ async function loadProfile() {
     }
 
     if (!docSnap.exists()) {
-      document.getElementById("name").textContent = "Profile not found.";
-      refreshProfileEditState();
+      setProfileUnavailable({
+        title: "Profile not found",
+        status: "That profile could not be found.",
+        editMessage: "Open another person from Family Tree.",
+        bio: "No matching profile was found.",
+      });
       return;
     }
 
     const data = docSnap.data();
     const person = { id: personId, ...data };
+    currentProfileImageUrl = data.image || "";
     
 
     if (!familyId && data.familyId) {
@@ -264,56 +358,60 @@ async function loadProfile() {
     allPeople = await getAllPeople(familyId);
 
     // PARENTS
-    const parentIds = Array.isArray(data.parentIds) ? data.parentIds : [];
-    const parentsList = parentIds
+    const parentIds = resolvePersonParentIds(person, allPeople);
+    const parentItems = parentIds
       .map(parentId => allPeople.find(person => person.id === parentId))
       .filter(Boolean)
-      .map(getDisplayName);
+      .map(parent => ({ person: parent }));
 
-    if (parentsList.length === 0) {
+    if (parentItems.length === 0) {
       [data.parent1, data.parent2].filter(Boolean).forEach(parentName => {
         const matchedParent = findPersonByNameString(parentName, allPeople);
         if (matchedParent) {
-          parentsList.push(getDisplayName(matchedParent));
+          parentItems.push({ person: matchedParent });
           return;
         }
 
         const parts = parentName.split(" ");
         if (parts.length >= 2) {
-          parentsList.push(toTitleFullName(parts[0], parts.slice(1).join(" ")));
+          parentItems.push({ label: toTitleFullName(parts[0], parts.slice(1).join(" ")) });
         } else {
-          parentsList.push(toTitle(parentName));
+          parentItems.push({ label: toTitle(parentName) });
         }
       });
     }
 
-    document.getElementById("parents").textContent =
-      parentsList.length > 0 ? parentsList.join(" and ") : "Unknown";
+    renderRelationshipList("parents", parentItems, "Unknown", "and");
 
     // SPOUSE
-    const spouseIds = Array.isArray(data.spouseIds) ? data.spouseIds : [];
-    const spouseName = spouseIds
+    const spouseIds = resolvePersonSpouseIds(person, allPeople);
+    const spouseItems = spouseIds
       .map(spouseId => allPeople.find(person => person.id === spouseId))
       .filter(Boolean)
-      .map(getDisplayName)
-      .join(", ") || toTitleFullName(
-        data.spouseFirstName || "",
-        data.spouseLastName || ""
-      );
+      .map(spouse => ({ person: spouse }));
 
-    document.getElementById("spouse").textContent =
-      spouseName || "No spouse listed.";
+    const legacySpouseName = toTitleFullName(
+      data.spouseFirstName || "",
+      data.spouseLastName || ""
+    );
+
+    if (spouseItems.length === 0 && legacySpouseName) {
+      const matchedSpouse = findPersonByNameString(
+        buildFullName(data.spouseFirstName, data.spouseLastName),
+        allPeople
+      );
+      spouseItems.push(matchedSpouse ? { person: matchedSpouse } : { label: legacySpouseName });
+    }
+
+    renderRelationshipList("spouse", spouseItems, "No spouse listed.", "and");
 
     // CHILDREN
     const children = getChildren(person, allPeople);
-    if (children.length > 0) {
-      const childrenNames = children.map(child => 
-        toTitleFullName(child.firstName || "", child.lastName || "")
-      );
-      document.getElementById("children").textContent = childrenNames.join(", ");
-    } else {
-      document.getElementById("children").textContent = "No children.";
-    }
+    renderRelationshipList(
+      "children",
+      children.map(child => ({ person: child })),
+      "No children."
+    );
 
     // BIO
     document.getElementById("bio").textContent =
@@ -330,6 +428,7 @@ async function loadProfile() {
         } else {
           profileImgEl.style.display = "none";
           if (profileCardEl) profileCardEl.classList.add("no-photo");
+          currentProfileImageUrl = "";
         }
       }
 
@@ -372,16 +471,16 @@ async function loadProfile() {
       buildFullName(data.spouseFirstName, data.spouseLastName)
     );
 
-    fillRelationshipSelect(editParent1, allPeople, selectedParent1Id, "Select Parent 1");
-    fillRelationshipSelect(editParent2, allPeople, selectedParent2Id, "Select Parent 2");
-    fillRelationshipSelect(editSpouse, allPeople, selectedSpouseId, "Select Spouse");
+    fillRelationshipSelect(editParent1, allPeople, selectedParent1Id, "Unknown / not listed yet");
+    fillRelationshipSelect(editParent2, allPeople, selectedParent2Id, "Unknown / not listed yet");
+    fillRelationshipSelect(editSpouse, allPeople, selectedSpouseId, "No spouse or not listed yet");
 
     if (editBio) {
         editBio.value = data.bio || "";
     }
 
     if (editImageUrl) {
-        editImageUrl.value = data.image || "";
+        editImageUrl.value = String(data.image || "").startsWith("https://") ? data.image : "";
     }
 
     if (removeImage) {
@@ -400,9 +499,12 @@ async function loadProfile() {
 
   } catch (error) {
     console.error("Error loading profile:", error);
-    document.getElementById("name").textContent =
-      "Error loading profile.";
-    refreshProfileEditState();
+    setProfileUnavailable({
+      title: "Could not load profile",
+      status: "Something went wrong while loading this profile. Check your connection and try again.",
+      editMessage: "Profile editing is unavailable until this profile loads.",
+      bio: "The profile data could not be loaded.",
+    });
   }
 }
 
@@ -410,13 +512,125 @@ function updateBackLink() {
   const backLink = document.getElementById("profileBackLink");
   if (!backLink) return;
 
-  const path = profileSource === "search" ? "/search" : "/tree";
-  const label = profileSource === "search" ? "Back to Search" : "Back to Family Tree";
+  const source = PROFILE_SOURCE_ROUTES[profileSource] ? profileSource : "tree";
+  const { path, label } = PROFILE_SOURCE_ROUTES[source];
+  const params = new URLSearchParams(window.location.search);
+  const searchQuery = params.get("query") || "";
+  const directorySort = params.get("sort") || "";
+  const treeQuery = params.get("treeQuery") || "";
+  const backParams = new URLSearchParams();
+
+  if (familyId) {
+    backParams.set("familyId", familyId);
+  }
+
+  if (source === "search" && searchQuery) {
+    backParams.set("query", searchQuery);
+  }
+
+  if (source === "search" && directorySort) {
+    backParams.set("sort", directorySort);
+  }
+
+  if (source === "tree" && treeQuery) {
+    backParams.set("treeQuery", treeQuery);
+  }
+
+  if (source === "tree" && personId) {
+    backParams.set("focus", personId);
+  }
+
+  const returnView = getReturnTreeView();
+  if (source === "tree" && returnView) {
+    backParams.set("view", returnView);
+  }
 
   backLink.textContent = label;
-  backLink.href = familyId
-    ? `${path}?familyId=${encodeURIComponent(familyId)}`
-    : path;
+  const queryString = backParams.toString();
+  backLink.href = queryString ? `${path}?${queryString}` : path;
+}
+
+function createRelationshipLink(person) {
+  const link = document.createElement("a");
+  const currentParams = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams();
+  params.set("person", person.id);
+  if (familyId) {
+    params.set("familyId", familyId);
+  }
+  params.set("from", profileSource === "search" ? "search" : "tree");
+  if (profileSource === "search") {
+    const searchQuery = currentParams.get("query") || "";
+    const directorySort = currentParams.get("sort") || "";
+    if (searchQuery) params.set("query", searchQuery);
+    if (directorySort) params.set("sort", directorySort);
+  } else {
+    const treeQuery = currentParams.get("treeQuery") || "";
+    if (treeQuery) params.set("treeQuery", treeQuery);
+  }
+  const returnView = getReturnTreeView();
+  if (returnView) {
+    params.set("view", returnView);
+  }
+
+  link.href = `/profile?${params.toString()}`;
+  link.className = "profile-relation-link";
+  link.textContent = getDisplayName(person);
+  return link;
+}
+
+function renderRelationshipList(elementId, items, emptyText, joinWord = "and") {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+
+  element.replaceChildren();
+
+  const cleanItems = items.filter(item => item?.person || item?.label);
+  if (cleanItems.length === 0) {
+    element.textContent = emptyText;
+    return;
+  }
+
+  cleanItems.forEach((item, index) => {
+    if (index > 0) {
+      element.append(index === cleanItems.length - 1 && cleanItems.length === 2 ? ` ${joinWord} ` : ", ");
+    }
+
+    if (item.person) {
+      element.appendChild(createRelationshipLink(item.person));
+    } else {
+      element.append(item.label);
+    }
+  });
+}
+
+function getModalFocusableElements(modal) {
+  return [...modal.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )].filter(element => element.offsetParent !== null);
+}
+
+function setEditFieldInvalid(input, isInvalid) {
+  if (!input) return;
+  input.toggleAttribute("aria-invalid", isInvalid);
+}
+
+function showEditValidationError(message, input = null) {
+  setProfileStatus(message);
+  setEditFieldInvalid(input, true);
+  input?.focus();
+}
+
+function clearEditValidationState() {
+  editForm?.querySelectorAll("[aria-invalid='true']").forEach(input => {
+    input.removeAttribute("aria-invalid");
+  });
+}
+
+function hideModal(modal) {
+  if (!modal) return;
+  modal.classList.remove("is-open");
+  modal.hidden = true;
 }
 
 async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
@@ -424,13 +638,43 @@ async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
   const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
 
+  await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
+  return getDownloadURL(imageRef);
+}
+
+function getManagedProfileImagePath(imageUrl, currentFamilyId, currentPersonId) {
+  if (!imageUrl || !currentFamilyId || !currentPersonId) return "";
+
   try {
-    await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
-    return getDownloadURL(imageRef);
+    const parsedUrl = new URL(imageUrl);
+    const encodedPath = parsedUrl.pathname.split("/o/")[1];
+    if (!encodedPath) return "";
+
+    const storagePath = decodeURIComponent(encodedPath.split("?")[0]);
+    const expectedPrefix = `families/${currentFamilyId}/people/${currentPersonId}/`;
+    return storagePath.startsWith(expectedPrefix) ? storagePath : "";
   } catch (error) {
-    console.warn("Storage upload failed; using embedded profile image fallback.", error);
-    return prepareImageDataUrl(preparedFile);
+    return "";
   }
+}
+
+async function deleteManagedProfileImage(imageUrl, currentFamilyId, currentPersonId) {
+  const storagePath = getManagedProfileImagePath(imageUrl, currentFamilyId, currentPersonId);
+  if (!storagePath) return;
+
+  try {
+    await deleteObject(ref(storage, storagePath));
+  } catch (error) {
+    console.warn("Could not delete old profile image from Storage:", error);
+  }
+}
+
+function getPhotoUploadErrorMessage(error) {
+  const message = String(error?.message || "");
+  if (/unauthorized|permission/i.test(message)) {
+    return "Firebase Storage blocked that photo. Confirm this account has editor access, then try a JPG, PNG, WebP, or GIF under 5 MB.";
+  }
+  return message || "Photo upload failed. Use a JPG, PNG, WebP, or GIF under 5 MB.";
 }
 
 
@@ -438,8 +682,19 @@ async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
 const editForm = document.getElementById("editPersonForm");
 
 if (editForm) {
+  editForm.noValidate = true;
+
+  editForm.addEventListener("input", (event) => {
+    setEditFieldInvalid(event.target, false);
+  });
+
+  editForm.addEventListener("change", (event) => {
+    setEditFieldInvalid(event.target, false);
+  });
+
   editForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearEditValidationState();
     const submitButton = editForm.querySelector('button[type="submit"]');
     if (submitButton) submitButton.disabled = true;
 
@@ -488,8 +743,22 @@ if (editForm) {
     const selectedParent1 = allPeople.find(person => person.id === parent1Id);
     const selectedParent2 = allPeople.find(person => person.id === parent2Id);
     const selectedSpouse = allPeople.find(person => person.id === spouseId);
+
+    if (!rawFirstName) {
+      showEditValidationError("First name is required.", document.getElementById("editFirstName"));
+      finishSubmit();
+      return;
+    }
+
+    if (!rawLastName) {
+      showEditValidationError("Last name is required.", document.getElementById("editLastName"));
+      finishSubmit();
+      return;
+    }
+
     if (parent1Id && parent2Id && parent1Id === parent2Id) {
-      setProfileStatus("Choose two different parents, or leave one blank.");
+      setEditFieldInvalid(document.getElementById("editParent1"), true);
+      showEditValidationError("Choose two different parents, or leave one blank.", document.getElementById("editParent2"));
       finishSubmit();
       return;
     }
@@ -498,7 +767,13 @@ if (editForm) {
       (parent1Id && isDescendantOf(parent1Id, personId)) ||
       (parent2Id && isDescendantOf(parent2Id, personId))
     ) {
-      setProfileStatus("Choose someone who is not already this person's child or descendant.");
+      if (parent1Id && isDescendantOf(parent1Id, personId)) {
+        setEditFieldInvalid(document.getElementById("editParent1"), true);
+      }
+      if (parent2Id && isDescendantOf(parent2Id, personId)) {
+        setEditFieldInvalid(document.getElementById("editParent2"), true);
+      }
+      showEditValidationError("Choose someone who is not already this person's child or descendant.", document.getElementById("editParent1"));
       finishSubmit();
       return;
     }
@@ -510,7 +785,7 @@ if (editForm) {
     const normalizedImageUrl = normalizeImageUrl(rawImageUrl);
 
     if (rawImageUrl && !normalizedImageUrl) {
-      setProfileStatus("Use a secure https:// photo URL, or upload an image file instead.");
+      showEditValidationError("Use a secure https:// photo URL, or upload an image file instead.", document.getElementById("editImageUrl"));
       finishSubmit();
       return;
     }
@@ -534,6 +809,7 @@ if (editForm) {
       birthDate = Timestamp.fromDate(jsDate);
     }
 
+    const previousImageUrl = currentProfileImageUrl;
     let imageUrl = removeImage ? null : normalizedImageUrl || null;
 
     if (imageFile) {
@@ -542,7 +818,7 @@ if (editForm) {
         imageUrl = await uploadProfileImage(familyId, personId, imageFile);
       } catch (err) {
         console.error("Error uploading image:", err);
-        setProfileStatus(err.message || "Photo upload failed. Try a smaller JPG/PNG or paste a secure photo URL.");
+        setProfileStatus(getPhotoUploadErrorMessage(err));
         finishSubmit();
         return;
       }
@@ -573,14 +849,24 @@ if (editForm) {
       const personRef = doc(db, collectionName, personId);
       await updateDoc(personRef, personData);
 
+      const imageWasReplaced = Boolean(
+        previousImageUrl &&
+        imageUrl &&
+        previousImageUrl !== imageUrl
+      );
+      const imageWasRemoved = Boolean(previousImageUrl && removeImage);
+      if (imageWasReplaced || imageWasRemoved) {
+        await deleteManagedProfileImage(previousImageUrl, familyId, personId);
+      }
+
       setProfileStatus("Profile saved. Reloading...");
       const modal = document.getElementById("editPersonModal");
-      if (modal) modal.style.display = "none";
+      hideModal(modal);
 
       window.location.reload();
     } catch (error) {
       console.error("Error updating person:", error);
-      setProfileStatus("Something went wrong while saving changes.");
+      setProfileStatus("Could not save profile changes. Check editor access and try again.");
       finishSubmit();
     }
   });
@@ -588,51 +874,96 @@ if (editForm) {
 
 async function fetchFunFact(birthDate) {
   const funFactEl = document.getElementById("funFact");
-  funFactEl.textContent = "Loading fun fact...";
-  
   const month = birthDate.getMonth() + 1;
   const day = birthDate.getDate();
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
-  
-  try {
-    const apiUrl = `/api/funfact?month=${month}&day=${day}`;
-    const response = await fetch(apiUrl);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    funFactEl.textContent = data.text || `On ${monthNames[month - 1]} ${day}, many interesting historical events have occurred throughout history!`;
-  } catch (error) {
-    console.error("Error fetching fun fact:", error);
-    funFactEl.textContent = `On ${monthNames[month - 1]} ${day}, many significant historical events have occurred! Did you know that people born on this date share it with many notable figures throughout history?`;
-  }
+
+  funFactEl.textContent = `Born on ${monthNames[month - 1]} ${day}. Add a story, photo, or memory to make this profile feel more personal.`;
 }
 
 function setupEditPersonModal() {
   const modal    = document.getElementById("editPersonModal");
   const btn      = document.getElementById("editPersonBtn");
-  const closeBtn = document.querySelector(".modal .close");
+  const closeBtn = modal?.querySelector(".close");
+  const modalContent = modal?.querySelector(".modal-content");
+  let previouslyFocusedElement = null;
 
   if (!modal || !btn) return;
 
-  btn.onclick = () => {
-    modal.style.display = "block";
-  };
-
-  if (closeBtn) {
-    closeBtn.onclick = () => {
-      modal.style.display = "none";
-    };
+  function openModal() {
+    previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : btn;
+    modal.hidden = false;
+    modal.classList.add("is-open");
+    const firstNameInput = document.getElementById("editFirstName");
+    if (firstNameInput && !firstNameInput.disabled) {
+      firstNameInput.focus();
+      return;
+    }
+    modalContent?.focus();
   }
 
-  window.addEventListener("click", (event) => {
-    if (event.target === modal) {
-      modal.style.display = "none";
+  function closeModal() {
+    hideModal(modal);
+    if (previouslyFocusedElement && document.contains(previouslyFocusedElement)) {
+      previouslyFocusedElement.focus();
+    } else {
+      btn.focus();
+    }
+  }
+
+  btn.addEventListener("click", openModal);
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeModal);
+  }
+
+  modal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeModal();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const focusableElements = getModalFocusableElements(modal);
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      modalContent?.focus();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
     }
   });
+
+  window.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  if (new URLSearchParams(window.location.search).get("edit") === "1") {
+    let attempts = 0;
+    const tryOpenRequestedEdit = () => {
+      attempts += 1;
+      if (!btn.hidden && profileCanEdit) {
+        openModal();
+        return;
+      }
+      if (attempts < 20) {
+        window.setTimeout(tryOpenRequestedEdit, 250);
+      }
+    };
+    window.setTimeout(tryOpenRequestedEdit, 250);
+  }
 }
 
 
@@ -661,11 +992,24 @@ if (deletePersonBtn) {
     try {
       setProfileStatus("Removing person...");
       await deleteDoc(doc(db, collectionName, personId));
-      const redirectUrl = familyId ? `/tree?familyId=${familyId}` : "/tree";
+      const returnParams = new URLSearchParams();
+      if (familyId) {
+        returnParams.set("familyId", familyId);
+      }
+      const returnView = getReturnTreeView();
+      if (returnView) {
+        returnParams.set("view", returnView);
+      }
+      const treeQuery = new URLSearchParams(window.location.search).get("treeQuery") || "";
+      if (treeQuery) {
+        returnParams.set("treeQuery", treeQuery);
+      }
+      const redirectQuery = returnParams.toString();
+      const redirectUrl = redirectQuery ? `/tree?${redirectQuery}` : "/tree";
       window.location.href = redirectUrl;
     } catch (error) {
       console.error("Error deleting person:", error);
-      setProfileStatus("Failed to delete this person.");
+      setProfileStatus("Could not remove this person. Check editor access and try again.");
     }
   });
 }

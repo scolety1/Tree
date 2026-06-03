@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260521-8";
+import { auth, db } from "./firebase.js?v=20260522-11";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
@@ -8,7 +8,8 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260521-8";
+import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260522-11";
+import { createStarterColetyTree } from "./starterTree.js?v=20260522-11";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 
@@ -120,6 +121,18 @@ export async function resolveCurrentUserFamilyId() {
       user,
       source: "firebase",
     };
+  }
+
+  try {
+    const starterTreeId = await createStarterColetyTree(user);
+    setFamilyId(starterTreeId);
+    return {
+      familyId: starterTreeId,
+      user,
+      source: "created-starter",
+    };
+  } catch (error) {
+    console.warn("Could not create starter family tree from family context:", error);
   }
 
   return {

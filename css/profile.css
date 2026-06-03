@@ -95,6 +95,17 @@
   line-height: 1.55;
 }
 
+.profile-relation-link {
+  color: var(--brand-strong);
+  font-weight: 750;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.profile-relation-link:hover {
+  color: var(--brand);
+}
+
 #funFact {
   color: var(--muted);
 }

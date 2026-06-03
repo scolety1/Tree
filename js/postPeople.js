@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase.js?v=20260521-8";
+import { db, storage } from "./firebase.js?v=20260522-11";
 import {
   addDoc,
   collection,
@@ -21,11 +21,10 @@ import {
   getImageFileExtension,
   getImageUploadMetadata,
   normalizeImageUrl,
-  prepareImageDataUrl,
   prepareImageFileForUpload,
   safeImageFileName,
-} from "./helpers.js?v=20260521-8";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260521-8";
+} from "./helpers.js?v=20260522-11";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -34,6 +33,23 @@ let currentUser = getCurrentUser();
 
 function setStatus(message) {
   if (statusEl) statusEl.textContent = message;
+}
+
+function setFieldInvalid(input, isInvalid) {
+  if (!input) return;
+  input.toggleAttribute("aria-invalid", isInvalid);
+}
+
+function showValidationError(message, input = null) {
+  setStatus(message);
+  setFieldInvalid(input, true);
+  input?.focus();
+}
+
+function clearValidationState() {
+  form?.querySelectorAll("[aria-invalid='true']").forEach(input => {
+    input.removeAttribute("aria-invalid");
+  });
 }
 
 function setAddFormDisabled(disabled) {
@@ -153,13 +169,16 @@ async function uploadPersonImage(familyId, personId, imageFile) {
   const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
 
-  try {
-    await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
-    return getDownloadURL(imageRef);
-  } catch (error) {
-    console.warn("Storage upload failed; using embedded profile image fallback.", error);
-    return prepareImageDataUrl(preparedFile);
+  await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));
+  return getDownloadURL(imageRef);
+}
+
+function getPhotoUploadErrorMessage(error) {
+  const message = String(error?.message || "");
+  if (/unauthorized|permission/i.test(message)) {
+    return "Firebase Storage blocked that photo. Confirm this account has editor access, then try a JPG, PNG, WebP, or GIF under 5 MB.";
   }
+  return message || "Photo upload failed. Use a JPG, PNG, WebP, or GIF under 5 MB.";
 }
 
 if (form) {
@@ -182,8 +201,19 @@ if (form) {
 }
 
 if(form) {
+  form.noValidate = true;
+
+  form.addEventListener("input", (event) => {
+    setFieldInvalid(event.target, false);
+  });
+
+  form.addEventListener("change", (event) => {
+    setFieldInvalid(event.target, false);
+  });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearValidationState();
     const submitButton = form.querySelector('button[type="submit"]');
     if (submitButton) submitButton.disabled = true;
     if (statusEl) statusEl.textContent = "Saving family member...";
@@ -193,43 +223,55 @@ if(form) {
     const user = currentUser || getCurrentUser();
 
     if (!familyId) {
-      setStatus("The example tree is read-only. Open a private tree to add people.");
+      showValidationError("The example tree is read-only. Open a private tree to add people.");
       if (submitButton) submitButton.disabled = false;
       return;
     }
 
     if (!user) {
-      setStatus("Sign in to add people to this family tree.");
+      showValidationError("Sign in to add people to this family tree.");
       if (submitButton) submitButton.disabled = false;
       return;
     }
 
     if (!await userCanEditCurrentTree(user, familyId)) {
-      setStatus("You can view this tree, but only the owner and editors can add people.");
+      showValidationError("You can view this tree, but only the owner and editors can add people.");
       if (submitButton) submitButton.disabled = false;
       return;
     }
 
     // ----- GET & CLEAN INPUT VALUES -----
-    const rawFirstName   = document.getElementById("firstName").value.trim();
+    const firstNameInput = document.getElementById("firstName");
+    const lastNameInput = document.getElementById("lastName");
+    const parent1Select = document.getElementById("parent1");
+    const parent2Select = document.getElementById("parent2");
+    const imageUrlInput = document.getElementById("personImageUrl");
+    const rawFirstName   = firstNameInput.value.trim();
     const rawMiddleInitial = document.getElementById("middleInitial").value.trim();
-    const rawLastName    = document.getElementById("lastName").value.trim();
+    const rawLastName    = lastNameInput.value.trim();
     const selectedSpouse = getSelectedPerson("spouse");
     const selectedParent1 = getSelectedPerson("parent1");
     const selectedParent2 = getSelectedPerson("parent2");
     const birthDateRaw   = document.getElementById("birthDate").value; // "YYYY-MM-DD"
     const rawBio         = document.getElementById("personBio")?.value.trim() || "";
-    const rawImageUrl    = document.getElementById("personImageUrl")?.value.trim() || "";
+    const rawImageUrl    = imageUrlInput?.value.trim() || "";
     const imageFile      = document.getElementById("personImageFile")?.files?.[0] || null;
 
-    if (!rawFirstName || !rawLastName) {
-      setStatus("First and last name are required.");
+    if (!rawFirstName) {
+      showValidationError("First name is required.", firstNameInput);
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
+
+    if (!rawLastName) {
+      showValidationError("Last name is required.", lastNameInput);
       if (submitButton) submitButton.disabled = false;
       return;
     }
 
     if (selectedParent1 && selectedParent2 && selectedParent1.id === selectedParent2.id) {
-      setStatus("Choose two different parents, or leave one blank.");
+      setFieldInvalid(parent1Select, true);
+      showValidationError("Choose two different parents, or leave one blank.", parent2Select);
       if (submitButton) submitButton.disabled = false;
       return;
     }
@@ -245,7 +287,7 @@ if(form) {
     const imageUrl = normalizeImageUrl(rawImageUrl);
 
     if (rawImageUrl && !imageUrl) {
-      setStatus("Use a secure https:// photo URL, or upload an image file instead.");
+      showValidationError("Use a secure https:// photo URL, or upload an image file instead.", imageUrlInput);
       if (submitButton) submitButton.disabled = false;
       return;
     }
@@ -294,26 +336,39 @@ if(form) {
     // ----- SAVE TO FIRESTORE -----
     try {
       const collectionName = familyId ? "people" : "example";
+      let savedPersonId = null;
       if (imageFile) {
         const personRef = doc(collection(db, collectionName));
+        savedPersonId = personRef.id;
         try {
           personData.image = await uploadPersonImage(familyId, personRef.id, imageFile);
         } catch (error) {
           console.error("Error uploading person photo:", error);
-          setStatus(error.message || "Photo upload failed. Try a smaller JPG/PNG or paste a secure photo URL.");
+          setStatus(getPhotoUploadErrorMessage(error));
           return;
         }
         await setDoc(personRef, personData);
       } else {
-        await addDoc(collection(db, collectionName), personData);
+        const personRef = await addDoc(collection(db, collectionName), personData);
+        savedPersonId = personRef.id;
       }
       form.reset();
+      clearValidationState();
       await refreshRelationshipOptions();
       setStatus(`Saved ${rawFirstName} ${rawLastName}. The tree has been updated.`);
-      window.dispatchEvent(new CustomEvent("person-added"));
+      window.dispatchEvent(new CustomEvent("person-added", {
+        detail: {
+          personId: savedPersonId,
+          familyId,
+          name: `${rawFirstName} ${rawLastName}`.trim(),
+          sourcePath: window.location.pathname,
+          searchQuery: new URLSearchParams(window.location.search).get("query") || "",
+          treeQuery: new URLSearchParams(window.location.search).get("treeQuery") || "",
+        },
+      }));
     } catch (error) {
       console.error("Error adding person:", error);
-      setStatus("Something went wrong while saving. Check that you are signed in and have access to this tree.");
+      setStatus("Could not save that person. Check that you are signed in with editor access, then try again.");
     } finally {
       if (submitButton) submitButton.disabled = false;
       refreshAddFormAvailability();

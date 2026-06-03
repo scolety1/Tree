@@ -1,6 +1,5 @@
-import { db } from "./firebase.js?v=20260521-8";
+import { db } from "./firebase.js?v=20260522-11";
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -9,14 +8,13 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  Timestamp,
   updateDoc,
   where,
   arrayRemove,
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260521-8";
+import { watchAuth } from "./auth.js?v=20260522-11";
 import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
@@ -24,14 +22,15 @@ import {
   getFamilyRole,
   getStoredFamilyId,
   setFamilyId,
-} from "./helpers.js?v=20260521-8";
+} from "./helpers.js?v=20260522-11";
+import {
+  STARTER_TREE_NAME,
+  createStarterColetyTree,
+} from "./starterTree.js?v=20260522-11";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
 let currentUser = null;
-
-const STARTER_TREE_NAME = "Colety Family Tree";
-const STARTER_TREE_DESCRIPTION = "A simple starter tree for the birthday demo. Edit names and relationships as you add real family details.";
 
 function formatDate(value) {
   if (!value || typeof value.toDate !== "function") return "";
@@ -42,8 +41,12 @@ function formatDate(value) {
   });
 }
 
-function setStatus(message) {
-  if (statusEl) statusEl.textContent = message;
+function setStatus(message, tone = "") {
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.toggle("is-loading", tone === "loading");
+  statusEl.classList.toggle("is-error", tone === "error");
+  statusEl.classList.toggle("is-success", tone === "success");
 }
 
 function getRoleLabel(role) {
@@ -56,6 +59,30 @@ function getRoleLabel(role) {
 function getMemberRole(tree, memberId) {
   if (memberId === tree.ownerId) return "owner";
   return tree.memberRoles?.[memberId] === "editor" ? "editor" : "viewer";
+}
+
+function getTreeInviteUrl(tree) {
+  const origin = window.location.origin || "";
+  return `${origin}/#joinTreeFormCard`;
+}
+
+function buildInviteMessage(tree, variant = "friendly") {
+  const treeName = tree.name || "our family tree";
+  const code = tree.joinCode || "";
+  const joinUrl = getTreeInviteUrl(tree);
+
+  if (variant === "short") {
+    return `Join ${treeName}: go to ${joinUrl} and use access code ${code}.`;
+  }
+
+  return [
+    `Hey! I made a private family tree for ${treeName}.`,
+    "",
+    `You can join here: ${joinUrl}`,
+    `Access code: ${code}`,
+    "",
+    "Once you join, you can browse the tree and help fill in family details."
+  ].join("\n");
 }
 
 async function generateAvailableJoinCode() {
@@ -140,28 +167,90 @@ function createTreeCard(tree) {
   detailsWrap.appendChild(membersMeta);
 
   if (isOwner && tree.joinCode) {
-    const code = document.createElement("p");
-    code.className = "family-tree-code";
-    code.append("Access code: ");
+    const code = document.createElement("div");
+    code.className = "family-tree-code invite-code-panel";
+
+    const codeIntro = document.createElement("div");
+    codeIntro.className = "invite-code-copy";
+    const codeLabel = document.createElement("span");
+    codeLabel.className = "invite-code-label";
+    codeLabel.textContent = "Invite code";
+    codeIntro.appendChild(codeLabel);
 
     const codeText = document.createElement("strong");
     codeText.className = "join-code-text";
     codeText.textContent = tree.joinCode;
-    code.appendChild(codeText);
+    codeIntro.appendChild(codeText);
+    code.appendChild(codeIntro);
+
+    const codeHelp = document.createElement("p");
+    codeHelp.textContent = "Share this code with family members so they can join as viewers.";
+    code.appendChild(codeHelp);
+
+    const codeActions = document.createElement("div");
+    codeActions.className = "invite-code-actions";
 
     const copyButton = document.createElement("button");
     copyButton.type = "button";
     copyButton.className = "text-action copy-code-button";
-    copyButton.textContent = "Copy";
-    code.append(" ");
-    code.appendChild(copyButton);
+    copyButton.textContent = "Copy Code";
+    copyButton.setAttribute("aria-label", `Copy invite code for ${tree.name || "this family tree"}`);
+    codeActions.appendChild(copyButton);
 
     const resetButton = document.createElement("button");
     resetButton.type = "button";
     resetButton.className = "text-action reset-code-button";
-    resetButton.textContent = "Reset";
-    code.append(" ");
-    code.appendChild(resetButton);
+    resetButton.textContent = "Reset Code";
+    resetButton.setAttribute("aria-label", `Reset invite code for ${tree.name || "this family tree"}`);
+    codeActions.appendChild(resetButton);
+    code.appendChild(codeActions);
+
+    const helper = document.createElement("details");
+    helper.className = "invite-helper";
+    const helperSummary = document.createElement("summary");
+    helperSummary.textContent = "Invite message";
+    helper.appendChild(helperSummary);
+
+    const helperCopy = document.createElement("p");
+    helperCopy.textContent = "Copy a ready-to-send message for relatives. It includes the private access code, so only send it to people you want in this tree.";
+    helper.appendChild(helperCopy);
+
+    const inviteTextarea = document.createElement("textarea");
+    inviteTextarea.className = "invite-message-text";
+    inviteTextarea.rows = 7;
+    inviteTextarea.readOnly = true;
+    inviteTextarea.value = buildInviteMessage(tree, "friendly");
+    inviteTextarea.setAttribute("aria-label", `Invite message for ${tree.name || "this family tree"}`);
+    helper.appendChild(inviteTextarea);
+
+    const helperActions = document.createElement("div");
+    helperActions.className = "invite-code-actions";
+
+    const copyInviteButton = document.createElement("button");
+    copyInviteButton.type = "button";
+    copyInviteButton.className = "text-action copy-invite-message-button";
+    copyInviteButton.textContent = "Copy Message";
+    copyInviteButton.setAttribute("aria-label", `Copy invite message for ${tree.name || "this family tree"}`);
+    helperActions.appendChild(copyInviteButton);
+
+    const friendlyButton = document.createElement("button");
+    friendlyButton.type = "button";
+    friendlyButton.className = "text-action invite-message-variant-button";
+    friendlyButton.dataset.inviteVariant = "friendly";
+    friendlyButton.textContent = "Friendly";
+    friendlyButton.setAttribute("aria-pressed", "true");
+    helperActions.appendChild(friendlyButton);
+
+    const shortButton = document.createElement("button");
+    shortButton.type = "button";
+    shortButton.className = "text-action invite-message-variant-button";
+    shortButton.dataset.inviteVariant = "short";
+    shortButton.textContent = "Short";
+    shortButton.setAttribute("aria-pressed", "false");
+    helperActions.appendChild(shortButton);
+
+    helper.appendChild(helperActions);
+    code.appendChild(helper);
 
     detailsWrap.appendChild(code);
   }
@@ -197,7 +286,8 @@ function createTreeCard(tree) {
         const roleSelect = document.createElement("select");
         roleSelect.className = "member-role-select";
         roleSelect.dataset.memberId = memberId;
-        roleSelect.setAttribute("aria-label", `Access for ${getMemberLabel(memberId, memberProfiles)}`);
+        roleSelect.setAttribute("aria-label", `Access level for ${getMemberLabel(memberId, memberProfiles)}`);
+        roleSelect.title = "Viewer can read only. Editor can add people and photos.";
 
         [
           ["viewer", "Can view only"],
@@ -219,6 +309,7 @@ function createTreeCard(tree) {
         removeButton.className = "text-action remove-member-button";
         removeButton.dataset.memberId = memberId;
         removeButton.textContent = "Remove";
+        removeButton.setAttribute("aria-label", `Remove ${getMemberLabel(memberId, memberProfiles)} from this family tree`);
         item.append(" ");
         item.appendChild(removeButton);
       }
@@ -245,12 +336,6 @@ function createTreeCard(tree) {
   openLink.href = `/tree?familyId=${encodeURIComponent(tree.id)}`;
   openLink.textContent = "Open Tree";
   actions.appendChild(openLink);
-
-  const searchLink = document.createElement("a");
-  searchLink.className = "button button-secondary";
-  searchLink.href = `/search?familyId=${encodeURIComponent(tree.id)}`;
-  searchLink.textContent = "Search People";
-  actions.appendChild(searchLink);
 
   if (isOwner || role !== "guest") {
     const dangerButton = document.createElement("button");
@@ -324,7 +409,33 @@ function renderDashboardEmptyState() {
   actions.appendChild(joinLink);
 
   empty.appendChild(actions);
-  listEl.appendChild(empty);
+  listEl.replaceChildren(empty);
+}
+
+function renderDashboardLoadingState() {
+  if (!listEl) return;
+
+  const loading = document.createElement("article");
+  loading.className = "loading-state";
+  loading.setAttribute("aria-hidden", "true");
+  listEl.replaceChildren(loading);
+}
+
+function renderDashboardUnavailableState() {
+  if (!listEl) return;
+
+  const state = document.createElement("article");
+  state.className = "empty-state";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "Family tree unavailable";
+  state.appendChild(heading);
+
+  const copy = document.createElement("p");
+  copy.textContent = "Refresh the page, then confirm this account has access to the family tree.";
+  state.appendChild(copy);
+
+  listEl.replaceChildren(state);
 }
 
 function getMemberLabel(memberId, memberProfiles) {
@@ -332,9 +443,12 @@ function getMemberLabel(memberId, memberProfiles) {
   return profile?.displayName || profile?.email || "Family member";
 }
 
-async function loadMemberProfiles(memberIds) {
+async function loadMemberProfiles(memberIds, currentUserId) {
+  const readableMemberIds = [...new Set(memberIds || [])]
+    .filter(memberId => memberId && memberId === currentUserId);
+
   const entries = await Promise.all(
-    [...new Set(memberIds || [])].map(async (memberId) => {
+    readableMemberIds.map(async (memberId) => {
       try {
         const snap = await getDoc(doc(db, "users", memberId));
         return [memberId, snap.exists() ? snap.data() : null];
@@ -393,7 +507,7 @@ async function createTreeFromDoc(docSnap, user) {
   const memberIds = normalizeMemberIds(data, user);
   const memberRoles = normalizeMemberRoles(data, user);
   const [memberProfiles, peopleCount] = await Promise.all([
-    loadMemberProfiles(memberIds),
+    loadMemberProfiles(memberIds, user.uid),
     loadPeopleCount(docSnap.id),
   ]);
 
@@ -411,108 +525,70 @@ async function createTreeFromDoc(docSnap, user) {
   };
 }
 
-function starterBirthDate(year, month, day) {
-  return Timestamp.fromDate(new Date(year, month - 1, day));
+async function createAndRenderStarterTree(user) {
+  const starterTreeId = await createStarterColetyTree(user);
+  const starterSnap = await getDoc(doc(db, "families", starterTreeId));
+
+  if (!starterSnap.exists()) {
+    throw new Error("Starter tree was created but could not be loaded.");
+  }
+
+  const starterTree = await createTreeFromDoc(starterSnap, user);
+  setFamilyId(starterTree.id);
+  setStatus("");
+  listEl.replaceChildren(createTreeCard(starterTree));
 }
 
-function starterPerson(ref, firstName, lastName, birthDate, parentRefs = [], spouseRefs = []) {
-  return {
-    id: ref.id,
-    firstName: firstName.toLowerCase(),
-    lastName: lastName.toLowerCase(),
-    birthDate,
-    familyId: null,
-    parentIds: parentRefs.map(parentRef => parentRef.id),
-    spouseIds: spouseRefs.map(spouseRef => spouseRef.id),
-    bio: "",
-  };
-}
-
-async function createStarterColetyTree(user) {
-  const joinCode = await generateAvailableJoinCode();
-  const familyRef = await addDoc(collection(db, "families"), {
-    name: STARTER_TREE_NAME,
-    description: STARTER_TREE_DESCRIPTION,
-    joinCode,
-    createdAt: serverTimestamp(),
-    ownerId: user.uid,
-    memberIds: [user.uid],
-    memberRoles: {
-      [user.uid]: "owner",
-    },
-    starterTree: true,
-  });
-
-  await setDoc(doc(db, "joinCodes", joinCode), {
-    familyId: familyRef.id,
-    createdAt: serverTimestamp(),
-    createdBy: user.uid,
-  });
-
-  const refs = {
-    grandpaDad: doc(collection(db, "people")),
-    grandmaDad: doc(collection(db, "people")),
-    grandpaMom: doc(collection(db, "people")),
-    grandmaMom: doc(collection(db, "people")),
-    dad: doc(collection(db, "people")),
-    mom: doc(collection(db, "people")),
-    spencer: doc(collection(db, "people")),
-    sibling: doc(collection(db, "people")),
-  };
-
-  const people = [
-    starterPerson(refs.grandpaDad, "Tim's Grandpa", "Colety", starterBirthDate(1930, 4, 12), [], [refs.grandmaDad]),
-    starterPerson(refs.grandmaDad, "Tim's Grandma", "Colety", starterBirthDate(1932, 8, 18), [], [refs.grandpaDad]),
-    starterPerson(refs.grandpaMom, "Mom's Grandpa", "Family", starterBirthDate(1931, 3, 9), [], [refs.grandmaMom]),
-    starterPerson(refs.grandmaMom, "Mom's Grandma", "Family", starterBirthDate(1934, 11, 4), [], [refs.grandpaMom]),
-    starterPerson(refs.dad, "Tim", "Colety", starterBirthDate(1960, 6, 15), [refs.grandpaDad, refs.grandmaDad], [refs.mom]),
-    starterPerson(refs.mom, "Tim's Wife", "Colety", starterBirthDate(1962, 9, 22), [refs.grandpaMom, refs.grandmaMom], [refs.dad]),
-    starterPerson(refs.spencer, "Spencer", "Colety", starterBirthDate(1995, 5, 21), [refs.dad, refs.mom]),
-    starterPerson(refs.sibling, "Colety", "Sibling", starterBirthDate(1998, 1, 10), [refs.dad, refs.mom]),
-  ].map(person => ({
-    ...person,
-    familyId: familyRef.id,
-  }));
-
-  await Promise.all(people.map(person => setDoc(doc(db, "people", person.id), person)));
-
-  return createTreeFromDoc({
-    id: familyRef.id,
-    data: () => ({
-      name: STARTER_TREE_NAME,
-      description: STARTER_TREE_DESCRIPTION,
-      joinCode,
-      createdAt: null,
-      ownerId: user.uid,
-      memberIds: [user.uid],
-      memberRoles: {
-        [user.uid]: "owner",
-      },
-      starterTree: true,
-    }),
-  }, user);
-}
-
-function setCardStatus(card, message) {
+function setCardStatus(card, message, tone = "") {
   const cardStatus = card.querySelector(".family-tree-card-status");
-  if (cardStatus) cardStatus.textContent = message;
+  if (!cardStatus) return;
+  cardStatus.textContent = message;
+  cardStatus.classList.toggle("is-loading", tone === "loading");
+  cardStatus.classList.toggle("is-error", tone === "error");
+  cardStatus.classList.toggle("is-success", tone === "success");
 }
 
 async function copyInviteCode(card, joinCode) {
   try {
     await navigator.clipboard.writeText(joinCode);
-    setCardStatus(card, "Access code copied.");
+    setCardStatus(card, "Access code copied.", "success");
   } catch (error) {
     console.error("Copy failed:", error);
-    setCardStatus(card, "Select the access code and copy it manually.");
+    setCardStatus(card, "Select the access code and copy it manually.", "error");
   }
+}
+
+async function copyInviteMessage(card) {
+  const message = card.querySelector(".invite-message-text")?.value || "";
+  if (!message.trim()) return;
+
+  try {
+    await navigator.clipboard.writeText(message);
+    setCardStatus(card, "Invite message copied.", "success");
+  } catch (error) {
+    console.error("Invite message copy failed:", error);
+    const textarea = card.querySelector(".invite-message-text");
+    textarea?.focus();
+    textarea?.select();
+    setCardStatus(card, "Message selected. Press Ctrl+C to copy it.", "error");
+  }
+}
+
+function setInviteMessageVariant(card, tree, variant) {
+  const textarea = card.querySelector(".invite-message-text");
+  if (!textarea) return;
+
+  textarea.value = buildInviteMessage(tree, variant);
+  card.querySelectorAll(".invite-message-variant-button").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.inviteVariant === variant));
+  });
 }
 
 async function resetInviteCode(card, tree) {
   const confirmed = confirm(`Reset the access code for "${tree.name || "this family tree"}"? The old code will stop working.`);
   if (!confirmed) return;
 
-  setCardStatus(card, "Resetting access code...");
+  setCardStatus(card, "Resetting access code...", "loading");
 
   try {
     const newCode = await generateAvailableJoinCode();
@@ -535,10 +611,12 @@ async function resetInviteCode(card, tree) {
     tree.joinCode = newCode;
     const codeText = card.querySelector(".join-code-text");
     if (codeText) codeText.textContent = newCode;
-    setCardStatus(card, "Access code reset.");
+    const activeVariant = card.querySelector(".invite-message-variant-button[aria-pressed='true']")?.dataset.inviteVariant || "friendly";
+    setInviteMessageVariant(card, tree, activeVariant);
+    setCardStatus(card, "Access code reset.", "success");
   } catch (error) {
     console.error("Error resetting access code:", error);
-    setCardStatus(card, "Could not reset access code.");
+    setCardStatus(card, "Could not reset the access code. Check owner access and try again.", "error");
   }
 }
 
@@ -548,21 +626,21 @@ async function saveTreeDetails(card, tree) {
   const description = form?.elements.description.value.trim();
 
   if (!name) {
-    setCardStatus(card, "Tree name is required.");
+    setCardStatus(card, "Tree name is required.", "error");
     return;
   }
 
-  setCardStatus(card, "Saving changes...");
+  setCardStatus(card, "Saving changes...", "loading");
 
   try {
     await updateDoc(doc(db, "families", tree.id), {
       name,
       description,
     });
-    setCardStatus(card, "Changes saved.");
+    setCardStatus(card, "Changes saved.", "success");
   } catch (error) {
     console.error("Error saving tree:", error);
-    setCardStatus(card, "Could not save changes.");
+    setCardStatus(card, "Could not save changes. Check owner access and try again.", "error");
   }
 }
 
@@ -570,7 +648,7 @@ async function archiveTree(card, tree) {
   const confirmed = confirm(`Archive "${tree.name || "this family tree"}"? You can restore it later once archive management is added.`);
   if (!confirmed) return;
 
-  setCardStatus(card, "Archiving tree...");
+  setCardStatus(card, "Archiving tree...", "loading");
 
   try {
     await updateDoc(doc(db, "families", tree.id), {
@@ -578,10 +656,10 @@ async function archiveTree(card, tree) {
       archivedBy: currentUser?.uid || null,
     });
     card.remove();
-    setStatus("Tree archived.");
+    setStatus("Tree archived.", "success");
   } catch (error) {
     console.error("Error archiving tree:", error);
-    setCardStatus(card, "Could not archive tree.");
+    setCardStatus(card, "Could not archive this tree. Check owner access and try again.", "error");
   }
 }
 
@@ -590,7 +668,7 @@ async function leaveTree(card, tree) {
   const confirmed = confirm(`Leave "${tree.name || "this family tree"}"?`);
   if (!confirmed) return;
 
-  setCardStatus(card, "Leaving tree...");
+  setCardStatus(card, "Leaving tree...", "loading");
 
   try {
     await updateDoc(doc(db, "families", tree.id), {
@@ -598,10 +676,10 @@ async function leaveTree(card, tree) {
       [`memberRoles.${currentUser.uid}`]: deleteField(),
     });
     card.remove();
-    setStatus("You left the tree.");
+    setStatus("You left the tree.", "success");
   } catch (error) {
     console.error("Error leaving tree:", error);
-    setCardStatus(card, "Could not leave tree.");
+    setCardStatus(card, "Could not leave this tree. Check your connection and try again.", "error");
   }
 }
 
@@ -610,7 +688,7 @@ async function removeMember(card, tree, memberId) {
   const confirmed = confirm(`Remove ${memberLabel} from "${tree.name || "this family tree"}"?`);
   if (!confirmed) return;
 
-  setCardStatus(card, "Removing member...");
+  setCardStatus(card, "Removing member...", "loading");
 
   try {
     await updateDoc(doc(db, "families", tree.id), {
@@ -620,10 +698,10 @@ async function removeMember(card, tree, memberId) {
 
     tree.memberIds = (tree.memberIds || []).filter(id => id !== memberId);
     card.querySelector(`[data-member-id="${CSS.escape(memberId)}"]`)?.closest("li")?.remove();
-    setCardStatus(card, "Member removed.");
+    setCardStatus(card, "Member removed.", "success");
   } catch (error) {
     console.error("Error removing member:", error);
-    setCardStatus(card, "Could not remove member.");
+    setCardStatus(card, "Could not remove that member. Check owner access and try again.", "error");
   }
 }
 
@@ -631,7 +709,7 @@ async function updateMemberRole(card, tree, memberId, role) {
   if (!currentUser || tree.ownerId !== currentUser.uid || memberId === tree.ownerId) return;
 
   const nextRole = role === "editor" ? "editor" : "viewer";
-  setCardStatus(card, "Updating access...");
+  setCardStatus(card, "Updating access...", "loading");
 
   try {
     await updateDoc(doc(db, "families", tree.id), {
@@ -648,21 +726,23 @@ async function updateMemberRole(card, tree, memberId, role) {
     const item = card.querySelector(`[data-member-id="${CSS.escape(memberId)}"]`)?.closest("li");
     const label = item?.querySelector("span");
     if (label) label.textContent = getRoleLabel(nextRole);
-    setCardStatus(card, nextRole === "editor" ? "Editor access granted." : "Changed to view-only access.");
+    setCardStatus(card, nextRole === "editor" ? "Editor access granted." : "Changed to view-only access.", "success");
   } catch (error) {
     console.error("Error updating member role:", error);
-    setCardStatus(card, "Could not update access.");
+    setCardStatus(card, "Could not update access. Check owner access and try again.", "error");
   }
 }
 
 function setupTreeCardActions(card, tree, isOwner) {
   const form = card.querySelector(".family-tree-edit-form");
   const copyBtn = card.querySelector(".copy-code-button");
+  const copyInviteMessageBtn = card.querySelector(".copy-invite-message-button");
   const resetCodeBtn = card.querySelector(".reset-code-button");
   const archiveBtn = card.querySelector(".archive-tree-button");
   const leaveBtn = card.querySelector(".leave-tree-button");
   const removeMemberBtns = card.querySelectorAll(".remove-member-button");
   const roleSelects = card.querySelectorAll(".member-role-select");
+  const inviteVariantBtns = card.querySelectorAll(".invite-message-variant-button");
 
   if (form && isOwner) {
     form.addEventListener("submit", (event) => {
@@ -674,6 +754,14 @@ function setupTreeCardActions(card, tree, isOwner) {
   if (copyBtn && tree.joinCode) {
     copyBtn.addEventListener("click", () => copyInviteCode(card, tree.joinCode));
   }
+
+  if (copyInviteMessageBtn && isOwner && tree.joinCode) {
+    copyInviteMessageBtn.addEventListener("click", () => copyInviteMessage(card));
+  }
+
+  inviteVariantBtns.forEach(button => {
+    button.addEventListener("click", () => setInviteMessageVariant(card, tree, button.dataset.inviteVariant || "friendly"));
+  });
 
   if (resetCodeBtn && isOwner) {
     resetCodeBtn.addEventListener("click", () => resetInviteCode(card, tree));
@@ -703,10 +791,12 @@ async function loadFamilyTrees(user) {
 
   if (!user) {
     setStatus("Sign in to see your private family tree.");
+    renderDashboardEmptyState();
     return;
   }
 
-  setStatus("Loading your family tree...");
+  setStatus("Loading your family tree...", "loading");
+  renderDashboardLoadingState();
 
   try {
     const familiesRef = collection(db, "families");
@@ -746,15 +836,13 @@ async function loadFamilyTrees(user) {
     }
 
     if (docs.length === 0) {
-      setStatus("Creating a starter Colety family tree...");
+      setStatus("Creating a starter Colety family tree...", "loading");
+      renderDashboardLoadingState();
       try {
-        const starterTree = await createStarterColetyTree(user);
-        setFamilyId(starterTree.id);
-        setStatus("");
-        listEl.appendChild(createTreeCard(starterTree));
+        await createAndRenderStarterTree(user);
       } catch (error) {
         console.error("Error creating starter tree:", error);
-        setStatus("Could not create the starter family tree. You can still start one manually.");
+        setStatus("Could not create the starter family tree. You can still start one manually.", "error");
         renderDashboardEmptyState();
       }
       return;
@@ -768,15 +856,13 @@ async function loadFamilyTrees(user) {
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     if (activeTrees.length === 0) {
-      setStatus("Creating a starter Colety family tree...");
+      setStatus("Creating a starter Colety family tree...", "loading");
+      renderDashboardLoadingState();
       try {
-        const starterTree = await createStarterColetyTree(user);
-        setFamilyId(starterTree.id);
-        setStatus("");
-        listEl.appendChild(createTreeCard(starterTree));
+        await createAndRenderStarterTree(user);
       } catch (error) {
         console.error("Error creating starter tree:", error);
-        setStatus("Could not create the starter family tree. You can still start one manually.");
+        setStatus("Could not create the starter family tree. You can still start one manually.", "error");
         renderDashboardEmptyState();
       }
       return;
@@ -794,7 +880,8 @@ async function loadFamilyTrees(user) {
     });
   } catch (error) {
     console.error("Error loading dashboard:", error);
-    setStatus("Could not load your family tree. Check your connection and permissions.");
+    setStatus("Could not load your family tree. Refresh the page, then confirm this account has access.", "error");
+    renderDashboardUnavailableState();
   }
 }
 

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connected Family Chart | Family Tree</title>
+    <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+    <script src="/js/chartEmbedBoot.js?v=20260522-11"></script>
+    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/family-chart@0.9.0/dist/styles/family-chart.css">
+    <link rel="stylesheet" href="/css/family_chart_spike.css?v=20260522-11">
+</head>
+<body>
+    <header>
+        <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
+        <nav aria-label="Main">
+            <ul class="nav">
+                <li class="home-nav-item"><a href="/">Home</a></li>
+                <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
+            </ul>
+        </nav>
+        <div class="account-area">
+            <p id="authStatus" class="auth-status">Checking sign-in...</p>
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+                <span class="account-icon" aria-hidden="true"></span>
+                <span class="account-link-text">Sign In</span>
+            </a>
+        </div>
+    </header>
+
+    <main class="layout-spike-main">
+        <section class="layout-spike-hero">
+            <div>
+                <p class="eyebrow">Connected chart</p>
+                <h2>Explore the family map</h2>
+                <p>
+                    Follow spouses, parents, children, and branches without losing the family paths.
+                </p>
+            </div>
+            <div class="layout-spike-actions">
+                <a id="chartSourceTreeLink" class="button button-secondary" href="/tree?demo=large">Back to current tree</a>
+                <a class="button button-secondary" href="/tree-spike?demo=large">Large demo</a>
+            </div>
+        </section>
+
+        <section class="layout-spike-panel">
+            <div class="layout-spike-controls">
+                <div class="layout-spike-control-group layout-spike-search-group">
+                    <label for="personSearchInput">Search by name</label>
+                    <div class="layout-spike-search-row">
+                        <input id="personSearchInput" type="search" list="personSearchOptions" placeholder="Type a name, e.g. Nora Johnson">
+                        <button id="personSearchBtn" class="button button-secondary" type="button">Find</button>
+                    </div>
+                    <datalist id="personSearchOptions"></datalist>
+                    <p id="personSearchHelp" class="search-help">Search centers the person and highlights their immediate family.</p>
+                </div>
+                <div class="layout-spike-control-group layout-spike-focus-group">
+                    <label for="focusPersonSelect">Focus person</label>
+                    <select id="focusPersonSelect"></select>
+                </div>
+                <div class="layout-spike-control-group">
+                    <span class="control-label">View</span>
+                    <div class="layout-spike-button-group" aria-label="Chart view controls">
+                        <button id="fitChartBtn" class="button button-secondary" type="button">Fit tree</button>
+                        <button id="resetChartBtn" class="button button-secondary" type="button">Reset view</button>
+                        <button id="zoomInChartBtn" class="button button-secondary" type="button">Zoom in</button>
+                        <button id="zoomOutChartBtn" class="button button-secondary" type="button">Zoom out</button>
+                    </div>
+                </div>
+                <div class="layout-spike-control-group">
+                    <span class="control-label">Direction</span>
+                    <div class="layout-spike-button-group" aria-label="Chart direction controls">
+                        <button id="verticalChartBtn" class="button button-secondary" type="button" aria-pressed="true">Vertical</button>
+                        <button id="horizontalChartBtn" class="button button-secondary" type="button" aria-pressed="false">Horizontal</button>
+                    </div>
+                </div>
+            </div>
+            <p id="layoutSpikeStatus" class="layout-spike-status" aria-live="polite">Loading family chart...</p>
+            <p id="relationshipMappingStatus" class="relationship-mapping-status">Checking relationship mapping...</p>
+            <p class="layout-spike-hint">Start with Fit tree for the full map. Focus a person, then zoom or pan to explore their branch.</p>
+            <div class="layout-spike-chart-shell">
+                <div id="FamilyChartSpike" class="family-chart-spike f3"></div>
+                <aside id="selectedPersonPanel" class="selected-person-panel" aria-live="polite">
+                    <p class="eyebrow">Selected person</p>
+                    <h2 id="selectedPersonName">Choose someone</h2>
+                    <p id="selectedPersonMeta" class="selected-person-meta">Focus or click a card to see their family details.</p>
+                    <details class="chart-key" open>
+                        <summary>Map key</summary>
+                        <dl>
+                            <div>
+                                <dt>Lines</dt>
+                                <dd>Show partner, parent, and child paths.</dd>
+                            </div>
+                            <div>
+                                <dt>C1, C2</dt>
+                                <dd>Child-branch markers for a couple or parent group.</dd>
+                            </div>
+                            <div>
+                                <dt>Outline</dt>
+                                <dd>The focused person and close family are emphasized.</dd>
+                            </div>
+                        </dl>
+                    </details>
+                    <dl class="selected-person-details">
+                        <div>
+                            <dt>Birthday</dt>
+                            <dd id="selectedPersonBirthday">-</dd>
+                        </div>
+                        <div>
+                            <dt>Parents</dt>
+                            <dd id="selectedPersonParents">-</dd>
+                        </div>
+                        <div>
+                            <dt>Spouse/partner</dt>
+                            <dd id="selectedPersonSpouses">-</dd>
+                        </div>
+                        <div>
+                            <dt>Children</dt>
+                            <dd id="selectedPersonChildren">-</dd>
+                        </div>
+                    </dl>
+                    <div class="selected-person-actions">
+                        <a id="selectedPersonEditLink" class="button selected-person-edit-link" href="/profile">Edit person</a>
+                        <a id="selectedPersonProfileLink" class="button button-secondary" href="/profile">More details</a>
+                        <button id="selectedPersonFocusBtn" class="button button-secondary" type="button">Focus in chart</button>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="layout-spike-notes">
+            <h2>Why This View Helps</h2>
+            <div class="notes-grid">
+                <article>
+                    <h3>Family paths</h3>
+                    <p>Spouses, parents, and children stay visually connected so branches feel easier to follow.</p>
+                </article>
+                <article>
+                    <h3>Large-tree navigation</h3>
+                    <p>Use search, focus, pan, and zoom instead of trying to scan every person at once.</p>
+                </article>
+                <article>
+                    <h3>Profile details</h3>
+                    <p>Select a person to see their immediate family, then open the full profile when you need more detail.</p>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/family-chart@0.9.0/dist/family-chart.min.js"></script>
+    <script type="module" src="/js/main.js?v=20260522-11"></script>
+    <script type="module" src="/js/familyChartSpike.js?v=20260522-11"></script>
+</body>
+</html>
