@@ -233,6 +233,49 @@ Must still be tested live on Firebase:
 - Signed-out and signed-in non-member private-data blocking.
 - Profile photo upload, replace, and remove against deployed Storage rules.
 
+## June 3 Firebase Deploy And Live Guest Smoke
+
+Status: Deployed and guest-smoked on Firebase Hosting. Owner/editor/viewer checks are still the release gate because they require Spencer's signed-in accounts.
+
+Deploy:
+
+- Commit: `7fd0629 Prepare birthday release fixes`
+- Command: `firebase deploy --only hosting,firestore:rules,storage --project tree-72e80`
+- Hosting URL: `https://tree-72e80.web.app`
+- Firestore rules compiled and released.
+- Storage rules compiled and released.
+
+Live guest/header checks passed:
+
+- Home: `https://tree-72e80.web.app/?fresh=prompt6-live-smoke`
+- Large demo tree: `https://tree-72e80.web.app/tree?demo=large&fresh=prompt6-live-smoke`
+- Card list fallback: `https://tree-72e80.web.app/tree?demo=large&view=cards&fresh=prompt6-live-smoke`
+- Hidden People Directory: `https://tree-72e80.web.app/search?demo=large&fresh=prompt6-live-smoke`
+- Account: `https://tree-72e80.web.app/account?fresh=prompt6-live-smoke`
+- Private profile signed-out state: `https://tree-72e80.web.app/profile?person=colety_rose&familyId=colety-birthday-tree&from=tree&fresh=prompt6-live-smoke`
+- Signed-out header showed `Home | Example Tree` and `Sign In`.
+- Private profile route did not expose Colety profile details while signed out.
+- Account route showed signed-out management copy instead of private data.
+- Add Person stayed hidden/disabled for signed-out/read-only Tree, Card list, and hidden People Directory routes.
+- Desktop smoke found no body-level horizontal overflow.
+- Phone-width smoke found no body-level horizontal overflow on Home, Large Demo Tree, Card list fallback, hidden People Directory, and Account.
+- Live response headers include `Content-Security-Policy-Report-Only`, `Cache-Control: no-cache, no-store, must-revalidate`, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: SAMEORIGIN`.
+
+Console note:
+
+- The known `MutationObserver.observe` browser error appeared again in the app browser.
+- App-code search still finds no `MutationObserver` usage; treat it as likely browser/extension noise unless it appears in Spencer's normal browser console.
+
+Still required before final birthday approval:
+
+- Sign in as `smcolety@gmail.com` and confirm the signed-in header shows only `Family Tree` plus the account icon.
+- Confirm the real Colety tree loads from `/tree?familyId=colety-birthday-tree`.
+- Confirm owner/editor Add Person visibility in Chart view, Card list, and hidden People Directory.
+- Confirm owner/editor selected-person `Edit person` and profile `?edit=1` modal behavior.
+- Confirm viewer read-only behavior with no add/edit/remove/photo/invite-reset controls.
+- Confirm signed-out and signed-in non-member private-data blocking.
+- Upload, replace, and remove a valid profile photo against deployed Storage rules.
+
 ## Final Release Order
 
 1. Finish code changes locally.

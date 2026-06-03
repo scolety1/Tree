@@ -2450,3 +2450,41 @@ Spencer live check:
 6. Confirm viewers cannot add, edit, remove, upload photos, or reset invite codes.
 7. Confirm signed-out and non-member users cannot read private Colety tree/profile/photo data.
 8. Upload, replace, and remove a valid profile photo against live Storage rules.
+
+## Release Fix Prompt 6 - Firebase Live Smoke - June 3
+
+Status: Firebase deploy and live guest/header smoke are done. Owner/editor/viewer checks remain Spencer-only because the available browser session was signed out.
+
+Deployed:
+
+- Commit `7fd0629 Prepare birthday release fixes`.
+- Ran `firebase deploy --only hosting,firestore:rules,storage --project tree-72e80`.
+- Hosting, Firestore rules, and Storage rules deployed successfully.
+- Live site: `https://tree-72e80.web.app`
+
+Live guest checks passed:
+
+- Home, Large Demo Tree, Card list fallback, hidden People Directory, Account, and a private Colety profile route loaded from Firebase Hosting.
+- Signed-out nav showed `Home | Example Tree` and `Sign In`.
+- The visible Search/People nav tab stayed removed.
+- Private profile route did not expose private Colety details while signed out.
+- Account route showed signed-out account guidance instead of private tree data.
+- Add Person stayed hidden/disabled for signed-out/read-only Tree, Card list, and hidden People Directory routes.
+- Desktop and phone-width smoke found no body-level horizontal overflow.
+- Live headers include report-only CSP and no-cache headers.
+
+Console note:
+
+- The known `MutationObserver.observe` error still appears in the app browser.
+- Repo search finds no `MutationObserver` usage in app code, so this still looks like browser/extension noise unless it also appears in Spencer's normal live console.
+
+Spencer release gate still required:
+
+1. Sign in as `smcolety@gmail.com` and confirm the signed-in header shows only `Family Tree` plus the account icon.
+2. Open `/tree?familyId=colety-birthday-tree` and confirm the real Colety tree loads.
+3. Confirm Add Person appears for owner/editor accounts in Chart view, Card list, and hidden People Directory.
+4. Select a person and confirm owner/editor users see `Edit person`; viewers do not.
+5. Open a profile with `?edit=1` as owner/editor and confirm the edit modal opens.
+6. Confirm viewers cannot add, edit, remove, upload photos, or reset invite codes.
+7. Confirm signed-out and signed-in non-member users cannot read private Colety tree/profile/photo data.
+8. Upload, replace, and remove a valid profile photo against live Storage rules.

@@ -44,13 +44,13 @@ Status: Done June 3, 2026. Committed and pushed to `main`; see "Prompt 4 Finding
 
 Deploy the approved release-fix work to Firebase. Prefer `firebase deploy --only hosting --project tree-72e80` for UI-only changes. If rules changed in the final diff, deploy hosting plus Firestore/Storage rules with the appropriate Firebase command. After deploy, provide the live URLs for Home, Large Demo Tree, Card list fallback, Account, and any hidden People Directory route that should be spot-checked.
 
-Status: Pending.
+Status: Done June 3, 2026. Deployed to Firebase Hosting plus Firestore and Storage rules; see "Prompt 5 Findings" below.
 
 ## Prompt 6 - Live Smoke And Owner Checklist
 
 After deploy, guide and/or perform a live smoke test. Confirm the live site shows the simplified nav, `Add Person` appears for the owner/editor in the real Colety tree, selected-person Edit/Profile actions work, profile edit modal opens, photo upload still needs or passes live Storage testing, and signed-out/non-member private data stays blocked. Update `DEPLOYMENT_CHECKLIST.md`, `5-21_WORKSHEET.md`, and this queue with pass/fail results and remaining Spencer-only items.
 
-Status: Pending.
+Status: Done June 3, 2026 for live guest/header smoke. Owner/editor/viewer Firebase checks still require Spencer's signed-in accounts; see "Prompt 6 Findings" below.
 
 ## Suggested Order
 
@@ -216,3 +216,64 @@ Checks before commit:
 - `npm run check` passed.
 - `git diff --check` passed with Windows line-ending warnings only.
 - `git fetch origin main` completed before staging.
+
+## Prompt 5 Findings - June 3, 2026
+
+Status: Done. Deployed commit `7fd0629` to Firebase project `tree-72e80`.
+
+Deploy command:
+
+- `firebase deploy --only hosting,firestore:rules,storage --project tree-72e80`
+
+Deploy result:
+
+- Hosting deployed successfully.
+- Firestore rules compiled and released.
+- Storage rules compiled and released.
+- Live Hosting URL: `https://tree-72e80.web.app`
+
+Live spot-check URLs:
+
+- Home: `https://tree-72e80.web.app/?fresh=release-fix-20260603`
+- Large demo tree: `https://tree-72e80.web.app/tree?demo=large&fresh=release-fix-20260603`
+- Card list fallback: `https://tree-72e80.web.app/tree?demo=large&view=cards&fresh=release-fix-20260603`
+- Account: `https://tree-72e80.web.app/account?fresh=release-fix-20260603`
+- Hidden People Directory: `https://tree-72e80.web.app/search?demo=large&fresh=release-fix-20260603`
+
+Verification:
+
+- `npm run check` passed before deploy.
+- Live route HTTP spot checks returned 200 with `Cache-Control: no-cache, no-store, must-revalidate`.
+
+## Prompt 6 Findings - June 3, 2026
+
+Status: Live guest/header smoke passed. Owner/editor/viewer checks remain Spencer-only because the available browser session was signed out.
+
+Live guest checks passed:
+
+- Home, Large Demo Tree, Card list fallback, hidden People Directory, Account, and private Profile routes loaded from Firebase Hosting.
+- Signed-out nav showed `Home | Example Tree` plus `Sign In`.
+- The visible Search/People tab stayed removed from the shared signed-out header.
+- Large demo tree and card fallback loaded with `Add Person` present in the DOM but hidden/disabled for signed-out/read-only access.
+- Hidden People Directory loaded as a direct route and kept edit/add controls hidden for signed-out access.
+- Account page showed a signed-out management state instead of exposing private data.
+- Private Colety profile URL did not expose profile details while signed out.
+- Desktop smoke found no body-level horizontal overflow.
+- Phone-width smoke found no body-level horizontal overflow on Home, Large Demo Tree, Card list fallback, hidden People Directory, and Account.
+- Live headers include `Content-Security-Policy-Report-Only`, `Cache-Control: no-cache, no-store, must-revalidate`, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: SAMEORIGIN`.
+
+Console note:
+
+- The browser log still shows the known `MutationObserver.observe` error.
+- Repo search found no `MutationObserver` usage in app code; this still appears to be browser/extension environment noise unless Spencer sees the same error in a normal live browser console.
+
+Spencer owner/editor/viewer checks still required:
+
+- Sign in as `smcolety@gmail.com` and confirm the signed-in header shows only `Family Tree` plus the account icon.
+- Confirm the real Colety tree loads from `/tree?familyId=colety-birthday-tree`.
+- Confirm Add Person appears for owner/editor accounts in Chart view, Card list, and hidden People Directory.
+- Confirm selected-person `Edit person` appears for owner/editor accounts and is hidden for viewers.
+- Confirm profile `?edit=1` opens the edit modal for owner/editor accounts.
+- Confirm viewers cannot add, edit, remove, reset invite codes, or upload photos.
+- Confirm signed-out and signed-in non-members cannot read private Colety tree/profile/photo data.
+- Upload, replace, and remove a valid profile photo against live Storage rules.
