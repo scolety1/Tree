@@ -166,7 +166,11 @@ async function refreshRelationshipOptions() {
 
 async function uploadPersonImage(familyId, personId, imageFile) {
   const preparedFile = await prepareImageFileForUpload(imageFile);
-  const imagePath = `families/${familyId}/people/${personId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
+  const uploaderId = currentUser?.uid || getCurrentUser()?.uid;
+  if (!uploaderId) {
+    throw new Error("Sign in before uploading a profile photo.");
+  }
+  const imagePath = `families/${familyId}/people/${personId}/uploads/${uploaderId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
 
   await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));

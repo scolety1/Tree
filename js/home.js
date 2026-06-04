@@ -27,6 +27,8 @@ const createFormCard     = document.getElementById("createTreeFormCard");
 const joinFormCard       = document.getElementById("joinTreeFormCard");
 const familyFormStatus   = document.getElementById("familyFormStatus");
 const formsSubtitle      = document.querySelector(".forms-subtitle");
+const formsSignInCallout = document.getElementById("familyFormsSignInCallout");
+const formsSignInLink    = document.getElementById("familyFormsSignInLink");
 let signedInUser = getCurrentUser();
 
 async function generateAvailableJoinCode(length = ACCESS_CODE_LENGTH) {
@@ -93,20 +95,28 @@ function setCardAuthNote(card, message, hash) {
     card.classList.add("requires-auth");
 }
 
+function setFormCardVisible(card, isVisible) {
+    if (card) card.hidden = !isVisible;
+}
+
 function updateFamilyFormsForAuth(user) {
     signedInUser = user;
     const mustSignIn = !user;
 
     setFormDisabled(createFamilyForm, mustSignIn);
     setFormDisabled(joinFamilyForm, mustSignIn);
+    setFormCardVisible(createFormCard, !mustSignIn);
+    setFormCardVisible(joinFormCard, !mustSignIn);
+    if (formsSignInCallout) formsSignInCallout.hidden = !mustSignIn;
+    if (formsSignInLink) formsSignInLink.href = getSignInUrl("#createTreeFormCard");
 
     if (mustSignIn) {
         if (createTreeBtn) createTreeBtn.textContent = "Sign In to Start";
         if (joinTreeBtn) joinTreeBtn.textContent = "Sign In to Join";
-        if (formsSubtitle) formsSubtitle.textContent = "Sign in first. We'll bring you back here to create a new tree or join one with a code.";
-        setCardAuthNote(createFormCard, "Private family trees need an account.", "#createTreeFormCard");
-        setCardAuthNote(joinFormCard, "Access codes are private.", "#joinTreeFormCard");
-        setFamilyFormStatus("Sign in to create or join a private family tree.");
+        if (formsSubtitle) formsSubtitle.textContent = "Create and join controls appear after sign-in so private access codes stay private.";
+        setCardAuthNote(createFormCard, "");
+        setCardAuthNote(joinFormCard, "");
+        setFamilyFormStatus("");
     } else {
         if (createTreeBtn) createTreeBtn.textContent = "Start a Tree";
         if (joinTreeBtn) joinTreeBtn.textContent = "Join with Code";

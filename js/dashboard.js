@@ -66,6 +66,31 @@ function getTreeInviteUrl(tree) {
   return `${origin}/#joinTreeFormCard`;
 }
 
+function hasMeaningfulBio(person) {
+  const bio = String(person?.bio || "").trim();
+  if (!bio) return false;
+  return !bio.toLowerCase().startsWith("starter profile");
+}
+
+function hasBirthDate(person) {
+  return Boolean(person?.birthDate && typeof person.birthDate.toDate === "function");
+}
+
+function hasProfilePhoto(person) {
+  return Boolean(String(person?.image || "").trim());
+}
+
+function hasRelationshipData(person, linkedPersonIds) {
+  return Boolean(
+    (Array.isArray(person?.parentIds) && person.parentIds.length > 0) ||
+    (Array.isArray(person?.spouseIds) && person.spouseIds.length > 0) ||
+    person?.parent1 ||
+    person?.parent2 ||
+    person?.spouse ||
+    linkedPersonIds.has(person.id)
+  );
+}
+
 function buildInviteMessage(tree, variant = "friendly") {
   const treeName = tree.name || "our family tree";
   const code = tree.joinCode || "";
@@ -83,6 +108,129 @@ function buildInviteMessage(tree, variant = "friendly") {
     "",
     "Once you join, you can browse the tree and help fill in family details."
   ].join("\n");
+}
+
+function createChecklistItem({ label, detail, status = "todo", href = "" }) {
+  const item = document.createElement(href ? "a" : "div");
+  item.className = `birthday-prep-item is-${status}`;
+  if (href) item.href = href;
+
+  const marker = document.createElement("span");
+  marker.className = "birthday-prep-marker";
+  marker.setAttribute("aria-hidden", "true");
+  marker.textContent = status === "done" ? "✓" : status === "review" ? "!" : "•";
+  item.appendChild(marker);
+
+  const copy = document.createElement("span");
+  copy.className = "birthday-prep-copy";
+
+  const title = document.createElement("strong");
+  title.textContent = label;
+  copy.appendChild(title);
+
+  const note = document.createElement("span");
+  note.textContent = detail;
+  copy.appendChild(note);
+
+  item.appendChild(copy);
+  return item;
+}
+
+function createBirthdayPrepChecklist(tree, isOwner) {
+  if (!isOwner) return null;
+
+  const prep = tree.prepSummary || {
+    peopleCount: tree.peopleCount || 0,
+    photoCount: 0,
+    missingBirthdays: 0,
+    missingBios: 0,
+    missingRelationships: 0,
+  };
+  const peopleCount = prep.peopleCount || 0;
+  const treeUrl = `/tree?familyId=${encodeURIComponent(tree.id)}`;
+  const directoryUrl = `/search?familyId=${encodeURIComponent(tree.id)}`;
+
+  const section = document.createElement("section");
+  section.className = "birthday-prep-checklist";
+  section.setAttribute("aria-labelledby", `birthday-prep-${tree.id}`);
+
+  const header = document.createElement("div");
+  header.className = "birthday-prep-header";
+
+  const heading = document.createElement("h3");
+  heading.id = `birthday-prep-${tree.id}`;
+  heading.textContent = "Birthday demo checklist";
+  header.appendChild(heading);
+
+  const intro = document.createElement("p");
+  intro.textContent = "A quick owner pass before showing the tree.";
+  header.appendChild(intro);
+  section.appendChild(header);
+
+  const list = document.createElement("div");
+  list.className = "birthday-prep-list";
+
+  list.appendChild(createChecklistItem({
+    label: "Photos",
+    detail: peopleCount ? `${prep.photoCount} of ${peopleCount} profiles have photos.` : "Add people before photo prep.",
+    status: peopleCount > 0 && prep.photoCount === peopleCount ? "done" : "todo",
+    href: directoryUrl,
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Birthdays",
+    detail: peopleCount === 0
+      ? "Add people before birthday prep."
+      : prep.missingBirthdays === 0
+      ? "Every profile has a birthday."
+      : `${prep.missingBirthdays} profile${prep.missingBirthdays === 1 ? "" : "s"} still need birthdays.`,
+    status: peopleCount > 0 && prep.missingBirthdays === 0 ? "done" : "todo",
+    href: directoryUrl,
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Bios",
+    detail: peopleCount === 0
+      ? "Add people before bio prep."
+      : prep.missingBios === 0
+      ? "Every profile has a real bio."
+      : `${prep.missingBios} profile${prep.missingBios === 1 ? "" : "s"} still have empty or starter bios.`,
+    status: peopleCount > 0 && prep.missingBios === 0 ? "done" : "todo",
+    href: directoryUrl,
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Relationships",
+    detail: peopleCount === 0
+      ? "Add people before relationship prep."
+      : prep.missingRelationships === 0
+      ? "All profiles are connected to the family map."
+      : `${prep.missingRelationships} profile${prep.missingRelationships === 1 ? "" : "s"} may be disconnected.`,
+    status: peopleCount > 0 && prep.missingRelationships === 0 ? "done" : "todo",
+    href: treeUrl,
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Invite code",
+    detail: tree.joinCode ? "Ready to copy for trusted relatives." : "Missing an invite code.",
+    status: tree.joinCode ? "done" : "todo",
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Public demo",
+    detail: "Open the example tree once before family sees it.",
+    status: "review",
+    href: "/tree?demo=large",
+  }));
+
+  list.appendChild(createChecklistItem({
+    label: "Domain and DNS",
+    detail: "Final live check for coletys.com after the domain move.",
+    status: "review",
+  }));
+
+  section.appendChild(list);
+  return section;
 }
 
 async function generateAvailableJoinCode() {
@@ -163,7 +311,7 @@ function createTreeCard(tree) {
   membersMeta.textContent = [
     `${memberCount} ${memberCount === 1 ? "member" : "members"}`,
     peopleCount == null ? "" : `${peopleCount} ${peopleCount === 1 ? "person" : "people"}`,
-  ].filter(Boolean).join(" · ");
+  ].filter(Boolean).join(" | ");
   detailsWrap.appendChild(membersMeta);
 
   if (isOwner && tree.joinCode) {
@@ -171,7 +319,7 @@ function createTreeCard(tree) {
     code.className = "family-tree-code invite-code-panel";
 
     const codeIntro = document.createElement("div");
-    codeIntro.className = "invite-code-copy";
+    codeIntro.className = "invite-code-display";
     const codeLabel = document.createElement("span");
     codeLabel.className = "invite-code-label";
     codeLabel.textContent = "Invite code";
@@ -180,6 +328,7 @@ function createTreeCard(tree) {
     const codeText = document.createElement("strong");
     codeText.className = "join-code-text";
     codeText.textContent = tree.joinCode;
+    codeText.setAttribute("aria-label", `Invite code ${tree.joinCode}`);
     codeIntro.appendChild(codeText);
     code.appendChild(codeIntro);
 
@@ -188,7 +337,8 @@ function createTreeCard(tree) {
     code.appendChild(codeHelp);
 
     const codeActions = document.createElement("div");
-    codeActions.className = "invite-code-actions";
+    codeActions.className = "invite-code-actions invite-code-primary-actions";
+    codeActions.setAttribute("aria-label", "Invite code actions");
 
     const copyButton = document.createElement("button");
     copyButton.type = "button";
@@ -224,7 +374,8 @@ function createTreeCard(tree) {
     helper.appendChild(inviteTextarea);
 
     const helperActions = document.createElement("div");
-    helperActions.className = "invite-code-actions";
+    helperActions.className = "invite-code-actions invite-message-actions";
+    helperActions.setAttribute("aria-label", "Invite message actions");
 
     const copyInviteButton = document.createElement("button");
     copyInviteButton.type = "button";
@@ -239,6 +390,7 @@ function createTreeCard(tree) {
     friendlyButton.dataset.inviteVariant = "friendly";
     friendlyButton.textContent = "Friendly";
     friendlyButton.setAttribute("aria-pressed", "true");
+    friendlyButton.setAttribute("aria-label", `Use friendly invite message for ${tree.name || "this family tree"}`);
     helperActions.appendChild(friendlyButton);
 
     const shortButton = document.createElement("button");
@@ -247,12 +399,18 @@ function createTreeCard(tree) {
     shortButton.dataset.inviteVariant = "short";
     shortButton.textContent = "Short";
     shortButton.setAttribute("aria-pressed", "false");
+    shortButton.setAttribute("aria-label", `Use short invite message for ${tree.name || "this family tree"}`);
     helperActions.appendChild(shortButton);
 
     helper.appendChild(helperActions);
     code.appendChild(helper);
 
     detailsWrap.appendChild(code);
+  }
+
+  const prepChecklist = createBirthdayPrepChecklist(tree, isOwner);
+  if (prepChecklist) {
+    detailsWrap.appendChild(prepChecklist);
   }
 
   const memberDetails = document.createElement("details");
@@ -462,18 +620,49 @@ async function loadMemberProfiles(memberIds, currentUserId) {
   return new Map(entries);
 }
 
-async function loadPeopleCount(familyId) {
-  if (!familyId) return null;
+async function loadBirthdayPrepSummary(familyId) {
+  if (!familyId) {
+    return {
+      peopleCount: null,
+      photoCount: 0,
+      missingBirthdays: 0,
+      missingBios: 0,
+      missingRelationships: 0,
+    };
+  }
 
   try {
     const peopleSnap = await getDocs(query(
       collection(db, "people"),
       where("familyId", "==", familyId)
     ));
-    return peopleSnap.size;
+    const people = peopleSnap.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    }));
+    const linkedPersonIds = new Set();
+
+    people.forEach(person => {
+      (Array.isArray(person.parentIds) ? person.parentIds : []).forEach(id => linkedPersonIds.add(id));
+      (Array.isArray(person.spouseIds) ? person.spouseIds : []).forEach(id => linkedPersonIds.add(id));
+    });
+
+    return {
+      peopleCount: people.length,
+      photoCount: people.filter(hasProfilePhoto).length,
+      missingBirthdays: people.filter(person => !hasBirthDate(person)).length,
+      missingBios: people.filter(person => !hasMeaningfulBio(person)).length,
+      missingRelationships: people.filter(person => !hasRelationshipData(person, linkedPersonIds)).length,
+    };
   } catch (error) {
-    console.warn("Could not load people count:", error);
-    return null;
+    console.warn("Could not load birthday prep summary:", error);
+    return {
+      peopleCount: null,
+      photoCount: 0,
+      missingBirthdays: 0,
+      missingBios: 0,
+      missingRelationships: 0,
+    };
   }
 }
 
@@ -506,9 +695,9 @@ async function createTreeFromDoc(docSnap, user) {
   const data = docSnap.data();
   const memberIds = normalizeMemberIds(data, user);
   const memberRoles = normalizeMemberRoles(data, user);
-  const [memberProfiles, peopleCount] = await Promise.all([
+  const [memberProfiles, prepSummary] = await Promise.all([
     loadMemberProfiles(memberIds, user.uid),
-    loadPeopleCount(docSnap.id),
+    loadBirthdayPrepSummary(docSnap.id),
   ]);
 
   return {
@@ -518,7 +707,8 @@ async function createTreeFromDoc(docSnap, user) {
     memberIds,
     memberRoles,
     memberProfiles,
-    peopleCount,
+    peopleCount: prepSummary.peopleCount,
+    prepSummary,
     needsMembershipRepair: data.ownerId === user.uid && !Array.isArray(data.memberIds),
     needsRoleRepair: data.ownerId === user.uid && data.memberRoles?.[user.uid] !== "owner",
     needsJoinCodeRepair: data.ownerId === user.uid && !data.joinCode,

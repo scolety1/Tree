@@ -276,6 +276,58 @@ Still required before final birthday approval:
 - Confirm signed-out and signed-in non-member private-data blocking.
 - Upload, replace, and remove a valid profile photo against deployed Storage rules.
 
+## June 4 External Audit Prompt 10 Deploy Candidate
+
+Status: Account readiness checklist is complete locally. Browser smoke is still required after deploy or a successful local server run.
+
+Ready locally:
+
+- Owner-only Account Birthday demo checklist.
+- Checklist coverage for photos, birthdays, real bios, relationship connectivity, invite code, public demo review, and domain/DNS review.
+- Local checks passed with `npm.cmd run check`.
+- Static Firebase Hosting rewrite/core asset assertion passed.
+
+Deploy notes:
+
+- Suggested commit message: `Add birthday demo readiness checklist`.
+- Suggested deploy command after review: `firebase deploy --only hosting,firestore:rules,storage --project tree-72e80`.
+
+Post-deploy smoke:
+
+1. Open `/account` as `smcolety@gmail.com`; confirm the checklist appears and counts match the Colety tree.
+2. Open `/tree?familyId=colety-birthday-tree`; confirm the tree loads, selected-person panel works, and Recently Viewed/relative chips help navigation.
+3. Open `/search?familyId=colety-birthday-tree`; confirm directory filtering, profile links, and Back to People context.
+4. Edit a profile and test photo upload, replace, and remove against live Storage.
+5. Confirm viewer/editor/non-member permissions before the birthday demo.
+6. Open `/tree?demo=large` signed out; confirm public demo data still looks intentional and non-Colety.
+
+## June 4 Audit Intake Prompts 1-6
+
+Status: Prompts 1-6 are complete locally. They are not final-release approved until the live Firebase owner/editor/viewer checks pass after deploy.
+
+Ready locally:
+
+- Public demo data consistency and signed-out/private-route copy were tightened.
+- Profile return/context handling was audited and patched where needed.
+- Account readiness copy and checklist behavior were cleaned up.
+- Hidden Family Directory copy now presents it as a secondary owner/testing view.
+- Memory Wall no longer shows a permanent loading state; it stays hidden until real photo/story content exists.
+- `README.md`, this checklist, and `5-21_WORKSHEET.md` document the current audit status and live gates.
+- Local checks passed with `npm.cmd run check`.
+
+Security and console notes:
+
+- Keep `Content-Security-Policy-Report-Only` for the birthday demo. Do not enforce CSP until Firebase Auth, Firestore, Storage, same-origin route loading, jsDelivr Family Chart assets, and any allowed profile-photo URLs are verified from live browser reports.
+- The recurring `MutationObserver.observe` warning has no app-owned source in this repo. Treat it as browser/extension noise unless Spencer can reproduce it in a clean normal browser profile with an app stack trace.
+
+Remaining live release gates:
+
+1. Sign in as the owner and confirm `/account`, `/tree?familyId=colety-birthday-tree`, `/profile`, and `/search?familyId=colety-birthday-tree` all load the private tree correctly.
+2. Test owner/editor Add Person, Edit Profile, profile `?edit=1`, invite-code reset/copy, and photo upload/replace/remove against live Firebase rules.
+3. Test viewer and non-member accounts to confirm private data and write controls stay blocked.
+4. Test public signed-out `/`, `/tree`, `/tree?demo=large`, and `/search?demo=large` after deploy.
+5. Watch live console output for CSP reports and any clean-browser `MutationObserver.observe` reproduction.
+
 ## Final Release Order
 
 1. Finish code changes locally.

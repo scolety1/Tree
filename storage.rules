@@ -42,5 +42,14 @@ service firebase.storage {
         && isSafeProfileImage(fileName);
       allow delete: if isFamilyEditor(familyId);
     }
+
+    match /families/{familyId}/people/{personId}/uploads/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && isSafeProfileImage(fileName);
+      allow delete: if signedIn()
+        && request.auth.uid == userId;
+    }
   }
 }

@@ -13,12 +13,14 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260522-11";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260522-11";
 
 let allPeople = [];
 let currentFamilyId = null;
 let currentSearchQuery = "";
 let currentSearchScope = "example";
 let currentDirectorySort = "name";
+let currentDemoContext = "";
 
 function getQueryFromUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -107,7 +109,11 @@ function getMissingInfoLabels(person, people) {
 function buildProfileUrl(person, familyId = null) {
   const params = new URLSearchParams();
   params.set("person", person.id);
-  if (familyId) params.set("familyId", familyId);
+  if (familyId) {
+    params.set("familyId", familyId);
+  } else {
+    params.set("demo", currentDemoContext || "example");
+  }
   if (currentSearchQuery) params.set("query", currentSearchQuery);
   if (currentDirectorySort && currentDirectorySort !== "name") params.set("sort", currentDirectorySort);
   params.set("from", "search");
@@ -256,13 +262,14 @@ function createMemoryCard(person, familyId = null) {
 }
 
 function renderMemoryWall(people, familyId = null) {
+  const section = document.getElementById("memoryWallSection");
   const wall = document.getElementById("memoryWall");
   if (!wall) return;
 
   wall.replaceChildren();
 
   if (!people || people.length === 0) {
-    wall.appendChild(createSearchMessage("Load a tree to see family memories."));
+    if (section) section.hidden = true;
     return;
   }
 
@@ -275,9 +282,11 @@ function renderMemoryWall(people, familyId = null) {
     });
 
   if (memoryPeople.length === 0) {
-    wall.appendChild(createSearchMessage("No photos or story notes have been added yet. Open a profile to add the first memory."));
+    if (section) section.hidden = true;
     return;
   }
+
+  if (section) section.hidden = false;
 
   const summary = document.createElement("p");
   summary.className = "search-summary";
@@ -325,7 +334,7 @@ function runSearch(rawQuery, resultsContainer) {
     const copy = document.createElement("p");
     const strong = document.createElement("strong");
     strong.textContent = trimmed;
-    copy.append("No directory results for ", strong, `. Try a shorter name, a last name, or add the person if they are missing from ${currentSearchScope}.`);
+    copy.append("No family members matched ", strong, `. Try a shorter name, a last name, or add the person if they are missing from ${currentSearchScope}.`);
     noResults.appendChild(copy);
     resultsContainer.appendChild(noResults);
     return;
@@ -393,7 +402,7 @@ function createSearchMessage(message) {
   const empty = document.createElement("div");
   empty.className = "empty-state";
   const heading = document.createElement("h3");
-  heading.textContent = "Directory status";
+  heading.textContent = "Family directory status";
   const copy = document.createElement("p");
   copy.textContent = message;
   empty.append(heading, copy);
@@ -414,20 +423,28 @@ async function initSearchPage() {
     return;
   }
 
-  const resolvedFamily = await resolveCurrentUserFamilyId();
+  const params = new URLSearchParams(window.location.search);
+  const requestedDemo = params.get("demo");
+  const explicitDemoSearch = requestedDemo === "large" || requestedDemo === "example";
+  currentDemoContext = explicitDemoSearch ? requestedDemo : "";
+  const resolvedFamily = explicitDemoSearch
+    ? { familyId: null, user: null }
+    : await resolveCurrentUserFamilyId();
   currentFamilyId = resolvedFamily.familyId;
-  const searchLabel = await getFamilySearchLabel(currentFamilyId);
-  currentSearchScope = currentFamilyId ? searchLabel : "the read-only example tree";
+  const usePublicDemoData = explicitDemoSearch || (!currentFamilyId && !resolvedFamily.user);
+  const searchLabel = usePublicDemoData ? "the read-only example family" : await getFamilySearchLabel(currentFamilyId);
+  currentSearchScope = currentFamilyId ? searchLabel : "the read-only example family";
+  if (usePublicDemoData && !currentDemoContext) currentDemoContext = "example";
   setSearchContext(currentFamilyId
-    ? `Searching ${searchLabel}.`
-    : "Searching the read-only example tree. Sign in to search your private family tree.");
+    ? `Browsing family members in ${searchLabel}.`
+    : "Browsing the read-only example family. These made-up people match the public family tree demo.");
 
   const queryFromUrl = getQueryFromUrl();
   if (queryFromUrl) {
     input.value = queryFromUrl;
   }
   if (sortSelect) {
-    const requestedSort = new URLSearchParams(window.location.search).get("sort");
+    const requestedSort = params.get("sort");
     if (["name", "generation", "birthday", "missing"].includes(requestedSort)) {
       sortSelect.value = requestedSort;
       currentDirectorySort = requestedSort;
@@ -438,7 +455,7 @@ async function initSearchPage() {
     setSearchFormDisabled(form, true);
     setSearchContext("This is a private family tree. Sign in to search it.");
     resultsContainer.replaceChildren();
-    resultsContainer.appendChild(createSearchMessage("Sign in with an invited account to search this private family tree."));
+    resultsContainer.appendChild(createSearchMessage("Sign in with an invited account to browse this private family directory."));
     renderMemoryWall([]);
     return;
   }
@@ -455,15 +472,15 @@ async function initSearchPage() {
   setSearchFormDisabled(form, false);
 
   try {
-    allPeople = await getAllPeople(currentFamilyId);
+    allPeople = usePublicDemoData ? generateLargeDemoTree() : await getAllPeople(currentFamilyId);
     runSearch(input.value, resultsContainer);
     renderMemoryWall(allPeople, currentFamilyId);
   } catch (err) {
     console.error("Error loading people for search:", err);
-    setSearchContext("Search data could not load.");
+    setSearchContext("Family directory data could not load.");
     setSearchFormDisabled(form, true);
     resultsContainer.replaceChildren();
-    resultsContainer.appendChild(createSearchMessage("Could not load people for this search. Refresh the page, then confirm this account has access to the selected tree."));
+    resultsContainer.appendChild(createSearchMessage("Could not load family members for this directory. Refresh the page, then confirm this account has access to the selected tree."));
     renderMemoryWall([]);
     return;
   }
@@ -506,7 +523,7 @@ async function initSearchPage() {
     setSearchContext(`Added ${addedName}. Refreshing ${currentSearchScope} without changing your search.`);
 
     try {
-      allPeople = await getAllPeople(currentFamilyId);
+      allPeople = usePublicDemoData ? generateLargeDemoTree() : await getAllPeople(currentFamilyId);
       input.value = queryBeforeRefresh;
       updateSearchUrl(queryBeforeRefresh);
       runSearch(queryBeforeRefresh, resultsContainer);

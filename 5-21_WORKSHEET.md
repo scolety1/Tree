@@ -2488,3 +2488,59 @@ Spencer release gate still required:
 6. Confirm viewers cannot add, edit, remove, upload photos, or reset invite codes.
 7. Confirm signed-out and signed-in non-member users cannot read private Colety tree/profile/photo data.
 8. Upload, replace, and remove a valid profile photo against live Storage rules.
+
+## June 4 External Audit Prompt 10 - Account Demo Readiness Checklist
+
+Status: Done locally; not committed, pushed, or deployed.
+
+What changed:
+
+- Added an owner-only Birthday demo checklist to the Account tree card.
+- The checklist summarizes photo coverage, birthdays, real bios, relationship connectivity, invite-code readiness, public demo review, and domain/DNS review.
+- Checklist counts come from the existing `people` query on Account; no new backend state or checklist collection was added.
+- Checklist links send the owner to the private Family Directory, private tree, and public large demo where the remaining prep work happens.
+
+Checks:
+
+- `npm.cmd run check` passed.
+- Static route/assets assertion passed for Firebase Hosting rewrites and core app files.
+- Static prompt-10 assertion passed for Account checklist code and styles.
+
+Unable to complete in this sandbox:
+
+- Browser smoke could not run in this turn because the in-app browser runtime crashed while setting up the local server, and background Python serving is blocked by the sandbox.
+
+Remaining release gate:
+
+1. Deploy or locally reload, then open `/account` as `smcolety@gmail.com` and confirm the Birthday demo checklist appears only for the owner.
+2. Confirm checklist counts match the Colety tree, especially photos, starter bios, and disconnected people.
+3. Open `/tree?familyId=colety-birthday-tree`, select several people, and confirm Recently Viewed plus relative chips are useful.
+4. Open `/search?familyId=colety-birthday-tree`, filter people, and confirm profile links/return paths still work.
+5. Edit a profile, upload/replace/remove a photo, and confirm Storage still works live.
+6. Confirm viewer/editor/non-member permission behavior before showing the app to family.
+
+## June 4 Audit Intake Prompts 1-6 - Docs And Release Gate Cleanup
+
+Status: Done locally; not committed, pushed, or deployed.
+
+What changed:
+
+- Intake prompts 1-6 are now marked complete locally in `TREE_2026-06-04_AUDIT_INTAKE_QUEUE.md`.
+- README now describes the current birthday-release app instead of the older scaffold/future-feature state.
+- Deployment checklist now has a June 4 audit intake status block with the exact live owner/editor/viewer release gates.
+- Family Directory is documented as a secondary owner/testing route, not the primary family-tree experience.
+- Memory Wall is treated as hidden/future content unless real photo/story data exists.
+
+Security and console notes:
+
+- CSP remains report-only for the birthday demo.
+- CSP enforcement is deferred until Firebase Auth, Firestore, Storage, same-origin route loading, jsDelivr Family Chart assets, and allowed profile-photo URLs are verified from live reports.
+- Repo search still finds no app-owned `MutationObserver` usage. Treat the recurring `MutationObserver.observe` warning as browser/extension noise unless it appears in a clean normal browser profile with an app stack.
+
+Remaining live release gate:
+
+1. Sign in as owner and test `/account`, `/tree?familyId=colety-birthday-tree`, `/profile`, and `/search?familyId=colety-birthday-tree`.
+2. Test owner/editor Add Person, Edit Profile, profile `?edit=1`, invite-code reset/copy, and photo upload/replace/remove.
+3. Confirm viewer and non-member accounts cannot read private data or use write controls.
+4. Check public signed-out `/`, `/tree`, `/tree?demo=large`, and `/search?demo=large` after deploy.
+5. Watch live console output for CSP reports and any clean-browser `MutationObserver.observe` reproduction.

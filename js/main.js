@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const treeContext = getTreeContextParams();
         document.querySelectorAll(".home-nav-item").forEach((item) => {
             item.hidden = !isSignedOut || isSignedIn;
+            item.setAttribute("aria-hidden", item.hidden ? "true" : "false");
         });
 
         const treeNavLink = document.getElementById("treeNavLink");

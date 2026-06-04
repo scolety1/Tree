@@ -86,6 +86,15 @@ function notifyTreeFrameHeight() {
   }, window.location.origin);
 }
 
+function notifyTreePersonSelected(personId) {
+  if (!isEmbedMode() || window.parent === window || !personId) return;
+
+  window.parent.postMessage({
+    type: "tree-chart-person-selected",
+    personId,
+  }, window.location.origin);
+}
+
 function setupEmbedResizeObserver() {
   if (!isEmbedMode() || window.parent === window) return;
 
@@ -354,6 +363,7 @@ function analyzeRelationshipMapping(people, data) {
 function getProfileUrl(personId, options = {}) {
   if (!personId || currentSource.isDemo || !currentSource.familyId) return "";
 
+  const currentParams = new URLSearchParams(window.location.search);
   const params = new URLSearchParams({
     person: personId,
     familyId: currentSource.familyId,
@@ -362,6 +372,11 @@ function getProfileUrl(personId, options = {}) {
 
   if (isEmbedMode()) {
     params.set("view", "chart");
+  }
+
+  const treeQuery = currentParams.get("treeQuery") || "";
+  if (treeQuery) {
+    params.set("treeQuery", treeQuery);
   }
 
   if (options.edit) {
@@ -508,6 +523,7 @@ function updateSelectedPersonPanel(personId) {
   }
 
   selectedPersonPanel.classList.add("has-selection");
+  notifyTreePersonSelected(personId);
   if (selectedPersonName) selectedPersonName.textContent = person.data.originalName || person.id;
   if (selectedPersonMeta) {
     selectedPersonMeta.textContent = currentSource.isDemo
@@ -741,6 +757,12 @@ async function loadSpikePeople() {
 }
 
 function chooseInitialPerson(data) {
+  const requestedFocusId = new URLSearchParams(window.location.search).get("focus");
+  const requestedPerson = requestedFocusId
+    ? data.find(person => person.id === requestedFocusId)
+    : null;
+  if (requestedPerson) return requestedPerson;
+
   if (currentSource.isDemo) {
     return data.find(person => person.id === "demo-g3-11") || data[0];
   }

@@ -3,7 +3,7 @@
 <head> 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>People Directory | Family Tree</title>
+    <title>Family Directory | Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/global.css?v=20260522-11">
 </head>
@@ -29,13 +29,13 @@
 
     <main>
         <section class="search-section">
-            <h2>People directory</h2>
-            <p>Browse everyone in the current tree, filter by name, and open profiles to fill in details.</p>
+            <h2>Family directory</h2>
+            <p class="secondary-surface-note">Secondary owner/testing view. For the family demo, start with the Family Tree page and use Find person there.</p>
             <p id="searchContext" class="search-context">Checking which tree to search...</p>
 
             <form id="search-form" class="directory-controls">
                 <div>
-                    <label for="search-input">Filter by name</label>
+                    <label for="search-input">Filter family members by name</label>
                     <input
                         id="search-input"
                         type="text"
@@ -60,13 +60,12 @@
             </div>
         </section>
 
-        <section class="memory-wall-section" aria-labelledby="memoryWallTitle">
+        <section id="memoryWallSection" class="memory-wall-section" aria-labelledby="memoryWallTitle" hidden>
             <div class="section-heading">
                 <h2 id="memoryWallTitle">Memory wall</h2>
-                <p>Browse the photos and story notes already added to this family tree.</p>
+                <p>Photos and story notes appear here once profiles have real memories attached.</p>
             </div>
             <div id="memoryWall" class="memory-wall" aria-live="polite">
-                Loading family memories...
             </div>
         </section>
         

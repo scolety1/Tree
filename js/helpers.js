@@ -323,9 +323,37 @@ export function buildFullName(firstName, lastName) {
   return `${f} ${l}`.trim();
 }
 
+const TITLECASE_ACRONYMS = new Map([
+  ["ai", "AI"],
+  ["api", "API"],
+  ["css", "CSS"],
+  ["dna", "DNA"],
+  ["html", "HTML"],
+  ["js", "JS"],
+  ["qa", "QA"],
+  ["ui", "UI"],
+  ["url", "URL"],
+  ["us", "US"],
+  ["usa", "USA"],
+]);
+
+function titleCaseToken(token) {
+  const cleanToken = String(token || "").trim();
+  if (!cleanToken) return "";
+
+  const acronym = TITLECASE_ACRONYMS.get(cleanToken.toLowerCase());
+  if (acronym) return acronym;
+
+  return cleanToken.charAt(0).toUpperCase() + cleanToken.slice(1).toLowerCase();
+}
+
 export function toTitle(str) {
   if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  return String(str)
+    .trim()
+    .split(/([\s'-]+)/)
+    .map(part => (/^[\s'-]+$/.test(part) ? part : titleCaseToken(part)))
+    .join("");
 }
 
 export function toTitleFullName(firstName, lastName) {

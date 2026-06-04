@@ -57,6 +57,42 @@
                     <p id="treeFocusStatus" class="tree-focus-status" aria-live="polite">Search this tree by name.</p>
                     <datalist id="treePersonList"></datalist>
                 </form>
+                <section id="treeRecentPeoplePanel" class="tree-recent-people-panel" aria-labelledby="treeRecentPeopleTitle" hidden>
+                    <div class="tree-tool-section-heading">
+                        <h2 id="treeRecentPeopleTitle">Recently viewed</h2>
+                        <button id="treeRecentPeopleClear" class="tree-text-button" type="button">Clear</button>
+                    </div>
+                    <div id="treeRecentPeopleList" class="tree-recent-people-list"></div>
+                </section>
+                <section id="treeSelectedPersonPanel" class="tree-selected-person-panel" aria-live="polite" hidden>
+                    <p class="tree-selected-eyebrow">Selected person</p>
+                    <h2 id="treeSelectedPersonName">Choose someone</h2>
+                    <p id="treeSelectedPersonMeta" class="tree-selected-meta">Use Find person or click a card in the family map.</p>
+                    <dl class="tree-selected-details">
+                        <div>
+                            <dt>Birthday</dt>
+                            <dd id="treeSelectedBirthday">-</dd>
+                        </div>
+                        <div>
+                            <dt>Parents</dt>
+                            <dd id="treeSelectedParents">-</dd>
+                        </div>
+                        <div>
+                            <dt>Spouse/partner</dt>
+                            <dd id="treeSelectedSpouse">-</dd>
+                        </div>
+                        <div>
+                            <dt>Children</dt>
+                            <dd id="treeSelectedChildren">-</dd>
+                        </div>
+                    </dl>
+                    <div id="treeSelectedRelativeActions" class="tree-selected-relative-actions"></div>
+                    <div class="tree-selected-actions">
+                        <a id="treeSelectedEditLink" class="button" href="/profile" hidden>Edit person</a>
+                        <a id="treeSelectedProfileLink" class="button button-secondary" href="/profile" hidden>Open profile</a>
+                        <button id="treeSelectedFocusBtn" class="button button-secondary" type="button">Focus in chart</button>
+                    </div>
+                </section>
                 <div class="tree-view-actions" aria-label="Map actions">
                     <button id="treeFullscreenBtn" class="button button-secondary" type="button">
                         Full Screen

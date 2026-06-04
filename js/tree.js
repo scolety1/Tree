@@ -29,8 +29,16 @@ let treeFocusIndex = -1;
 let currentTreeView = "cards";
 let chartRefreshToken = 0;
 let chartLoadTimer = null;
+let activeTreeContext = {
+  familyId: null,
+  isDemoMode: true,
+  canEdit: false,
+};
 const TREE_DENSITY_STORAGE_KEY = "treeDensity";
 const TREE_VIEW_STORAGE_KEY = "treePreferredView";
+const TREE_RECENTS_STORAGE_KEY = "treeRecentlyViewedPeople";
+const TREE_RECENTS_LIMIT = 8;
+const TREE_RELATIVE_GROUP_LIMIT = 4;
 const TREE_DENSITIES = new Set(["comfortable", "dense", "compact"]);
 const TREE_VIEWS = new Set(["chart", "cards"]);
 const CHART_READY_TIMEOUT_MS = 9000;
@@ -80,6 +88,14 @@ function buildChartFrameUrl(familyId, isDemoMode = false) {
     params.set("familyId", familyId);
   }
   params.set("embed", "tree");
+  const focusPersonId = getInitialFocusPersonId();
+  if (focusPersonId) {
+    params.set("focus", focusPersonId);
+  }
+  const treeQuery = getInitialTreeQuery();
+  if (treeQuery) {
+    params.set("treeQuery", treeQuery);
+  }
   if (chartRefreshToken) {
     params.set("fresh", String(chartRefreshToken));
   }
@@ -126,6 +142,10 @@ function markChartLoading(message = "Building the family map...") {
 function markChartReady() {
   clearChartLoadTimer();
   setChartStatus("ready", "Connected chart ready", "The connected chart is ready.");
+  const focusedPersonId = getInitialFocusPersonId();
+  if (focusedPersonId) {
+    focusPersonInChartFrame(focusedPersonId, getInitialTreeQuery());
+  }
 }
 
 function markChartError(message = "The connected chart could not load. Card list view is still available.") {
@@ -186,6 +206,14 @@ function setupChartFrameSafety() {
           chartView.style.minHeight = `${nextHeight}px`;
         }
       }
+      return;
+    }
+
+    if (data.type === "tree-chart-person-selected") {
+      setSelectedPersonPanel(data.personId, {
+        source: "chart",
+        scroll: false,
+      });
       return;
     }
 
@@ -325,6 +353,7 @@ function setupAddPersonModal() {
 
   function openModal() {
     previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : btn;
+    document.body.classList.add("add-person-modal-open");
     modal.hidden = false;
     modal.classList.add("is-open");
     const firstNameInput = document.getElementById("firstName");
@@ -338,6 +367,7 @@ function setupAddPersonModal() {
   function closeModal() {
     modal.classList.remove("is-open");
     modal.hidden = true;
+    document.body.classList.remove("add-person-modal-open");
     if (previouslyFocusedElement && document.contains(previouslyFocusedElement)) {
       previouslyFocusedElement.focus();
     } else {
@@ -406,22 +436,14 @@ function createPersonCard(person, familyId = null, options = {}) {
   const fullTitleName = toTitleFullName(person.firstName, person.lastName);
 
   const link = document.createElement(options.noProfileLinks ? "span" : "a");
-  // Include familyId in profile link if it exists
-  let profileUrl = `/profile?person=${encodeURIComponent(person.id)}`;
-  if (familyId) {
-    profileUrl += `&familyId=${encodeURIComponent(familyId)}`;
-  }
-  profileUrl += "&from=tree";
-  if (TREE_VIEWS.has(currentTreeView)) {
-    profileUrl += `&view=${encodeURIComponent(currentTreeView)}`;
-  }
-  const currentParams = new URLSearchParams(window.location.search);
-  const treeQuery = currentParams.get("treeQuery") || "";
-  if (treeQuery) {
-    profileUrl += `&treeQuery=${encodeURIComponent(treeQuery)}`;
-  }
   if (!options.noProfileLinks) {
-    link.href = profileUrl;
+    const params = new URLSearchParams();
+    params.set("person", person.id);
+    addTreeProfileContext(params, familyId, {
+      isDemoMode: Boolean(options.isDemoMode),
+      isPublicExample: !familyId && !options.isDemoMode,
+    });
+    link.href = `/profile?${params.toString()}`;
   }
   link.dataset.personId = person.id; // for connector calculations
   link.dataset.personName = getPersonSearchText(person);
@@ -522,6 +544,27 @@ function normalizeTreeSearch(value) {
     .replace(/\s+/g, " ");
 }
 
+function addTreeProfileContext(params, familyId, options = {}) {
+  if (familyId) {
+    params.set("familyId", familyId);
+  } else if (options.demoContext) {
+    params.set("demo", options.demoContext);
+  } else if (options.isDemoMode || options.isPublicExample) {
+    const currentDemo = new URLSearchParams(window.location.search).get("demo");
+    params.set("demo", currentDemo === "large" ? "large" : "example");
+  }
+
+  params.set("from", "tree");
+  if (TREE_VIEWS.has(currentTreeView)) {
+    params.set("view", currentTreeView);
+  }
+
+  const treeQuery = new URLSearchParams(window.location.search).get("treeQuery") || "";
+  if (treeQuery) {
+    params.set("treeQuery", treeQuery);
+  }
+}
+
 function getPersonSearchText(person) {
   return normalizeTreeSearch([
     person?.firstName,
@@ -533,6 +576,333 @@ function getPersonSearchText(person) {
 
 function getPersonDisplayName(person) {
   return toTitleFullName(person?.firstName || "", person?.lastName || "") || "Unnamed";
+}
+
+function getPersonById(personId) {
+  return lastRenderedPeople.find(person => person.id === personId) || null;
+}
+
+function getRecentPeopleScopeKey() {
+  if (activeTreeContext.familyId) return `family:${activeTreeContext.familyId}`;
+  return activeTreeContext.isDemoMode ? "demo:large" : "demo:example";
+}
+
+function readRecentPeopleStore() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TREE_RECENTS_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    console.warn("Could not read recently viewed people:", error);
+    return {};
+  }
+}
+
+function writeRecentPeopleStore(store) {
+  try {
+    localStorage.setItem(TREE_RECENTS_STORAGE_KEY, JSON.stringify(store));
+  } catch (error) {
+    console.warn("Could not save recently viewed people:", error);
+  }
+}
+
+function getRecentPeopleIds() {
+  const ids = readRecentPeopleStore()[getRecentPeopleScopeKey()];
+  return Array.isArray(ids) ? ids.filter(Boolean) : [];
+}
+
+function setRecentPeopleIds(ids) {
+  const store = readRecentPeopleStore();
+  const scope = getRecentPeopleScopeKey();
+  const cleanIds = [...new Set(ids.filter(id => getPersonById(id)))].slice(0, TREE_RECENTS_LIMIT);
+
+  if (cleanIds.length > 0) {
+    store[scope] = cleanIds;
+  } else {
+    delete store[scope];
+  }
+
+  writeRecentPeopleStore(store);
+}
+
+function createPersonJumpChip(person, labelPrefix = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tree-relative-chip";
+  button.textContent = `${labelPrefix}${getPersonDisplayName(person)}`;
+  button.addEventListener("click", () => {
+    setSelectedPersonPanel(person.id, {
+      source: "quick-jump",
+      scroll: false,
+      focusChart: true,
+    });
+  });
+  return button;
+}
+
+function createOverflowChip(count) {
+  const chip = document.createElement("span");
+  chip.className = "tree-relative-chip tree-relative-overflow";
+  chip.textContent = `+${count} more`;
+  chip.setAttribute("aria-label", `${count} more relatives in this group`);
+  return chip;
+}
+
+function addRecentPerson(personId) {
+  if (!personId || !getPersonById(personId)) return;
+
+  setRecentPeopleIds([
+    personId,
+    ...getRecentPeopleIds().filter(id => id !== personId),
+  ]);
+}
+
+function renderRecentPeople() {
+  const panel = document.getElementById("treeRecentPeoplePanel");
+  const list = document.getElementById("treeRecentPeopleList");
+  if (!panel || !list) return;
+
+  const recentPeople = getRecentPeopleIds()
+    .map(getPersonById)
+    .filter(Boolean);
+
+  list.replaceChildren();
+  panel.hidden = recentPeople.length === 0;
+  panel.setAttribute("aria-hidden", recentPeople.length === 0 ? "true" : "false");
+
+  recentPeople.forEach(person => {
+    list.appendChild(createPersonJumpChip(person));
+  });
+}
+
+function clearRecentPeople() {
+  setRecentPeopleIds([]);
+  renderRecentPeople();
+}
+
+function setupRecentPeopleControls() {
+  const clearButton = document.getElementById("treeRecentPeopleClear");
+  clearButton?.addEventListener("click", clearRecentPeople);
+}
+
+function formatSelectedBirthDate(person) {
+  const birthday = getBirthdayDate(person);
+  if (!birthday) return "Unknown";
+
+  return birthday.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function getSelectedRelationshipPeople(person, relationship) {
+  if (!person) return [];
+
+  if (relationship === "parents") {
+    return resolvePersonParentIds(person, lastRenderedPeople)
+      .map(getPersonById)
+      .filter(Boolean);
+  }
+
+  if (relationship === "spouses") {
+    return resolvePersonSpouseIds(person, lastRenderedPeople)
+      .map(getPersonById)
+      .filter(Boolean);
+  }
+
+  if (relationship === "children") {
+    return derivePersonChildren(person, lastRenderedPeople);
+  }
+
+  if (relationship === "siblings") {
+    const parentIds = resolvePersonParentIds(person, lastRenderedPeople);
+    if (parentIds.length === 0) return [];
+
+    return lastRenderedPeople
+      .filter(other => other.id !== person.id)
+      .filter(other => resolvePersonParentIds(other, lastRenderedPeople).some(parentId => parentIds.includes(parentId)))
+      .sort((a, b) => getPersonDisplayName(a).localeCompare(getPersonDisplayName(b)));
+  }
+
+  return [];
+}
+
+function formatSelectedRelationshipList(people, emptyText) {
+  if (!people.length) return emptyText;
+
+  const names = people.map(getPersonDisplayName).filter(Boolean);
+  if (names.length <= 3) return names.join(", ");
+  return `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+}
+
+function buildTreeProfileUrl(personId, { edit = false } = {}) {
+  if (!personId || activeTreeContext.isDemoMode || !activeTreeContext.familyId) return "";
+
+  const params = new URLSearchParams();
+  params.set("person", personId);
+  params.set("familyId", activeTreeContext.familyId);
+  params.set("from", "tree");
+  if (TREE_VIEWS.has(currentTreeView)) params.set("view", currentTreeView);
+
+  const treeQuery = new URLSearchParams(window.location.search).get("treeQuery") || "";
+  if (treeQuery) params.set("treeQuery", treeQuery);
+  if (edit) params.set("edit", "1");
+
+  return `/profile?${params.toString()}`;
+}
+
+function setSelectedLink(link, href) {
+  if (!link) return;
+  if (!href) {
+    link.hidden = true;
+    link.removeAttribute("href");
+    return;
+  }
+
+  link.hidden = false;
+  link.href = href;
+}
+
+function addRelativeFocusButton(container, person, labelPrefix = "") {
+  if (!container || !person?.id) return;
+  container.appendChild(createPersonJumpChip(person, labelPrefix));
+}
+
+function createRelativeGroup(title, people) {
+  const group = document.createElement("section");
+  group.className = "tree-relative-group";
+  group.setAttribute("aria-label", title);
+
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  group.appendChild(heading);
+
+  const list = document.createElement("div");
+  list.className = "tree-relative-chip-list";
+  const uniquePeople = [];
+  const seenIds = new Set();
+  people.forEach(person => {
+    if (!person?.id || seenIds.has(person.id)) return;
+    seenIds.add(person.id);
+    uniquePeople.push(person);
+  });
+
+  uniquePeople.slice(0, TREE_RELATIVE_GROUP_LIMIT).forEach(relative => {
+    addRelativeFocusButton(list, relative);
+  });
+
+  const hiddenCount = uniquePeople.length - TREE_RELATIVE_GROUP_LIMIT;
+  if (hiddenCount > 0) {
+    list.appendChild(createOverflowChip(hiddenCount));
+  }
+
+  group.appendChild(list);
+  return group;
+}
+
+function renderSelectedRelativeActions(person, parents, spouses, children, siblings) {
+  const container = document.getElementById("treeSelectedRelativeActions");
+  if (!container) return;
+
+  container.replaceChildren();
+  const label = document.createElement("p");
+  label.className = "tree-relative-actions-label";
+  label.textContent = "Close relatives";
+  container.appendChild(label);
+
+  const groups = [
+    { title: "Parents", people: parents },
+    { title: "Spouse/partner", people: spouses },
+    { title: "Children", people: children },
+    { title: "Siblings", people: siblings },
+  ];
+
+  const visibleGroups = groups.filter(group => group.people.length > 0);
+
+  if (visibleGroups.length === 0) {
+    const note = document.createElement("p");
+    note.className = "tree-relative-empty";
+    note.textContent = "No close relatives are linked yet.";
+    container.appendChild(note);
+    return;
+  }
+
+  visibleGroups.forEach(group => {
+    container.appendChild(createRelativeGroup(group.title, group.people));
+  });
+}
+
+function clearSelectedPersonPanel() {
+  const panel = document.getElementById("treeSelectedPersonPanel");
+  if (panel) panel.hidden = true;
+  setSelectedLink(document.getElementById("treeSelectedProfileLink"), "");
+  setSelectedLink(document.getElementById("treeSelectedEditLink"), "");
+  document.getElementById("treeSelectedRelativeActions")?.replaceChildren();
+}
+
+function setSelectedPersonPanel(personId, { source = "tree", scroll = false, focusChart = false } = {}) {
+  const panel = document.getElementById("treeSelectedPersonPanel");
+  if (!panel || !personId) return;
+
+  const person = getPersonById(personId);
+  if (!person) {
+    clearSelectedPersonPanel();
+    return;
+  }
+
+  const parents = getSelectedRelationshipPeople(person, "parents");
+  const spouses = getSelectedRelationshipPeople(person, "spouses");
+  const children = getSelectedRelationshipPeople(person, "children");
+  const siblings = getSelectedRelationshipPeople(person, "siblings");
+
+  panel.hidden = false;
+  document.getElementById("treeSelectedPersonName").textContent = getPersonDisplayName(person);
+  document.getElementById("treeSelectedPersonMeta").textContent = activeTreeContext.isDemoMode
+    ? "Read-only example person. Use this card to understand the selected branch."
+    : activeTreeContext.canEdit
+      ? "Owner/editor view. Open the profile to edit details, photos, and relationships."
+      : "Private-tree person. Open the profile to see more details.";
+  document.getElementById("treeSelectedBirthday").textContent = formatSelectedBirthDate(person);
+  document.getElementById("treeSelectedParents").textContent = formatSelectedRelationshipList(parents, "Unknown");
+  document.getElementById("treeSelectedSpouse").textContent = formatSelectedRelationshipList(spouses, "No spouse or partner listed.");
+  document.getElementById("treeSelectedChildren").textContent = formatSelectedRelationshipList(children, "No children listed.");
+
+  setSelectedLink(document.getElementById("treeSelectedProfileLink"), buildTreeProfileUrl(person.id));
+  setSelectedLink(
+    document.getElementById("treeSelectedEditLink"),
+    activeTreeContext.canEdit ? buildTreeProfileUrl(person.id, { edit: true }) : ""
+  );
+
+  const focusBtn = document.getElementById("treeSelectedFocusBtn");
+  if (focusBtn) {
+    focusBtn.hidden = false;
+    focusBtn.onclick = () => {
+      focusPersonInTree(person.id);
+      focusPersonInChartFrame(person.id, getPersonDisplayName(person));
+      updateTreeFocusUrl({ personId: person.id });
+      setTreeFocusStatus(`Focused ${getPersonDisplayName(person)}.`);
+    };
+  }
+
+  addRecentPerson(person.id);
+  renderRecentPeople();
+  renderSelectedRelativeActions(person, parents, spouses, children, siblings);
+  setFocusedCard(person.id);
+
+  if (focusChart) {
+    focusPersonInTree(person.id);
+    focusPersonInChartFrame(person.id, getPersonDisplayName(person));
+    updateTreeFocusUrl({ personId: person.id });
+    setTreeFocusStatus(`Focused ${getPersonDisplayName(person)}.`);
+  }
+
+  if (scroll || window.matchMedia("(max-width: 820px)").matches) {
+    panel.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }
 }
 
 function getTreeFocusElements() {
@@ -570,6 +940,7 @@ function clearTreeFocus() {
   treeFocusMatches = [];
   treeFocusIndex = -1;
   updateTreeFocusButtons();
+  clearSelectedPersonPanel();
 }
 
 function setFocusedCard(personId) {
@@ -619,6 +990,10 @@ function focusTreeMatch(index) {
   setFocusedCard(person.id);
   focusPersonInTree(person.id);
   focusPersonInChartFrame(person.id, input?.value.trim() || "");
+  setSelectedPersonPanel(person.id, {
+    source: "search",
+    scroll: true,
+  });
   setTreeFocusStatus(`${treeFocusIndex + 1} of ${treeFocusMatches.length}: ${getPersonDisplayName(person)}`);
   updateTreeFocusUrl({
     personId: person.id,
@@ -868,6 +1243,10 @@ function setupRelationshipFinder() {
     }
 
     focusPersonInChartFrame(personB.id, getPersonDisplayName(personB));
+    setSelectedPersonPanel(personB.id, {
+      source: "relationship",
+      scroll: true,
+    });
     setRelationshipResult(renderRelationshipPath(path, lastRenderedPeople));
   });
 }
@@ -935,9 +1314,10 @@ function createProfileLink(person, familyId, isDemoMode, className = "") {
   if (className) link.className = className;
   const params = new URLSearchParams();
   params.set("person", person.id);
-  if (familyId) params.set("familyId", familyId);
-  params.set("from", "tree");
-  if (TREE_VIEWS.has(currentTreeView)) params.set("view", currentTreeView);
+  addTreeProfileContext(params, familyId, {
+    isDemoMode,
+    isPublicExample: !familyId && !isDemoMode,
+  });
   link.href = `/profile?${params.toString()}`;
   link.textContent = name;
   return link;
@@ -1815,6 +2195,18 @@ async function isFamilyArchived(familyId) {
   }
 }
 
+async function userCanEditTree(familyId, user) {
+  if (!familyId || !user) return false;
+
+  try {
+    const familySnap = await getDoc(doc(db, "families", familyId));
+    return familySnap.exists() && ["owner", "editor"].includes(getFamilyRole(familySnap.data(), user));
+  } catch (err) {
+    console.warn("Could not check tree edit access:", err);
+    return false;
+  }
+}
+
 async function loadFamilyTree() {
   const treeLayout = document.getElementById("tree-layout");
   if (!treeLayout) {
@@ -1828,6 +2220,12 @@ async function loadFamilyTree() {
     ? { familyId: null, user: null }
     : await resolveCurrentUserFamilyId();
   const familyId = resolvedFamily.familyId;
+  const isPublicDemoMode = largeDemoMode || (!familyId && !resolvedFamily.user);
+  activeTreeContext = {
+    familyId,
+    isDemoMode: isPublicDemoMode,
+    canEdit: false,
+  };
 
   if (!largeDemoMode && familyId && !resolvedFamily.user) {
     const titleEl = document.getElementById("treeTitle");
@@ -1851,7 +2249,8 @@ async function loadFamilyTree() {
 
   // Update the title (family name or example)
   await updateTreeTitle(familyId, resolvedFamily.user);
-  updateChartFrameSource(familyId, largeDemoMode || !familyId);
+  activeTreeContext.canEdit = await userCanEditTree(familyId, resolvedFamily.user);
+  updateChartFrameSource(familyId, isPublicDemoMode);
 
   if (!largeDemoMode && await isFamilyArchived(familyId)) {
     setTreeView("cards", { persist: false, updateUrl: false });
@@ -1862,7 +2261,7 @@ async function loadFamilyTree() {
   setTreeMessage(treeLayout, "Loading this family tree...");
 
   try {
-    const allPeople = largeDemoMode ? generateLargeDemoTree() : await getAllPeople(familyId);
+    const allPeople = isPublicDemoMode ? generateLargeDemoTree() : await getAllPeople(familyId);
 
     if (!allPeople || allPeople.length === 0) {
       populateTreeFocusOptions([]);
@@ -1880,11 +2279,12 @@ async function loadFamilyTree() {
     // Group & sort by generation using BFS-based helpers
     const genMap = groupByGeneration(allPeople);
     const genKeys = sortGenerationKeys(genMap);
-    const overviewMode = allPeople.length >= OVERVIEW_MODE_THRESHOLD || largeDemoMode;
+    const overviewMode = allPeople.length >= OVERVIEW_MODE_THRESHOLD || isPublicDemoMode;
     setTreeModeCopy(overviewMode);
     setTreeView(getPreferredTreeView(overviewMode, familyId), { persist: false, updateUrl: false });
-    updateChartFrameSource(familyId, largeDemoMode || !familyId);
+    updateChartFrameSource(familyId, isPublicDemoMode);
     populateTreeFocusOptions(allPeople);
+    renderRecentPeople();
     clearTreeFocus();
     const { input: focusInput } = getTreeFocusElements();
     if (focusInput && initialTreeQuery) {
@@ -1893,8 +2293,8 @@ async function loadFamilyTree() {
     setTreeFocusStatus(overviewMode
       ? `Search ${allPeople.length} people to jump directly to a card.`
       : `Search ${allPeople.length} people in this tree.`);
-    renderBirthdayCalendar(allPeople, familyId, { isDemoMode: largeDemoMode });
-    renderMissingInfoChecklist(allPeople, familyId, { isDemoMode: largeDemoMode });
+    renderBirthdayCalendar(allPeople, familyId, { isDemoMode: isPublicDemoMode });
+    renderMissingInfoChecklist(allPeople, familyId, { isDemoMode: isPublicDemoMode });
     renderFamilyStats(allPeople);
 
     treeLayout.replaceChildren(); // clear loading text
@@ -1935,6 +2335,7 @@ async function loadFamilyTree() {
       renderGeneration(genNumber, peopleInGen, treeLayout, familyId, {
         collapsed: overviewMode && genNumber > collapseAfterGeneration,
         noProfileLinks: largeDemoMode,
+        isDemoMode: isPublicDemoMode,
         highlightPersonId: pendingHighlightPersonId,
         showRelationshipTags: overviewMode,
         allPeople,
@@ -1956,7 +2357,14 @@ async function loadFamilyTree() {
     if (initialTreeQuery) {
       runTreeFocusSearch(0);
     } else {
-      focusPersonInTree(pendingHighlightPersonId || initialFocusPersonId);
+      const focusedPersonId = pendingHighlightPersonId || initialFocusPersonId;
+      focusPersonInTree(focusedPersonId);
+      if (focusedPersonId) {
+        setSelectedPersonPanel(focusedPersonId, {
+          source: "initial",
+          scroll: false,
+        });
+      }
     }
     pendingHighlightPersonId = null;
   } catch (err) {
@@ -1968,6 +2376,7 @@ async function loadFamilyTree() {
 
 function setTreeMessage(treeLayout, message) {
   lastRenderedPeople = [];
+  renderRecentPeople();
   document.body.classList.remove("tree-card-layout-ready", "tree-card-cue-ready");
   treeLayout.replaceChildren();
   treeLayout.classList.remove("tree-overview-mode");
@@ -1977,6 +2386,7 @@ function setTreeMessage(treeLayout, message) {
   renderBirthdayCalendar([], null, { isDemoMode: false });
   renderMissingInfoChecklist([], null, { isDemoMode: false });
   renderFamilyStats([]);
+  clearSelectedPersonPanel();
   const state = document.createElement("div");
   state.className = "tree-state-message";
 
@@ -2046,6 +2456,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupTreeViewSwitch();
   setupTreeFocusControls();
   setupRelationshipFinder();
+  setupRecentPeopleControls();
   setupTreeFullscreenButton();
   setupChartFrameSafety();
   setupAddPersonModal();

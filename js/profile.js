@@ -36,6 +36,7 @@ import {
 } from "./helpers.js?v=20260522-11";
 import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
 import { getAuthUserOnce } from "./familyContext.js?v=20260522-11";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260522-11";
 
 
 let personId = null;
@@ -46,6 +47,7 @@ let currentAuthUser = getCurrentUser();
 let profileSource = "tree";
 let profileCanEdit = false;
 let currentProfileImageUrl = "";
+let profileDemoContext = "";
 
 const PROFILE_SOURCE_ROUTES = {
   search: {
@@ -59,12 +61,55 @@ const PROFILE_SOURCE_ROUTES = {
 };
 
 function getProfileSourceFromParams(params = new URLSearchParams(window.location.search)) {
-  return params.get("from") === "search" ? "search" : "tree";
+  const from = params.get("from");
+  const source = params.get("source");
+
+  if (PROFILE_SOURCE_ROUTES[from]) return from;
+  if (source === "search" || source === "directory") return "search";
+  if (params.has("query") || params.has("sort")) return "search";
+  return "tree";
+}
+
+function isGeneratedDemoPersonId(currentPersonId) {
+  return /^demo-/.test(String(currentPersonId || ""));
+}
+
+function getProfileDemoContext(params = new URLSearchParams(window.location.search)) {
+  const demo = params.get("demo");
+  const source = params.get("source");
+
+  if (demo === "example" || demo === "large") return demo;
+  if (source === "large") return "large";
+  if (source === "example" || source === "demo") return "example";
+  return "";
+}
+
+function resolveProfileFamilyId(params = new URLSearchParams(window.location.search)) {
+  profileDemoContext = getProfileDemoContext(params);
+
+  if (!profileDemoContext && isGeneratedDemoPersonId(params.get("person"))) {
+    profileDemoContext = "example";
+  }
+
+  if (profileDemoContext) return null;
+
+  const urlFamilyId = params.get("familyId");
+  if (urlFamilyId) return urlFamilyId;
+
+  return getFamilyIdFromHelper();
 }
 
 function getReturnTreeView() {
   const view = new URLSearchParams(window.location.search).get("view");
   return view === "chart" || view === "cards" ? view : "";
+}
+
+function shouldUseGeneratedDemoProfile() {
+  return !familyId && (Boolean(profileDemoContext) || String(personId || "").startsWith("demo-"));
+}
+
+function findGeneratedDemoPerson(currentPersonId) {
+  return generateLargeDemoTree().find(person => person.id === currentPersonId) || null;
 }
 
 function setProfileStatus(message) {
@@ -246,7 +291,7 @@ async function loadProfile() {
   personId = params.get("person");
   profileSource = getProfileSourceFromParams(params);
   
-  familyId = params.get("familyId") || getFamilyIdFromHelper();
+  familyId = resolveProfileFamilyId(params);
   updateBackLink();
 
   if (!personId) {
@@ -281,6 +326,7 @@ async function loadProfile() {
 
     let docRef;
     let docSnap;
+    let generatedDemoPerson = null;
     
     if (familyId) {
       docRef = doc(db, "people", personId);
@@ -308,14 +354,20 @@ async function loadProfile() {
     }
     
     if (!familyId) {
-      docRef = doc(db, "example", personId);
-      docSnap = await getDoc(docRef);
+      if (shouldUseGeneratedDemoProfile()) {
+        generatedDemoPerson = findGeneratedDemoPerson(personId);
+      }
+
+      if (!generatedDemoPerson) {
+        docRef = doc(db, "example", personId);
+        docSnap = await getDoc(docRef);
+      }
       collectionName = "example";
     } else {
       collectionName = "people";
     }
 
-    if (!docSnap.exists()) {
+    if (!generatedDemoPerson && !docSnap.exists()) {
       setProfileUnavailable({
         title: "Profile not found",
         status: "That profile could not be found.",
@@ -325,12 +377,12 @@ async function loadProfile() {
       return;
     }
 
-    const data = docSnap.data();
+    const data = generatedDemoPerson || docSnap.data();
     const person = { id: personId, ...data };
     currentProfileImageUrl = data.image || "";
     
 
-    if (!familyId && data.familyId) {
+    if (!familyId && data.familyId && !profileDemoContext) {
       familyId = data.familyId;
       updateBackLink();
     }
@@ -355,7 +407,7 @@ async function loadProfile() {
       birthDateEl.textContent = "Unknown";
     }
 
-    allPeople = await getAllPeople(familyId);
+    allPeople = shouldUseGeneratedDemoProfile() ? generateLargeDemoTree() : await getAllPeople(familyId);
 
     // PARENTS
     const parentIds = resolvePersonParentIds(person, allPeople);
@@ -522,6 +574,8 @@ function updateBackLink() {
 
   if (familyId) {
     backParams.set("familyId", familyId);
+  } else if (profileDemoContext) {
+    backParams.set("demo", profileDemoContext);
   }
 
   if (source === "search" && searchQuery) {
@@ -557,6 +611,8 @@ function createRelationshipLink(person) {
   params.set("person", person.id);
   if (familyId) {
     params.set("familyId", familyId);
+  } else if (profileDemoContext) {
+    params.set("demo", profileDemoContext);
   }
   params.set("from", profileSource === "search" ? "search" : "tree");
   if (profileSource === "search") {
@@ -635,7 +691,11 @@ function hideModal(modal) {
 
 async function uploadProfileImage(currentFamilyId, currentPersonId, imageFile) {
   const preparedFile = await prepareImageFileForUpload(imageFile);
-  const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
+  const uploaderId = getCurrentUser()?.uid;
+  if (!uploaderId) {
+    throw new Error("Sign in before uploading a profile photo.");
+  }
+  const imagePath = `families/${currentFamilyId}/people/${currentPersonId}/uploads/${uploaderId}/${Date.now()}-${safeImageFileName(preparedFile.name)}.${getImageFileExtension(preparedFile)}`;
   const imageRef = ref(storage, imagePath);
 
   await uploadBytes(imageRef, preparedFile, getImageUploadMetadata(preparedFile));

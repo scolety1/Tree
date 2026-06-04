@@ -1,1 +1,7 @@
 .firebase/
+firestore-debug.log
+TREE_EXTERNAL_AUDIT_*.txt
+TREE_EXTERNAL_AUDIT_*.md
+TREE_EXTERNAL_AUDIT_*.zip
+TREE_EXTERNAL_AUDIT_PACKAGE_*/
+TREE_QA_REVIEW_*.zip
