@@ -30,10 +30,10 @@
         <section class="dashboard-hero">
             <div>
                 <h2>Account</h2>
-                <p id="accountEmail">Manage your sign-in and family tree access.</p>
+                <p id="accountEmail" aria-live="polite">Manage your sign-in and family tree access.</p>
             </div>
             <div class="dashboard-actions">
-                <button id="signOutBtn" class="button button-secondary" type="button" hidden>Sign Out</button>
+                <button id="signOutBtn" class="button button-secondary" type="button" aria-describedby="accountEmail" hidden>Sign Out</button>
             </div>
         </section>
 
@@ -42,10 +42,10 @@
                 <h2>Your family tree</h2>
                 <p>This tree is private. Share the access code only with relatives you want to invite.</p>
             </div>
-            <div id="dashboardStatus" class="dashboard-status" aria-live="polite">
+            <div id="dashboardStatus" class="dashboard-status" role="status" aria-live="polite">
                 Loading your family tree...
             </div>
-            <div id="familyTreeList" class="family-tree-list"></div>
+            <div id="familyTreeList" class="family-tree-list" aria-label="Family tree account list" aria-live="polite"></div>
         </section>
 
     </main>

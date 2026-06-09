@@ -374,4 +374,42 @@ Acceptance:
 - Photo Storage works against live rules.
 - Any remaining issue is documented with severity.
 
-Status: Pending.
+Status: Partially complete June 4, 2026. Owner/editor/viewer acceptance is blocked until Spencer signs in as `smcolety@gmail.com` or provides a logged-in live browser session. See Prompt 9 Findings.
+
+Prompt 9 Findings:
+
+- Live browser auth state:
+  - The available in-app browser is signed out.
+  - `/account` does not show `smcolety@gmail.com`.
+  - No usable password/session for `smcolety@gmail.com` or the disposable test account is available in the repo.
+- Completed signed-out/non-member live smoke after the Prompt 8 deploy:
+  - `/account`
+  - `/tree?familyId=colety-birthday-tree`
+  - `/profile?person=colety_rose&familyId=colety-birthday-tree&from=tree`
+  - `/search?familyId=colety-birthday-tree`
+  - `/tree?demo=large`
+  - `/search?demo=large`
+- Passed signed-out/non-member checks:
+  - Private Account route shows sign-in/account guidance and no owner controls.
+  - Private Colety tree route shows sign-in-needed copy and does not reveal real Colety people.
+  - Private Colety profile route blocks details and shows private-profile copy.
+  - Private Colety directory route asks for sign-in and does not reveal real Colety people.
+  - Public large demo still shows made-up Johnson/example data.
+  - Public Family Directory still shows made-up example data, secondary owner/testing copy, and no owner controls.
+  - No checked route had page-level horizontal overflow at the available desktop viewport.
+- Could not complete owner-only acceptance from this session:
+  - Account checklist as `smcolety@gmail.com`.
+  - Invite code copy/reset and role controls.
+  - Private `colety-birthday-tree` owner chart load.
+  - Add Person.
+  - Selected-person panel, Recently Viewed, relative chips on the private tree.
+  - Profile edit and `?edit=1`.
+  - Photo upload/replace/remove and invalid photo rejection.
+  - Viewer/editor/non-member role comparisons beyond signed-out non-member behavior.
+  - True mobile-width live owner test.
+- Historical note: June 3 disposable-owner testing previously covered many owner flows on `codex.tree.test.1780513994154@example.com` and tree `bD0RHI0euhabv310nEZc`, but that was before the current June 4 deploy and does not replace the final `smcolety@gmail.com` owner check.
+- Birthday blockers remaining:
+  - Spencer must run the owner checklist in a logged-in normal browser.
+  - Photo upload/replace/remove must be verified live against the deployed Storage rules.
+  - Viewer/editor/non-member permission behavior must be checked with real accounts.
+- Suggested next action: Spencer opens the live site in normal Chrome, signs in as `smcolety@gmail.com`, and runs the Prompt 9 owner checklist from this section. Keep DevTools Console open for CSP reports and any clean-browser `MutationObserver.observe` reproduction.

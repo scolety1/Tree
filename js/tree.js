@@ -316,9 +316,11 @@ function setTreeView(view, options = {}) {
 
   const label = document.querySelector(".tree-toolbar-label");
   const hint = document.querySelector(".tree-scroll-hint");
+  const actionHint = document.querySelector(".tree-action-hint");
   if (isChartView) {
-    if (label) label.textContent = "Family map";
-    if (hint) hint.textContent = "Pan, zoom, or search to move through the tree.";
+    if (label) label.textContent = "Start here";
+    if (hint) hint.textContent = "Search a name, or click any person card for details.";
+    if (actionHint) actionHint.textContent = "Pan and zoom the map when the family gets wide.";
   }
 
   if (persist) localStorage.setItem(TREE_VIEW_STORAGE_KEY, nextView);
@@ -356,6 +358,7 @@ function setupAddPersonModal() {
     document.body.classList.add("add-person-modal-open");
     modal.hidden = false;
     modal.classList.add("is-open");
+    btn.setAttribute("aria-expanded", "true");
     const firstNameInput = document.getElementById("firstName");
     if (firstNameInput && !firstNameInput.disabled) {
       firstNameInput.focus();
@@ -368,6 +371,7 @@ function setupAddPersonModal() {
     modal.classList.remove("is-open");
     modal.hidden = true;
     document.body.classList.remove("add-person-modal-open");
+    btn.setAttribute("aria-expanded", "false");
     if (previouslyFocusedElement && document.contains(previouslyFocusedElement)) {
       previouslyFocusedElement.focus();
     } else {
@@ -736,31 +740,36 @@ function formatSelectedRelationshipList(people, emptyText) {
 }
 
 function buildTreeProfileUrl(personId, { edit = false } = {}) {
-  if (!personId || activeTreeContext.isDemoMode || !activeTreeContext.familyId) return "";
+  if (!personId) return "";
 
   const params = new URLSearchParams();
   params.set("person", personId);
-  params.set("familyId", activeTreeContext.familyId);
-  params.set("from", "tree");
-  if (TREE_VIEWS.has(currentTreeView)) params.set("view", currentTreeView);
+  addTreeProfileContext(params, activeTreeContext.familyId, {
+    isDemoMode: activeTreeContext.isDemoMode,
+    isPublicExample: !activeTreeContext.familyId && !activeTreeContext.isDemoMode,
+  });
 
-  const treeQuery = new URLSearchParams(window.location.search).get("treeQuery") || "";
-  if (treeQuery) params.set("treeQuery", treeQuery);
-  if (edit) params.set("edit", "1");
+  if (edit && activeTreeContext.canEdit) {
+    params.set("edit", "1");
+  }
 
   return `/profile?${params.toString()}`;
 }
 
-function setSelectedLink(link, href) {
+function setSelectedLink(link, href, label = "") {
   if (!link) return;
   if (!href) {
     link.hidden = true;
     link.removeAttribute("href");
+    link.removeAttribute("aria-label");
     return;
   }
 
   link.hidden = false;
   link.href = href;
+  if (label) {
+    link.setAttribute("aria-label", label);
+  }
 }
 
 function addRelativeFocusButton(container, person, labelPrefix = "") {
@@ -837,7 +846,30 @@ function clearSelectedPersonPanel() {
   if (panel) panel.hidden = true;
   setSelectedLink(document.getElementById("treeSelectedProfileLink"), "");
   setSelectedLink(document.getElementById("treeSelectedEditLink"), "");
+  const focusBtn = document.getElementById("treeSelectedFocusBtn");
+  if (focusBtn) {
+    focusBtn.hidden = true;
+    focusBtn.onclick = null;
+    focusBtn.removeAttribute("aria-label");
+  }
+  const clearBtn = document.getElementById("treeSelectedClearBtn");
+  if (clearBtn) {
+    clearBtn.hidden = true;
+    clearBtn.onclick = null;
+    clearBtn.removeAttribute("aria-label");
+  }
   document.getElementById("treeSelectedRelativeActions")?.replaceChildren();
+}
+
+function clearSelectedPersonSelection() {
+  clearSelectedPersonPanel();
+  document.querySelectorAll(".person-card-focused").forEach(card => {
+    card.classList.remove("person-card-focused");
+  });
+  updateTreeFocusUrl({ personId: "" });
+  setTreeFocusStatus(treeFocusMatches.length > 0
+    ? "Selection cleared. Use Find, Prev, or Next to choose another match."
+    : "Selection cleared. Search a name or click a card to explore.");
 }
 
 function setSelectedPersonPanel(personId, { source = "tree", scroll = false, focusChart = false } = {}) {
@@ -858,30 +890,53 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
   panel.hidden = false;
   document.getElementById("treeSelectedPersonName").textContent = getPersonDisplayName(person);
   document.getElementById("treeSelectedPersonMeta").textContent = activeTreeContext.isDemoMode
-    ? "Read-only example person. Use this card to understand the selected branch."
+    ? "Read-only demo person. View details, focus the map, or choose a close relative."
     : activeTreeContext.canEdit
-      ? "Owner/editor view. Open the profile to edit details, photos, and relationships."
-      : "Private-tree person. Open the profile to see more details.";
+      ? "Owner/editor view. Edit profile details, photos, relationships, or focus this branch."
+      : "Private-tree person. View details or focus this branch. Editing is owner/editor only.";
   document.getElementById("treeSelectedBirthday").textContent = formatSelectedBirthDate(person);
   document.getElementById("treeSelectedParents").textContent = formatSelectedRelationshipList(parents, "Unknown");
   document.getElementById("treeSelectedSpouse").textContent = formatSelectedRelationshipList(spouses, "No spouse or partner listed.");
   document.getElementById("treeSelectedChildren").textContent = formatSelectedRelationshipList(children, "No children listed.");
 
-  setSelectedLink(document.getElementById("treeSelectedProfileLink"), buildTreeProfileUrl(person.id));
+  const selectedName = getPersonDisplayName(person);
+  const profileLink = document.getElementById("treeSelectedProfileLink");
+  if (profileLink) {
+    profileLink.textContent = activeTreeContext.isDemoMode ? "View demo details" : "Open profile";
+  }
+  const editLink = document.getElementById("treeSelectedEditLink");
+  if (editLink) {
+    editLink.textContent = "Edit profile";
+  }
   setSelectedLink(
-    document.getElementById("treeSelectedEditLink"),
-    activeTreeContext.canEdit ? buildTreeProfileUrl(person.id, { edit: true }) : ""
+    profileLink,
+    buildTreeProfileUrl(person.id),
+    `Open ${selectedName}'s full profile`
+  );
+  setSelectedLink(
+    editLink,
+    activeTreeContext.canEdit ? buildTreeProfileUrl(person.id, { edit: true }) : "",
+    `Edit ${selectedName}'s profile`
   );
 
   const focusBtn = document.getElementById("treeSelectedFocusBtn");
   if (focusBtn) {
     focusBtn.hidden = false;
+    focusBtn.textContent = "Focus in map";
+    focusBtn.setAttribute("aria-label", `Focus ${selectedName} in the family map`);
     focusBtn.onclick = () => {
       focusPersonInTree(person.id);
       focusPersonInChartFrame(person.id, getPersonDisplayName(person));
       updateTreeFocusUrl({ personId: person.id });
       setTreeFocusStatus(`Focused ${getPersonDisplayName(person)}.`);
     };
+  }
+
+  const clearBtn = document.getElementById("treeSelectedClearBtn");
+  if (clearBtn) {
+    clearBtn.hidden = false;
+    clearBtn.setAttribute("aria-label", `Clear selected person ${selectedName}`);
+    clearBtn.onclick = clearSelectedPersonSelection;
   }
 
   addRecentPerson(person.id);
@@ -1163,36 +1218,105 @@ function getRelationshipSummary(path, people) {
   if (!path || path.length === 0) return "";
   if (path.length === 1) return "That is the same person.";
 
+  const source = people.find(person => person.id === path[0].id);
   const target = people.find(person => person.id === path[path.length - 1].id);
+  const sourceName = getPersonDisplayName(source);
+  const targetName = getPersonDisplayName(target);
   const firstStep = path[1]?.via;
   const lastStep = path[path.length - 1]?.via;
 
   if (path.length === 2) {
-    if (firstStep === "parent") return `${getPersonDisplayName(target)} is their parent.`;
-    if (firstStep === "child") return `${getPersonDisplayName(target)} is their child.`;
-    if (firstStep === "spouse/partner") return `${getPersonDisplayName(target)} is their spouse or partner.`;
+    if (firstStep === "parent") return `${targetName} is ${sourceName}'s parent.`;
+    if (firstStep === "child") return `${targetName} is ${sourceName}'s child.`;
+    if (firstStep === "spouse/partner") return `${targetName} is ${sourceName}'s spouse or partner.`;
   }
 
   if (path.length === 3 && firstStep === "parent" && lastStep === "parent") {
-    return `${getPersonDisplayName(target)} is their grandparent.`;
+    return `${targetName} is ${sourceName}'s grandparent.`;
   }
 
   if (path.length === 3 && firstStep === "child" && lastStep === "child") {
-    return `${getPersonDisplayName(target)} is their grandchild.`;
+    return `${targetName} is ${sourceName}'s grandchild.`;
   }
 
   if (path.length === 3 && firstStep === "parent" && lastStep === "child") {
-    return `${getPersonDisplayName(target)} is connected through a shared parent.`;
+    const sharedParent = people.find(person => person.id === path[1]?.id);
+    return `${sourceName} and ${targetName} are connected through ${getPersonDisplayName(sharedParent)}, a shared parent.`;
   }
 
-  return `${getPersonDisplayName(target)} is ${path.length - 1} family steps away.`;
+  return `${sourceName} connects to ${targetName} in ${path.length - 1} family steps.`;
+}
+
+function getRelationshipStepLabel(label) {
+  if (label === "spouse/partner") return "spouse or partner";
+  return label || "connected to";
+}
+
+function getRelationshipReadablePath(path, people) {
+  if (!path || path.length === 0) return "";
+
+  return path.map((step, index) => {
+    const person = people.find(item => item.id === step.id);
+    const name = getPersonDisplayName(person);
+    if (index === 0) return name;
+    return `-> ${getRelationshipStepLabel(step.via)} -> ${name}`;
+  }).join(" ");
+}
+
+function renderRelationshipMessage(title, message) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "relationship-story relationship-story-note";
+
+  const heading = document.createElement("strong");
+  heading.textContent = title;
+
+  const copy = document.createElement("p");
+  copy.textContent = message;
+
+  wrapper.append(heading, copy);
+  return wrapper;
 }
 
 function renderRelationshipPath(path, people) {
   const wrapper = document.createElement("div");
+  wrapper.className = "relationship-story";
+
   const summary = document.createElement("strong");
   summary.textContent = getRelationshipSummary(path, people);
   wrapper.appendChild(summary);
+
+  const intro = document.createElement("p");
+  intro.className = "relationship-story-intro";
+  intro.textContent = path.length === 1
+    ? "You picked the same card twice."
+    : "Read the path from left to right:";
+  wrapper.appendChild(intro);
+
+  const readablePath = document.createElement("p");
+  readablePath.className = "relationship-path-readable";
+  readablePath.textContent = getRelationshipReadablePath(path, people);
+  wrapper.appendChild(readablePath);
+
+  const chain = document.createElement("div");
+  chain.className = "relationship-path-chain";
+  chain.setAttribute("aria-label", "Relationship path");
+
+  path.forEach((step, index) => {
+    const person = people.find(item => item.id === step.id);
+    if (index > 0) {
+      const connector = document.createElement("span");
+      connector.className = "relationship-path-connector";
+      connector.textContent = getRelationshipStepLabel(step.via);
+      chain.appendChild(connector);
+    }
+
+    const name = document.createElement("span");
+    name.className = "relationship-path-person";
+    name.textContent = getPersonDisplayName(person);
+    chain.appendChild(name);
+  });
+
+  wrapper.appendChild(chain);
 
   const list = document.createElement("ol");
   list.className = "relationship-path-list";
@@ -1203,7 +1327,7 @@ function renderRelationshipPath(path, people) {
 
     const stepLabel = document.createElement("span");
     stepLabel.className = "relationship-path-step";
-    stepLabel.textContent = index === 0 ? "Start" : `Then ${step.via}`;
+    stepLabel.textContent = index === 0 ? "Start" : `Then ${getRelationshipStepLabel(step.via)}`;
 
     const name = document.createElement("span");
     name.textContent = getPersonDisplayName(person);
@@ -1224,7 +1348,10 @@ function setupRelationshipFinder() {
     event.preventDefault();
 
     if (lastRenderedPeople.length === 0) {
-      setRelationshipResult("Load a family tree first, then choose two people.");
+      setRelationshipResult(renderRelationshipMessage(
+        "Load a tree first",
+        "Open the example tree or a private family tree, then choose two people to compare."
+      ));
       return;
     }
 
@@ -1232,13 +1359,19 @@ function setupRelationshipFinder() {
     const personB = findPersonByRelationshipInput(personBInput.value);
 
     if (!personA || !personB) {
-      setRelationshipResult("Choose two people from this tree. Try typing a first and last name.");
+      setRelationshipResult(renderRelationshipMessage(
+        "Choose two people from this tree",
+        "Try a full name from the suggestions, or use Find person first and copy the name from a card."
+      ));
       return;
     }
 
     const path = findRelationshipPath(personA.id, personB.id, lastRenderedPeople);
     if (!path) {
-      setRelationshipResult(`No relationship path found between ${getPersonDisplayName(personA)} and ${getPersonDisplayName(personB)} yet.`);
+      setRelationshipResult(renderRelationshipMessage(
+        "No path found yet",
+        `${getPersonDisplayName(personA)} and ${getPersonDisplayName(personB)} may need more parent, child, or partner links before the app can connect them.`
+      ));
       return;
     }
 
@@ -1346,6 +1479,69 @@ function createBirthdayItem(person, info, familyId, isDemoMode) {
   return item;
 }
 
+function createBirthdaySummaryCard(label, value, note = "") {
+  const card = document.createElement("div");
+  card.className = "birthday-summary-card";
+
+  const valueEl = document.createElement("strong");
+  valueEl.textContent = value;
+
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+
+  card.append(valueEl, labelEl);
+
+  if (note) {
+    const noteEl = document.createElement("small");
+    noteEl.textContent = note;
+    card.appendChild(noteEl);
+  }
+
+  return card;
+}
+
+function createBirthdaySummary(people, birthdayPeople, missingPeople) {
+  const summary = document.createElement("section");
+  summary.className = "birthday-summary";
+  summary.setAttribute("aria-label", "Birthday summary");
+
+  const next = birthdayPeople[0];
+  const nextName = next ? getPersonDisplayName(next.person) : "None yet";
+  const nextNote = next
+    ? next.info.daysUntil === 0
+      ? "today"
+      : next.info.daysUntil === 1
+        ? "tomorrow"
+        : `${next.info.daysUntil} days away`
+    : "add birthdays to start";
+
+  summary.append(
+    createBirthdaySummaryCard("Next up", nextName, nextNote),
+    createBirthdaySummaryCard("With birthdays", String(birthdayPeople.length), `of ${people.length} people`),
+    createBirthdaySummaryCard("Missing dates", String(missingPeople.length), missingPeople.length ? "needs review" : "all set")
+  );
+
+  return summary;
+}
+
+function createThisMonthBirthdaySection(birthdayPeople, familyId, isDemoMode) {
+  const currentMonth = new Date().getMonth();
+  const thisMonth = birthdayPeople.filter(({ info }) => info.birthDate.getMonth() === currentMonth);
+  if (thisMonth.length === 0) return null;
+
+  const section = document.createElement("section");
+  section.className = "birthday-section";
+  const heading = document.createElement("h3");
+  heading.textContent = "This month";
+  const list = document.createElement("ul");
+  list.className = "birthday-list";
+  thisMonth.slice(0, 5).forEach(({ person, info }) => {
+    list.appendChild(createBirthdayItem(person, info, familyId, isDemoMode));
+  });
+  section.append(heading, list);
+  return section;
+}
+
 function renderBirthdayCalendar(people, familyId = null, options = {}) {
   const panel = document.getElementById("birthdayCalendarPanel");
   if (!panel) return;
@@ -1355,7 +1551,7 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
   if (!people || people.length === 0) {
     const empty = document.createElement("p");
     empty.className = "birthday-empty-note";
-    empty.textContent = "Load a tree to see birthdays.";
+    empty.textContent = "Open a tree to see upcoming birthdays here.";
     panel.appendChild(empty);
     return;
   }
@@ -1375,10 +1571,14 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
   if (birthdayPeople.length === 0) {
     const empty = document.createElement("p");
     empty.className = "birthday-empty-note";
-    empty.textContent = `No birthdays are filled in yet. ${missingPeople.length} people are missing birthdays.`;
+    empty.textContent = `No birthdays are filled in yet. Add dates on profiles to start birthday reminders. ${missingPeople.length} ${missingPeople.length === 1 ? "person needs" : "people need"} a date.`;
     panel.appendChild(empty);
     return;
   }
+
+  const isDemoMode = Boolean(options.isDemoMode);
+  const summary = createBirthdaySummary(people, birthdayPeople, missingPeople);
+  const thisMonthSection = createThisMonthBirthdaySection(birthdayPeople, familyId, isDemoMode);
 
   const upcomingSection = document.createElement("section");
   upcomingSection.className = "birthday-section";
@@ -1387,7 +1587,7 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
   const upcomingList = document.createElement("ul");
   upcomingList.className = "birthday-list";
   birthdayPeople.slice(0, 6).forEach(({ person, info }) => {
-    upcomingList.appendChild(createBirthdayItem(person, info, familyId, Boolean(options.isDemoMode)));
+    upcomingList.appendChild(createBirthdayItem(person, info, familyId, isDemoMode));
   });
   upcomingSection.append(upcomingHeading, upcomingList);
 
@@ -1402,16 +1602,26 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
   monthsHeading.textContent = "By month";
   const monthsList = document.createElement("ul");
   monthsList.className = "birthday-month-grid";
+  const maxMonthCount = Math.max(...monthCounts.values());
   [...monthCounts.entries()]
     .sort((a, b) => a[0] - b[0])
     .forEach(([month, count]) => {
       const item = document.createElement("li");
       item.className = "birthday-month-pill";
-      item.textContent = `${new Date(2026, month, 1).toLocaleString("en-US", { month: "short" })}: ${count}`;
+      const label = document.createElement("span");
+      label.textContent = new Date(2026, month, 1).toLocaleString("en-US", { month: "short" });
+      const meter = document.createElement("span");
+      meter.className = "birthday-month-meter";
+      meter.style.setProperty("--birthday-month-fill", `${Math.max(12, Math.round((count / maxMonthCount) * 100))}%`);
+      const countEl = document.createElement("strong");
+      countEl.textContent = String(count);
+      item.append(label, meter, countEl);
       monthsList.appendChild(item);
     });
   monthsSection.append(monthsHeading, monthsList);
 
+  panel.append(summary);
+  if (thisMonthSection) panel.appendChild(thisMonthSection);
   panel.append(upcomingSection, monthsSection);
 
   if (missingPeople.length > 0) {
@@ -1419,11 +1629,14 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
     missingSection.className = "birthday-section";
     const missingHeading = document.createElement("h3");
     missingHeading.textContent = `Missing birthdays (${missingPeople.length})`;
+    const missingNote = document.createElement("p");
+    missingNote.className = "birthday-missing-note";
+    missingNote.textContent = "Start with these so reminders and birthday prep feel complete.";
     const missingList = document.createElement("ul");
     missingList.className = "birthday-missing-list";
     missingPeople.slice(0, 5).forEach(person => {
       const item = document.createElement("li");
-      item.appendChild(createProfileLink(person, familyId, Boolean(options.isDemoMode), "birthday-item-name"));
+      item.appendChild(createProfileLink(person, familyId, isDemoMode, "birthday-item-name"));
       missingList.appendChild(item);
     });
     if (missingPeople.length > 5) {
@@ -1431,7 +1644,7 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
       extra.textContent = `+${missingPeople.length - 5} more`;
       missingList.appendChild(extra);
     }
-    missingSection.append(missingHeading, missingList);
+    missingSection.append(missingHeading, missingNote, missingList);
     panel.appendChild(missingSection);
   }
 }
@@ -1470,7 +1683,7 @@ function renderMissingInfoChecklist(people, familyId = null, options = {}) {
   if (!people || people.length === 0) {
     const empty = document.createElement("p");
     empty.className = "missing-info-summary";
-    empty.textContent = "Load a tree to see what needs filling in.";
+    empty.textContent = "Open a tree to see which profiles need photos, birthdays, stories, or relationships.";
     panel.appendChild(empty);
     return;
   }
@@ -1560,6 +1773,90 @@ function getMostCommonLastNames(people, limit = 3) {
     .slice(0, limit);
 }
 
+function getFamilyNameCloud(people, limit = 8) {
+  return getMostCommonLastNames(people, limit)
+    .map(([name, count], index) => {
+      const size = index < 2 ? "large" : index < 5 ? "medium" : "small";
+      return { name, count, size };
+    });
+}
+
+function getDailySpotlightPerson(people, today = new Date()) {
+  if (!Array.isArray(people) || people.length === 0) return null;
+
+  const sortedPeople = [...people].sort((a, b) => {
+    const nameCompare = getPersonDisplayName(a).localeCompare(getPersonDisplayName(b));
+    return nameCompare || String(a?.id || "").localeCompare(String(b?.id || ""));
+  });
+  const seed = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}-${sortedPeople.length}`;
+  const seedValue = [...seed].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return sortedPeople[seedValue % sortedPeople.length] || null;
+}
+
+function getPersonGenerationLabel(person) {
+  const generationNumber = Number(person?.generation);
+  return Number.isFinite(generationNumber) && generationNumber > 0
+    ? `Generation ${generationNumber}`
+    : "Generation unknown";
+}
+
+function createFamilySpotlightCard(person, people, familyId, isDemoMode) {
+  const section = document.createElement("section");
+  section.className = "family-spotlight-card";
+
+  const heading = document.createElement("h3");
+  heading.textContent = "Relative spotlight";
+
+  const name = createProfileLink(person, familyId, isDemoMode, "family-spotlight-name");
+
+  const meta = document.createElement("div");
+  meta.className = "family-spotlight-meta";
+  const birthday = getBirthdayDate(person);
+  const relativesCount = resolvePersonParentIds(person, people).length
+    + resolvePersonSpouseIds(person, people).length
+    + derivePersonChildren(person, people).length;
+  [
+    getPersonGenerationLabel(person),
+    birthday ? `Birthday: ${formatBirthdayMonthDay(birthday)}` : "Birthday: not listed yet",
+    `${relativesCount} close ${relativesCount === 1 ? "relative" : "relatives"} linked`,
+  ].forEach(text => {
+    const item = document.createElement("span");
+    item.textContent = text;
+    meta.appendChild(item);
+  });
+
+  const note = document.createElement("p");
+  note.className = "family-spotlight-note";
+  note.textContent = isDemoMode
+    ? "A quick way to explore one person in the sample tree."
+    : "A good profile to add a memory, photo, or relationship detail to.";
+
+  section.append(heading, name, meta, note);
+  return section;
+}
+
+function createFamilyNameCloudSection(people) {
+  const names = getFamilyNameCloud(people);
+  if (!names.length) return null;
+
+  const section = document.createElement("section");
+  section.className = "family-stats-section";
+  const heading = document.createElement("h3");
+  heading.textContent = "Family name cloud";
+
+  const list = document.createElement("ul");
+  list.className = "family-name-cloud";
+  names.forEach(({ name, count, size }) => {
+    const item = document.createElement("li");
+    item.className = `family-name-chip is-${size}`;
+    item.textContent = `${name} ${count}`;
+    list.appendChild(item);
+  });
+
+  section.append(heading, list);
+  return section;
+}
+
 function formatStatsDate(date) {
   return date.toLocaleDateString("en-US", {
     year: "numeric",
@@ -1603,7 +1900,7 @@ function appendStatsList(parent, headingText, rows) {
   parent.appendChild(section);
 }
 
-function renderFamilyStats(people) {
+function renderFamilyStats(people, familyId = null, options = {}) {
   const panel = document.getElementById("familyStatsPanel");
   if (!panel) return;
 
@@ -1612,7 +1909,7 @@ function renderFamilyStats(people) {
   if (!people || people.length === 0) {
     const empty = document.createElement("p");
     empty.className = "family-stats-note";
-    empty.textContent = "Load a tree to see family stats.";
+    empty.textContent = "Open a tree to see counts, birthday coverage, and cleanup progress.";
     panel.appendChild(empty);
     return;
   }
@@ -1647,6 +1944,16 @@ function renderFamilyStats(people) {
   });
   panel.appendChild(grid);
 
+  const spotlightPerson = getDailySpotlightPerson(people);
+  if (spotlightPerson) {
+    panel.appendChild(createFamilySpotlightCard(
+      spotlightPerson,
+      people,
+      familyId,
+      Boolean(options.isDemoMode)
+    ));
+  }
+
   const birthdayRows = [];
   if (birthdayDates[0]) birthdayRows.push(["Oldest birthday", formatStatsDate(birthdayDates[0])]);
   if (listedBirthdaysToDate[listedBirthdaysToDate.length - 1]) {
@@ -1666,12 +1973,282 @@ function renderFamilyStats(people) {
 
   appendStatsList(panel, "Common last names", getMostCommonLastNames(people));
 
+  const nameCloud = createFamilyNameCloudSection(people);
+  if (nameCloud) panel.appendChild(nameCloud);
+
   const note = document.createElement("p");
   note.className = "family-stats-note";
   note.textContent = missingProfileCount === 0
     ? "This tree is looking nicely filled in."
-    : "Use Missing info to knock out the fastest cleanup wins.";
+    : "Use Profiles to finish to knock out the fastest cleanup wins.";
   panel.appendChild(note);
+}
+
+function normalizeHealthName(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getRawLegacySpouseName(person) {
+  return buildFullName(person?.spouseFirstName || "", person?.spouseLastName || "");
+}
+
+function createDataHealthScore(label, value) {
+  const card = document.createElement("div");
+  card.className = "data-health-score";
+  const valueEl = document.createElement("strong");
+  valueEl.textContent = String(value);
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  card.append(valueEl, labelEl);
+  return card;
+}
+
+function pushDataHealthIssue(issues, group, label, detail, severity = "warning") {
+  issues.push({ group, label, detail, severity });
+}
+
+function createDataHealthReport(people) {
+  const idToPerson = new Map();
+  const duplicateIds = new Set();
+  const nameBuckets = new Map();
+  const issues = [];
+
+  people.forEach(person => {
+    if (!person?.id) return;
+    if (idToPerson.has(person.id)) duplicateIds.add(person.id);
+    idToPerson.set(person.id, person);
+
+    const nameKey = normalizeHealthName(getPersonDisplayName(person));
+    if (!nameKey || nameKey === "unnamed") return;
+    if (!nameBuckets.has(nameKey)) nameBuckets.set(nameKey, []);
+    nameBuckets.get(nameKey).push(person);
+  });
+
+  duplicateIds.forEach(id => {
+    pushDataHealthIssue(issues, "Relationship cleanup", "Duplicate person ID", id, "error");
+  });
+
+  nameBuckets.forEach(bucket => {
+    if (bucket.length < 2) return;
+    pushDataHealthIssue(
+      issues,
+      "Profile review",
+      "Duplicate name",
+      `${getPersonDisplayName(bucket[0])} appears ${bucket.length} times. Add middle initials, dates, or notes if these are different people.`
+    );
+  });
+
+  people.forEach(person => {
+    const name = getPersonDisplayName(person);
+    const rawParentIds = Array.isArray(person.parentIds) ? person.parentIds.filter(Boolean) : [];
+    const rawSpouseIds = Array.isArray(person.spouseIds) ? person.spouseIds.filter(Boolean) : [];
+    const resolvedParentIds = resolvePersonParentIds(person, people);
+    const resolvedSpouseIds = resolvePersonSpouseIds(person, people);
+    const children = derivePersonChildren(person, people);
+
+    rawParentIds.forEach(parentId => {
+      if (parentId === person.id) {
+        pushDataHealthIssue(issues, "Relationship cleanup", "Self parent link", `${name} lists themselves as a parent.`, "error");
+      } else if (!idToPerson.has(parentId)) {
+        pushDataHealthIssue(issues, "Relationship cleanup", "Broken parent ID", `${name} points to missing parent ID ${parentId}.`, "error");
+      }
+    });
+
+    rawSpouseIds.forEach(spouseId => {
+      if (spouseId === person.id) {
+        pushDataHealthIssue(issues, "Relationship cleanup", "Self spouse link", `${name} lists themselves as spouse/partner.`, "error");
+      } else if (!idToPerson.has(spouseId)) {
+        pushDataHealthIssue(issues, "Relationship cleanup", "Broken spouse ID", `${name} points to missing spouse ID ${spouseId}.`, "error");
+      }
+    });
+
+    [person.parent1, person.parent2].filter(Boolean).forEach(parentName => {
+      if (!findPersonByNameString(parentName, people)) {
+        pushDataHealthIssue(
+          issues,
+          "Legacy compatibility",
+          "Unresolved legacy parent",
+          `${name} has legacy parent "${parentName}" that does not match a person.`
+        );
+      }
+    });
+
+    const legacySpouseName = getRawLegacySpouseName(person);
+    if (legacySpouseName && !findPersonByNameString(legacySpouseName, people)) {
+      pushDataHealthIssue(
+        issues,
+        "Legacy compatibility",
+        "Unresolved legacy spouse",
+        `${name} has legacy spouse "${legacySpouseName}" that does not match a person.`
+      );
+    }
+
+    rawSpouseIds
+      .filter(spouseId => spouseId !== person.id && idToPerson.has(spouseId))
+      .forEach(spouseId => {
+        const spouse = idToPerson.get(spouseId);
+        const spouseRawIds = Array.isArray(spouse.spouseIds) ? spouse.spouseIds : [];
+        const spouseLegacyName = normalizeHealthName(getRawLegacySpouseName(spouse));
+        const personName = normalizeHealthName(getPersonDisplayName(person));
+        if (!spouseRawIds.includes(person.id) && spouseLegacyName !== personName) {
+          pushDataHealthIssue(
+            issues,
+            "Relationship cleanup",
+            "One-way spouse link",
+            `${name} points to ${getPersonDisplayName(spouse)}, but the link is not reciprocated.`
+          );
+        }
+      });
+
+    if (resolvedParentIds.length > 2) {
+      pushDataHealthIssue(
+        issues,
+        "Relationship cleanup",
+        "More than two parents",
+        `${name} resolves to ${resolvedParentIds.length} parents. Check duplicate ID and legacy parent entries.`
+      );
+    }
+
+    if (resolvedParentIds.length === 0 && resolvedSpouseIds.length === 0 && children.length === 0) {
+      pushDataHealthIssue(
+        issues,
+        "Profile review",
+        "Disconnected person",
+        `${name} is not connected to parents, spouse/partner, or children yet.`
+      );
+    }
+  });
+
+  const missingBirthdays = people.filter(person => !getBirthdayDate(person));
+  const missingBios = people.filter(person => !hasMeaningfulBio(person));
+  const missingPhotos = people.filter(person => !person?.image);
+  const peopleWithNoParents = people.filter(person => resolvePersonParentIds(person, people).length === 0);
+  const peopleWithNoSpouses = people.filter(person => resolvePersonSpouseIds(person, people).length === 0);
+  const peopleWithNoChildren = people.filter(person => derivePersonChildren(person, people).length === 0);
+
+  return {
+    peopleCount: people.length,
+    issueCount: issues.length,
+    errorCount: issues.filter(issue => issue.severity === "error").length,
+    warningCount: issues.filter(issue => issue.severity !== "error").length,
+    missingBirthdays,
+    missingBios,
+    missingPhotos,
+    peopleWithNoParents,
+    peopleWithNoSpouses,
+    peopleWithNoChildren,
+    issues,
+  };
+}
+
+function appendDataHealthIssueGroup(panel, headingText, issues) {
+  if (!issues.length) return;
+
+  const section = document.createElement("section");
+  section.className = "data-health-issue-group";
+  const heading = document.createElement("h3");
+  heading.textContent = headingText;
+  const list = document.createElement("ul");
+  list.className = "data-health-issue-list";
+
+  issues.slice(0, 6).forEach(issue => {
+    const item = document.createElement("li");
+    item.className = `data-health-issue is-${issue.severity === "error" ? "error" : "warning"}`;
+    const label = document.createElement("strong");
+    label.textContent = issue.label;
+    const detail = document.createElement("span");
+    detail.textContent = issue.detail;
+    item.append(label, detail);
+    list.appendChild(item);
+  });
+
+  if (issues.length > 6) {
+    const extra = document.createElement("li");
+    extra.className = "data-health-issue";
+    const label = document.createElement("strong");
+    label.textContent = `+${issues.length - 6} more`;
+    const detail = document.createElement("span");
+    detail.textContent = "Use the full data model review later if this list keeps growing.";
+    extra.append(label, detail);
+    list.appendChild(extra);
+  }
+
+  section.append(heading, list);
+  panel.appendChild(section);
+}
+
+function renderDataHealthInspector(people, options = {}) {
+  const panel = document.getElementById("dataHealthPanel");
+  if (!panel) return;
+
+  panel.replaceChildren();
+
+  if (!people || people.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "data-health-summary";
+    empty.textContent = "Open a tree to check relationship data for broken links, duplicate names, and missing profile basics.";
+    panel.appendChild(empty);
+    return;
+  }
+
+  const report = createDataHealthReport(people);
+  const completenessIssues = [
+    ["Missing birthdays", report.missingBirthdays.length],
+    ["Missing bios", report.missingBios.length],
+    ["Missing photos", report.missingPhotos.length],
+    ["No parents listed", report.peopleWithNoParents.length],
+    ["No spouse/partner", report.peopleWithNoSpouses.length],
+    ["No children listed", report.peopleWithNoChildren.length],
+  ]
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => ({
+      group: "Profile completeness",
+      label,
+      detail: `${count} ${count === 1 ? "profile" : "profiles"}`,
+      severity: "warning",
+    }));
+  const totalNotes = report.issueCount + completenessIssues.length;
+  const totalWarnings = report.warningCount + completenessIssues.length;
+
+  const summary = document.createElement("div");
+  summary.className = "data-health-summary";
+  const title = document.createElement("strong");
+  title.textContent = totalNotes === 0
+    ? "No data health notes found."
+    : `${totalNotes} data health ${totalNotes === 1 ? "note" : "notes"} found`;
+  const copy = document.createElement("span");
+  copy.textContent = options.isDemoMode
+    ? "Public demo data is read-only. This shows what the inspector checks before a live family review."
+    : "Read-only check. It does not change people, photos, or relationships.";
+  summary.append(title, copy);
+  panel.appendChild(summary);
+
+  const scoreGrid = document.createElement("div");
+  scoreGrid.className = "data-health-score-grid";
+  scoreGrid.append(
+    createDataHealthScore("Errors", report.errorCount),
+    createDataHealthScore("Warnings", totalWarnings),
+    createDataHealthScore("People", report.peopleCount)
+  );
+  panel.appendChild(scoreGrid);
+
+  const groupedIssues = new Map();
+  report.issues.forEach(issue => {
+    if (!groupedIssues.has(issue.group)) groupedIssues.set(issue.group, []);
+    groupedIssues.get(issue.group).push(issue);
+  });
+
+  appendDataHealthIssueGroup(panel, "Relationship cleanup", groupedIssues.get("Relationship cleanup") || []);
+  appendDataHealthIssueGroup(panel, "Legacy compatibility", groupedIssues.get("Legacy compatibility") || []);
+  appendDataHealthIssueGroup(panel, "Profile review", groupedIssues.get("Profile review") || []);
+  appendDataHealthIssueGroup(panel, "Profile completeness", completenessIssues);
+
+  if (report.issueCount === 0 && completenessIssues.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "data-health-empty";
+    empty.textContent = "This tree is in great shape for the current checks.";
+    panel.appendChild(empty);
+  }
 }
 
 /* ---------------------------
@@ -1859,7 +2436,7 @@ function revealCollapsedGenerationForPerson(personId) {
 }
 
 /* ---------------------------
-   PARENT Ã¢â€ â€™ CHILD CONNECTOR LINES
+   PARENT TO CHILD CONNECTOR LINES
 --------------------------- */
 
 function drawParentChildLines(people) {
@@ -2044,15 +2621,22 @@ function setTreeDensity(mode) {
 function setTreeModeCopy(isOverviewMode) {
   const label = document.querySelector(".tree-toolbar-label");
   const hint = document.querySelector(".tree-scroll-hint");
+  const actionHint = document.querySelector(".tree-action-hint");
 
   if (label) {
-    label.textContent = isOverviewMode ? "Large tree overview" : "Tree view";
+    label.textContent = "Start here";
   }
 
   if (hint) {
     hint.textContent = isOverviewMode
-      ? "Use Find person to jump around larger families."
-      : "Scroll sideways to see larger families.";
+      ? "Use Find person first, then open profiles from the selected person panel."
+      : "Search a name, or click any person card for details.";
+  }
+
+  if (actionHint) {
+    actionHint.textContent = isOverviewMode
+      ? "The card list is a fallback view for browsing wide families."
+      : "Scroll sideways if this tree grows wider than the screen.";
   }
 }
 
@@ -2091,7 +2675,12 @@ function setupTreeFullscreenButton() {
   if (!button || !panel) return;
 
   function updateButtonLabel() {
-    button.textContent = document.fullscreenElement ? "Exit Full Screen" : "Full Screen";
+    const isFullscreen = Boolean(document.fullscreenElement);
+    button.textContent = isFullscreen ? "Exit full screen" : "Full screen map";
+    button.setAttribute(
+      "aria-label",
+      isFullscreen ? "Exit full screen family tree view" : "Open family tree in full screen"
+    );
   }
 
   button.addEventListener("click", async () => {
@@ -2112,6 +2701,86 @@ function setupTreeFullscreenButton() {
   updateButtonLabel();
 }
 
+function setupTreePresentationControls() {
+  const presentationButton = document.getElementById("treePresentationBtn");
+  const printButton = document.getElementById("treePrintBtn");
+  const canvasPanel = document.querySelector(".tree-canvas-panel");
+  if (!presentationButton && !printButton) return;
+
+  function setPresentationMode(isActive, { scrollToTree = false } = {}) {
+    document.body.classList.toggle("tree-presentation-mode", isActive);
+    if (presentationButton) {
+      presentationButton.textContent = isActive ? "Exit Presentation" : "Presentation View";
+      presentationButton.setAttribute("aria-pressed", isActive ? "true" : "false");
+      presentationButton.setAttribute(
+        "aria-label",
+        isActive ? "Exit presentation view" : "Show presentation view"
+      );
+    }
+
+    if (isActive && scrollToTree) {
+      canvasPanel?.scrollIntoView({
+        block: "start",
+        inline: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }
+
+  presentationButton?.addEventListener("click", () => {
+    setPresentationMode(!document.body.classList.contains("tree-presentation-mode"), {
+      scrollToTree: true,
+    });
+  });
+
+  printButton?.addEventListener("click", () => {
+    window.print();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !document.body.classList.contains("tree-presentation-mode")) return;
+    setPresentationMode(false);
+    presentationButton?.focus({ preventScroll: true });
+  });
+}
+
+function setupTreeTour() {
+  const toggle = document.getElementById("treeTourToggle");
+  const panel = document.getElementById("treeTourPanel");
+  const closeButton = document.getElementById("treeTourClose");
+  if (!toggle || !panel) return;
+
+  function setTourOpen(isOpen, { restoreFocus = false } = {}) {
+    panel.hidden = !isOpen;
+    toggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    if (isOpen) {
+      panel.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+      closeButton?.focus({ preventScroll: true });
+    } else if (restoreFocus) {
+      toggle.focus({ preventScroll: true });
+    }
+  }
+
+  toggle.addEventListener("click", () => {
+    setTourOpen(panel.hidden);
+  });
+
+  closeButton?.addEventListener("click", () => {
+    setTourOpen(false, { restoreFocus: true });
+  });
+
+  panel.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    setTourOpen(false, { restoreFocus: true });
+  });
+}
+
+function setTreeSubtitle(message) {
+  const subtitleEl = document.getElementById("treeSubtitle");
+  if (subtitleEl) subtitleEl.textContent = message;
+}
+
 async function updateTreeTitle(familyId, user = null) {
   const titleEl = document.getElementById("treeTitle");
   const joinCodeDisplay = document.getElementById("joinCodeDisplay");
@@ -2122,15 +2791,18 @@ async function updateTreeTitle(familyId, user = null) {
   if (isLargeDemoMode()) {
     titleEl.textContent = "Large Demo Family Tree";
     document.title = "Large Demo Family Tree";
+    setTreeSubtitle("A made-up Johnson family tree for stress-testing big families. Search a name or click any card to understand the branches.");
     if (joinCodeDisplay) {
       joinCodeDisplay.style.display = "none";
     }
     return;
   }
 
-  // Example tree: no familyId Ã¢â€ â€™ keep default title and hide join code
+  // Example tree: no familyId, so keep sample copy and hide the join code.
   if (!familyId) {
     titleEl.textContent = "Example Family Tree";
+    document.title = "Our Family Tree";
+    setTreeSubtitle("A read-only sample tree. Use Find person or click a card to see how profiles and relationships work.");
     if (joinCodeDisplay) {
       joinCodeDisplay.style.display = "none";
     }
@@ -2143,6 +2815,7 @@ async function updateTreeTitle(familyId, user = null) {
 
     if (!familySnap.exists()) {
       titleEl.textContent = "Family Tree";
+      setTreeSubtitle("This tree could not be found. Open Account or check the invite link before trying again.");
       if (joinCodeDisplay) {
         joinCodeDisplay.style.display = "none";
       }
@@ -2153,6 +2826,7 @@ async function updateTreeTitle(familyId, user = null) {
 
     if (data.archivedAt) {
       titleEl.textContent = "Archived Family Tree";
+      setTreeSubtitle("This family tree is archived. You can browse what is available, but editing is paused.");
       if (joinCodeDisplay) {
         joinCodeDisplay.style.display = "none";
       }
@@ -2160,6 +2834,7 @@ async function updateTreeTitle(familyId, user = null) {
     }
 
     titleEl.textContent = data.name || "Family Tree";
+    setTreeSubtitle("Search a relative, click any card for details, or open a profile to edit stories, relationships, and photos.");
 
     // Optional: update browser tab title as well
     document.title = data.name || "Our Family Tree";
@@ -2176,6 +2851,7 @@ async function updateTreeTitle(familyId, user = null) {
   } catch (err) {
     console.error("Error loading family name:", err);
     titleEl.textContent = "Family Tree";
+    setTreeSubtitle("This tree could not load its title. Refresh, sign in, or confirm this account has access.");
     if (joinCodeDisplay) {
       joinCodeDisplay.style.display = "none";
     }
@@ -2233,7 +2909,9 @@ async function loadFamilyTree() {
     if (titleEl) titleEl.textContent = "Family Tree";
     if (joinCodeDisplay) joinCodeDisplay.style.display = "none";
     setTreeView("cards", { persist: false, updateUrl: false });
-    setTreeMessage(treeLayout, "Sign in to view this private family tree.");
+    setTreeMessage(treeLayout, "Sign in with an invited account to view this private family tree.", [
+      { label: "Sign In", href: "/signin" },
+    ]);
     return;
   }
 
@@ -2243,7 +2921,9 @@ async function loadFamilyTree() {
     if (titleEl) titleEl.textContent = "Family Tree";
     if (joinCodeDisplay) joinCodeDisplay.style.display = "none";
     setTreeView("cards", { persist: false, updateUrl: false });
-    setTreeMessage(treeLayout, "No private family tree is connected to this account yet. Open Account to start one or join with a code.");
+    setTreeMessage(treeLayout, "No private family tree is connected to this account yet. Open Account to start one or join with a code.", [
+      { label: "Open Account", href: "/account" },
+    ]);
     return;
   }
 
@@ -2254,7 +2934,9 @@ async function loadFamilyTree() {
 
   if (!largeDemoMode && await isFamilyArchived(familyId)) {
     setTreeView("cards", { persist: false, updateUrl: false });
-    setTreeMessage(treeLayout, "This family tree has been archived.");
+    setTreeMessage(treeLayout, "This family tree has been archived. Open Account to choose another tree or review access.", [
+      { label: "Open Account", href: "/account" },
+    ]);
     return;
   }
 
@@ -2270,8 +2952,11 @@ async function loadFamilyTree() {
       setTreeMessage(
         treeLayout,
         familyId
-          ? "This tree is empty. Use the + button to add the first family member."
-          : "The example tree is empty or unavailable right now."
+          ? "This tree is ready for its first person. Use Add Person when you have owner or editor access."
+          : "The example tree is unavailable right now. Refresh to try loading the demo again.",
+        familyId
+          ? []
+          : [{ label: "Refresh", onClick: () => window.location.reload() }]
       );
       return;
     }
@@ -2295,7 +2980,8 @@ async function loadFamilyTree() {
       : `Search ${allPeople.length} people in this tree.`);
     renderBirthdayCalendar(allPeople, familyId, { isDemoMode: isPublicDemoMode });
     renderMissingInfoChecklist(allPeople, familyId, { isDemoMode: isPublicDemoMode });
-    renderFamilyStats(allPeople);
+    renderFamilyStats(allPeople, familyId, { isDemoMode: isPublicDemoMode });
+    renderDataHealthInspector(allPeople, { isDemoMode: isPublicDemoMode });
 
     treeLayout.replaceChildren(); // clear loading text
     treeLayout.classList.toggle("tree-overview-mode", overviewMode);
@@ -2370,11 +3056,14 @@ async function loadFamilyTree() {
   } catch (err) {
     console.error("Error loading family tree:", err);
     setTreeView("cards", { persist: false, updateUrl: false });
-    setTreeMessage(treeLayout, "Could not load this family tree. Refresh the page, then confirm this account has access.");
+    setTreeMessage(treeLayout, "Could not load this family tree. Refresh the page, then confirm this account has access.", [
+      { label: "Refresh", onClick: () => window.location.reload() },
+      { label: "Open Account", href: "/account", secondary: true },
+    ]);
   }
 }
 
-function setTreeMessage(treeLayout, message) {
+function setTreeMessage(treeLayout, message, actions = []) {
   lastRenderedPeople = [];
   renderRecentPeople();
   document.body.classList.remove("tree-card-layout-ready", "tree-card-cue-ready");
@@ -2386,6 +3075,7 @@ function setTreeMessage(treeLayout, message) {
   renderBirthdayCalendar([], null, { isDemoMode: false });
   renderMissingInfoChecklist([], null, { isDemoMode: false });
   renderFamilyStats([]);
+  renderDataHealthInspector([], { isDemoMode: false });
   clearSelectedPersonPanel();
   const state = document.createElement("div");
   state.className = "tree-state-message";
@@ -2406,6 +3096,25 @@ function setTreeMessage(treeLayout, message) {
   const copy = document.createElement("span");
   copy.textContent = message;
   state.append(title, copy);
+
+  if (Array.isArray(actions) && actions.length > 0) {
+    const actionRow = document.createElement("div");
+    actionRow.className = "tree-state-actions";
+    actions.forEach(action => {
+      const control = action.href ? document.createElement("a") : document.createElement("button");
+      control.className = action.secondary ? "button button-secondary" : "button";
+      control.textContent = action.label;
+      if (action.href) {
+        control.href = action.href;
+      } else {
+        control.type = "button";
+        control.addEventListener("click", action.onClick || (() => {}));
+      }
+      actionRow.appendChild(control);
+    });
+    state.appendChild(actionRow);
+  }
+
   treeLayout.appendChild(state);
 }
 
@@ -2458,6 +3167,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setupRelationshipFinder();
   setupRecentPeopleControls();
   setupTreeFullscreenButton();
+  setupTreePresentationControls();
+  setupTreeTour();
   setupChartFrameSafety();
   setupAddPersonModal();
   setupCopyCode();

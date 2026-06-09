@@ -311,7 +311,12 @@ function runSearch(rawQuery, resultsContainer) {
   currentSearchQuery = trimmed;
 
   if (allPeople.length === 0) {
-    resultsContainer.appendChild(createSearchMessage("No people are available in this tree yet."));
+    resultsContainer.appendChild(createSearchMessage("No people are available in this tree yet. Add the first family member from Family Tree when you have editor access.", {
+      title: "No people yet",
+      actions: [
+        { label: "Open Family Tree", href: currentFamilyId ? `/tree?familyId=${encodeURIComponent(currentFamilyId)}` : "/tree" },
+      ],
+    }));
     return;
   }
 
@@ -398,14 +403,28 @@ function updateSearchUrl(rawQuery) {
   window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-function createSearchMessage(message) {
+function createSearchMessage(message, options = {}) {
   const empty = document.createElement("div");
   empty.className = "empty-state";
   const heading = document.createElement("h3");
-  heading.textContent = "Family directory status";
+  heading.textContent = options.title || "Family directory status";
   const copy = document.createElement("p");
   copy.textContent = message;
   empty.append(heading, copy);
+
+  if (Array.isArray(options.actions) && options.actions.length > 0) {
+    const actionRow = document.createElement("div");
+    actionRow.className = "empty-state-actions";
+    options.actions.forEach(action => {
+      const link = document.createElement("a");
+      link.className = action.secondary ? "button button-secondary" : "button";
+      link.href = action.href;
+      link.textContent = action.label;
+      actionRow.appendChild(link);
+    });
+    empty.appendChild(actionRow);
+  }
+
   return empty;
 }
 
@@ -455,7 +474,12 @@ async function initSearchPage() {
     setSearchFormDisabled(form, true);
     setSearchContext("This is a private family tree. Sign in to search it.");
     resultsContainer.replaceChildren();
-    resultsContainer.appendChild(createSearchMessage("Sign in with an invited account to browse this private family directory."));
+    resultsContainer.appendChild(createSearchMessage("Sign in with an invited account to browse this private family directory.", {
+      title: "Sign in needed",
+      actions: [
+        { label: "Sign In", href: "/signin" },
+      ],
+    }));
     renderMemoryWall([]);
     return;
   }
@@ -464,7 +488,12 @@ async function initSearchPage() {
     setSearchFormDisabled(form, true);
     setSearchContext("No private family tree is connected to this account yet.");
     resultsContainer.replaceChildren();
-    resultsContainer.appendChild(createSearchMessage("No private family tree is connected to this account yet. Open Account to start one or join with a code."));
+    resultsContainer.appendChild(createSearchMessage("No private family tree is connected to this account yet. Open Account to start one or join with a code.", {
+      title: "No tree connected",
+      actions: [
+        { label: "Open Account", href: "/account" },
+      ],
+    }));
     renderMemoryWall([]);
     return;
   }
@@ -480,7 +509,13 @@ async function initSearchPage() {
     setSearchContext("Family directory data could not load.");
     setSearchFormDisabled(form, true);
     resultsContainer.replaceChildren();
-    resultsContainer.appendChild(createSearchMessage("Could not load family members for this directory. Refresh the page, then confirm this account has access to the selected tree."));
+    resultsContainer.appendChild(createSearchMessage("Could not load family members for this directory. Refresh the page, then confirm this account has access to the selected tree.", {
+      title: "Directory unavailable",
+      actions: [
+        { label: "Open Account", href: "/account" },
+        { label: "Open Family Tree", href: currentFamilyId ? `/tree?familyId=${encodeURIComponent(currentFamilyId)}` : "/tree", secondary: true },
+      ],
+    }));
     renderMemoryWall([]);
     return;
   }

@@ -537,18 +537,18 @@ function chooseCurrentTree(trees) {
   );
 }
 
-function renderDashboardEmptyState() {
+function renderDashboardEmptyState(options = {}) {
   if (!listEl) return;
 
   const empty = document.createElement("article");
   empty.className = "empty-state";
 
   const heading = document.createElement("h3");
-  heading.textContent = "No family tree yet";
+  heading.textContent = options.title || "No family tree yet";
   empty.appendChild(heading);
 
   const copy = document.createElement("p");
-  copy.textContent = "Create a private family tree or join one with an access code from a relative.";
+  copy.textContent = options.message || "Create a private family tree or join one with an access code from a relative.";
   empty.appendChild(copy);
 
   const actions = document.createElement("div");
@@ -556,15 +556,17 @@ function renderDashboardEmptyState() {
 
   const createLink = document.createElement("a");
   createLink.className = "button";
-  createLink.href = "/#createTreeFormCard";
-  createLink.textContent = "Start Family Tree";
+  createLink.href = options.primaryHref || "/#createTreeFormCard";
+  createLink.textContent = options.primaryLabel || "Start Family Tree";
   actions.appendChild(createLink);
 
-  const joinLink = document.createElement("a");
-  joinLink.className = "button button-secondary";
-  joinLink.href = "/#joinTreeFormCard";
-  joinLink.textContent = "Join with Code";
-  actions.appendChild(joinLink);
+  if (options.secondaryLabel !== null) {
+    const joinLink = document.createElement("a");
+    joinLink.className = "button button-secondary";
+    joinLink.href = options.secondaryHref || "/#joinTreeFormCard";
+    joinLink.textContent = options.secondaryLabel || "Join with Code";
+    actions.appendChild(joinLink);
+  }
 
   empty.appendChild(actions);
   listEl.replaceChildren(empty);
@@ -590,8 +592,22 @@ function renderDashboardUnavailableState() {
   state.appendChild(heading);
 
   const copy = document.createElement("p");
-  copy.textContent = "Refresh the page, then confirm this account has access to the family tree.";
+  copy.textContent = "Refresh the page first. If this keeps happening, confirm this account is listed as owner, editor, or viewer in the family tree.";
   state.appendChild(copy);
+
+  const actions = document.createElement("div");
+  actions.className = "empty-state-actions";
+  const refreshButton = document.createElement("button");
+  refreshButton.className = "button";
+  refreshButton.type = "button";
+  refreshButton.textContent = "Refresh";
+  refreshButton.addEventListener("click", () => window.location.reload());
+  const homeLink = document.createElement("a");
+  homeLink.className = "button button-secondary";
+  homeLink.href = "/";
+  homeLink.textContent = "Go Home";
+  actions.append(refreshButton, homeLink);
+  state.appendChild(actions);
 
   listEl.replaceChildren(state);
 }
@@ -981,7 +997,14 @@ async function loadFamilyTrees(user) {
 
   if (!user) {
     setStatus("Sign in to see your private family tree.");
-    renderDashboardEmptyState();
+    renderDashboardEmptyState({
+      title: "Sign in to manage your tree",
+      message: "Your private family tree, access code, and member controls appear here after sign-in.",
+      primaryLabel: "Sign In",
+      primaryHref: "/signin",
+      secondaryLabel: "Preview Example Tree",
+      secondaryHref: "/tree",
+    });
     return;
   }
 

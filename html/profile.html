@@ -32,53 +32,61 @@
     <section class="profile-card" id="profileCard">
       <!-- LEFT: PHOTO -->
       <div class="profile-photo-wrapper">
-        <img id="profileImage" class="profile-image" alt="Profile picture" />
+        <img id="profileImage" class="profile-image" alt="" hidden aria-hidden="true" />
+        <div id="profilePhotoPlaceholder" class="profile-photo-placeholder" role="img" aria-label="No profile photo yet">
+          <span id="profilePhotoInitials" class="profile-photo-initials">FT</span>
+          <strong id="profilePhotoPlaceholderTitle">No photo yet</strong>
+          <span id="profilePhotoPlaceholderText">Add one when this profile is ready.</span>
+        </div>
       </div>
 
       <!-- RIGHT: DETAILS -->
       <div class="profile-details">
-        <h1 id="name">Loading...</h1>
-        <p id="profileStatus" class="form-status profile-status" aria-live="polite"></p>
-        <p id="profileEditState" class="profile-edit-state">Checking edit access...</p>
+        <h1 id="name">Loading profile</h1>
+        <p id="profileStatus" class="form-status profile-status is-loading" role="status" aria-live="polite">Getting profile details...</p>
+        <p id="profileEditState" class="profile-edit-state" aria-live="polite">Checking edit access...</p>
+        <p id="profileStoryLead" class="profile-story-lead">Profiles collect the person, relationships, photos, and family notes in one place.</p>
 
-        <p class="profileInfo">
-          <strong>Birthday: </strong>
-          <span id="birthDate"></span>
-        </p>
+        <div class="profile-facts" aria-label="Profile details">
+          <p class="profileInfo">
+            <strong>Birthday</strong>
+            <span id="birthDate"></span>
+          </p>
 
-        <p class="profileInfo">
-          <strong>Parents: </strong>
-          <span id="parents"></span>
-        </p>
+          <p class="profileInfo">
+            <strong>Parents</strong>
+            <span id="parents"></span>
+          </p>
 
-        <p class="profileInfo">
-          <strong>Spouse: </strong>
-          <span id="spouse"></span>
-        </p>
+          <p class="profileInfo">
+            <strong>Spouse or partner</strong>
+            <span id="spouse"></span>
+          </p>
 
-        <p class="profileInfo">
-          <strong>Children: </strong>
-          <span id="children"></span>
-        </p>
+          <p class="profileInfo">
+            <strong>Children</strong>
+            <span id="children"></span>
+          </p>
 
-        <p class="profileInfo">
-          <strong>Bio: </strong>
-          <span id="bio"></span>
-        </p>
+          <p class="profileInfo profileInfo-memory">
+            <strong>Bio</strong>
+            <span id="bio"></span>
+          </p>
 
-        <p class="profileInfo">
-          <strong>Birthday fun fact: </strong>
-          <span id="funFact">Loading...</span>
-        </p>
+          <p class="profileInfo profileInfo-memory">
+            <strong>Birthday note</strong>
+            <span id="funFact">Birthday note will appear when the profile loads.</span>
+          </p>
+        </div>
 
         <div class="profile-buttons">
           <a id="profileBackLink" href="/tree" class="button profile-btn secondary">
             Back to Family Tree
           </a>
-          <button id="deletePersonBtn" class="button profile-btn danger" hidden>
+          <button id="deletePersonBtn" class="button profile-btn danger" type="button" aria-describedby="profileEditState" hidden>
             Remove This Person
           </button>
-          <button id="editPersonBtn" class="button profile-btn primary" hidden>
+          <button id="editPersonBtn" class="button profile-btn primary" type="button" aria-haspopup="dialog" aria-controls="editPersonModal" aria-expanded="false" aria-describedby="profileEditState" hidden>
             Edit Profile
           </button>
         </div>
@@ -86,11 +94,12 @@
     </section>
   </div>
 
-  <div id="editPersonModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editPersonModalTitle" hidden>
+  <div id="editPersonModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editPersonModalTitle" aria-describedby="editPersonModalIntro editRelationshipHelp" hidden>
     <div class="modal-content" tabindex="-1">
       <button class="close" type="button" aria-label="Close edit profile form">&times;</button>
       <h2 id="editPersonModalTitle">Edit Profile</h2>
-      <form id="editPersonForm" enctype="multipart/form-data">
+      <p id="editPersonModalIntro" class="modal-intro">Update this person's details, relationships, and photo.</p>
+      <form id="editPersonForm" enctype="multipart/form-data" aria-describedby="editRelationshipHelp editPhotoHelp">
         <label class="form-label">
           First Name
           <input type="text" id="editFirstName" required><br>
@@ -140,7 +149,7 @@
         <label class="form-label">
           Upload profile photo
           <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"><br>
-          <span class="field-note">Use JPG, PNG, WebP, or GIF under 5 MB. HEIC photos need to be exported first.</span>
+          <span id="editPhotoHelp" class="field-note">Use JPG, PNG, WebP, or GIF under 5 MB. HEIC photos need to be exported first.</span>
         </label>
         <label class="form-label checkbox-label">
           <input type="checkbox" id="removeImage">

@@ -28,11 +28,54 @@
 
     <main>
         <section class="welcome-section">
-            <h2>Build the family tree without making it a chore</h2>
-            <p>
-                Create a private tree, invite relatives with a simple access code, and keep the people,
-                relationships, and stories easy to browse.
-            </p>
+            <div class="welcome-copy">
+                <p class="eyebrow">Private family tree builder</p>
+                <h2>Build the family tree without making it a chore</h2>
+                <p>
+                    Create a private tree, invite relatives with a simple access code, and keep the people,
+                    relationships, and stories easy to browse.
+                </p>
+                <div class="hero-actions" aria-label="Primary actions">
+                    <a class="button" href="/signin">Sign In to Start</a>
+                    <a id="heroExampleTreeLink" class="button button-secondary" href="/tree">View Example Tree</a>
+                </div>
+            </div>
+
+            <aside class="family-preview" aria-labelledby="familyPreviewTitle">
+                <div class="family-preview-header">
+                    <div>
+                        <p class="eyebrow">Example branch</p>
+                        <h3 id="familyPreviewTitle">See how a few relatives connect</h3>
+                    </div>
+                    <button id="previewBranchBtn" class="text-action" type="button" aria-controls="previewBranchStatus">Highlight a branch</button>
+                </div>
+                <div class="mini-tree" aria-label="Small example family branch">
+                    <div class="mini-person mini-person-parent" data-preview-person="parent-a">
+                        <span class="mini-avatar" aria-hidden="true">GJ</span>
+                        <strong>Graham</strong>
+                        <span>parent</span>
+                    </div>
+                    <div class="mini-person mini-person-parent" data-preview-person="parent-b">
+                        <span class="mini-avatar" aria-hidden="true">IM</span>
+                        <strong>Iris</strong>
+                        <span>parent</span>
+                    </div>
+                    <div class="mini-connector" aria-hidden="true"></div>
+                    <div class="mini-person mini-person-child" data-preview-person="child-a">
+                        <span class="mini-avatar" aria-hidden="true">AJ</span>
+                        <strong>Alex</strong>
+                        <span>child</span>
+                    </div>
+                    <div class="mini-person mini-person-child" data-preview-person="child-b">
+                        <span class="mini-avatar" aria-hidden="true">CJ</span>
+                        <strong>Casey</strong>
+                        <span>child</span>
+                    </div>
+                </div>
+                <p id="previewBranchStatus" class="preview-status" aria-live="polite">
+                    Click the button to trace one example branch.
+                </p>
+            </aside>
         </section>
 
         <section class="actions-section">
@@ -45,7 +88,7 @@
                         Make a dedicated family space with its own access code. You can add people now and
                         invite others when it feels ready.
                     </p>
-                    <button id="createTreeBtn" class="button">
+                    <button id="createTreeBtn" class="button" type="button" aria-controls="createTreeFormCard familyFormStatus">
                         Start a Tree
                     </button>
                 </article>
@@ -56,7 +99,7 @@
                         Already have a code from someone else? Join their tree and pick up right where
                         the family left off.
                     </p>
-                    <button id="joinTreeBtn" class="button">
+                    <button id="joinTreeBtn" class="button" type="button" aria-controls="joinTreeFormCard familyFormStatus">
                         Join with Code
                     </button>
                 </article>
@@ -79,7 +122,7 @@
             <p class="forms-subtitle">
                 Sign in first. Then create a new tree or join one with a code from a relative.
             </p>
-            <p id="familyFormStatus" class="form-status" aria-live="polite"></p>
+            <p id="familyFormStatus" class="form-status" role="status" aria-live="polite"></p>
 
             <div id="familyFormsSignInCallout" class="signed-out-family-callout" hidden>
                 <div>
@@ -93,7 +136,7 @@
                 <h3>Create a New Family Tree</h3>
                 <p>Use a name your family will recognize. We'll generate the access code after creation.</p>
 
-                <form id="createFamilyForm">
+                <form id="createFamilyForm" aria-describedby="familyFormStatus">
                     <label for="familyName">Family Tree Name</label>
                     <input
                         type="text"
@@ -119,7 +162,7 @@
                 <h3>Join an Existing Family Tree</h3>
                 <p>Paste the access code exactly as it was shared. New members can view first; the owner can turn on editor access later.</p>
 
-                <form id="joinFamilyForm">
+                <form id="joinFamilyForm" aria-describedby="familyFormStatus">
                     <label for="joinCode">Access Code</label>
                     <input
                         type="text"

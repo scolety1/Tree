@@ -29,7 +29,25 @@ const familyFormStatus   = document.getElementById("familyFormStatus");
 const formsSubtitle      = document.querySelector(".forms-subtitle");
 const formsSignInCallout = document.getElementById("familyFormsSignInCallout");
 const formsSignInLink    = document.getElementById("familyFormsSignInLink");
+const previewBranchBtn   = document.getElementById("previewBranchBtn");
+const previewBranchStatus = document.getElementById("previewBranchStatus");
 let signedInUser = getCurrentUser();
+
+const previewBranches = [
+    {
+        people: ["parent-a", "child-a"],
+        label: "Graham connects to Alex through one parent-child line."
+    },
+    {
+        people: ["parent-b", "child-b"],
+        label: "Iris connects to Casey through one parent-child line."
+    },
+    {
+        people: ["parent-a", "parent-b", "child-a", "child-b"],
+        label: "This branch shows two parents and two children in one small family group."
+    }
+];
+let previewBranchIndex = 0;
 
 async function generateAvailableJoinCode(length = ACCESS_CODE_LENGTH) {
     for (let attempt = 0; attempt < 8; attempt++) {
@@ -45,6 +63,24 @@ function setFamilyFormStatus(message) {
     if (familyFormStatus) {
         familyFormStatus.textContent = message;
     }
+}
+
+function highlightPreviewBranch() {
+    if (!previewBranchBtn) return;
+    const branch = previewBranches[previewBranchIndex % previewBranches.length];
+    const activePeople = new Set(branch.people);
+
+    document.querySelectorAll("[data-preview-person]").forEach((card) => {
+        const isActive = activePeople.has(card.dataset.previewPerson || "");
+        card.classList.toggle("is-highlighted", isActive);
+        card.classList.toggle("is-dimmed", !isActive);
+    });
+
+    if (previewBranchStatus) {
+        previewBranchStatus.textContent = branch.label;
+    }
+
+    previewBranchIndex += 1;
 }
 
 function setFormBusy(form, isBusy) {
@@ -158,6 +194,10 @@ if (joinTreeBtn && joinFormCard) {
         }
         joinFormCard.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+}
+
+if (previewBranchBtn) {
+    previewBranchBtn.addEventListener("click", highlightPreviewBranch);
 }
 
 /* -----------------------------------

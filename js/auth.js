@@ -120,7 +120,7 @@ function updateAuthStatus(user) {
 
   if (authLink) {
     authLink.href = user ? "/account" : "/signin";
-    authLink.setAttribute("aria-label", user ? "Open account settings" : "Sign in");
+    authLink.setAttribute("aria-label", user ? `Open account settings for ${displayEmail}` : "Sign in");
     authLink.hidden = !user && window.location.pathname === "/signin";
   }
 
@@ -181,14 +181,32 @@ function setupAuthForm() {
   const status = document.getElementById("authFormStatus");
   let createMode = false;
 
-  function setStatus(message) {
-    if (status) status.textContent = message;
+  function getAuthStatusTone(message = "") {
+    if (!message) return "";
+    if (/creating|signing in|opening|sending/i.test(message)) return "loading";
+    if (/signed in|email sent/i.test(message)) return "success";
+    return "error";
+  }
+
+  function setStatus(message, tone = getAuthStatusTone(message)) {
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle("is-loading", tone === "loading");
+    status.classList.toggle("is-success", tone === "success");
+    status.classList.toggle("is-error", tone === "error");
   }
 
   function renderMode() {
     if (title) title.textContent = createMode ? "Create Your Account" : "Sign In";
     if (submitBtn) submitBtn.textContent = createMode ? "Create Account" : "Sign In";
-    if (modeToggle) modeToggle.textContent = createMode ? "Already have an account? Sign in" : "New here? Create an account";
+    const passwordInput = document.getElementById("authPassword");
+    if (passwordInput) {
+      passwordInput.autocomplete = createMode ? "new-password" : "current-password";
+    }
+    if (modeToggle) {
+      modeToggle.textContent = createMode ? "Already have an account? Sign in" : "New here? Create an account";
+      modeToggle.setAttribute("aria-pressed", createMode ? "true" : "false");
+    }
   }
 
   if (modeToggle) {
@@ -204,9 +222,17 @@ function setupAuthForm() {
       event.preventDefault();
       const email = document.getElementById("authEmail")?.value.trim();
       const password = document.getElementById("authPassword")?.value;
+      const emailInput = document.getElementById("authEmail");
+      const passwordInput = document.getElementById("authPassword");
+
+      emailInput?.removeAttribute("aria-invalid");
+      passwordInput?.removeAttribute("aria-invalid");
 
       if (!email || !password) {
+        if (!email) emailInput?.setAttribute("aria-invalid", "true");
+        if (!password) passwordInput?.setAttribute("aria-invalid", "true");
         setStatus("Enter your email and password.");
+        (email ? passwordInput : emailInput)?.focus();
         return;
       }
 
@@ -232,6 +258,7 @@ function setupAuthForm() {
 
   if (googleBtn) {
     googleBtn.addEventListener("click", async () => {
+      googleBtn.disabled = true;
       setStatus("Opening Google sign-in...");
       try {
         await signInWithGoogle();
@@ -240,24 +267,35 @@ function setupAuthForm() {
       } catch (error) {
         console.error("Google sign-in error:", error);
         setStatus(getFriendlyAuthError(error));
+      } finally {
+        googleBtn.disabled = false;
       }
     });
   }
 
   if (resetBtn) {
     resetBtn.addEventListener("click", async () => {
+      if (resetBtn.disabled) return;
       const email = document.getElementById("authEmail")?.value.trim();
+      const emailInput = document.getElementById("authEmail");
+      emailInput?.removeAttribute("aria-invalid");
       if (!email) {
+        emailInput?.setAttribute("aria-invalid", "true");
         setStatus("Enter your email first, then reset your password.");
+        emailInput?.focus();
         return;
       }
 
+      resetBtn.disabled = true;
+      setStatus("Sending password reset email...");
       try {
         await resetPassword(email);
         setStatus("Password reset email sent.");
       } catch (error) {
         console.error("Password reset error:", error);
         setStatus(getFriendlyAuthError(error));
+      } finally {
+        resetBtn.disabled = false;
       }
     });
   }

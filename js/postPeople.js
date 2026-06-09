@@ -31,8 +31,20 @@ const statusEl = document.getElementById("addPersonStatus");
 let peopleOptions = [];
 let currentUser = getCurrentUser();
 
-function setStatus(message) {
-  if (statusEl) statusEl.textContent = message;
+function getAddPersonStatusTone(message = "") {
+  if (!message) return "";
+  if (/saving|uploading|checking|loading/i.test(message)) return "loading";
+  if (/saved|updated/i.test(message)) return "success";
+  if (/could not|blocked|failed|required|sign in|read-only|owner|editor|choose|use a secure/i.test(message)) return "error";
+  return "";
+}
+
+function setStatus(message, tone = getAddPersonStatusTone(message)) {
+  if (!statusEl) return;
+  statusEl.textContent = message;
+  statusEl.classList.toggle("is-loading", tone === "loading");
+  statusEl.classList.toggle("is-success", tone === "success");
+  statusEl.classList.toggle("is-error", tone === "error");
 }
 
 function setFieldInvalid(input, isInvalid) {
@@ -115,7 +127,7 @@ function refreshAddFormAvailability(user = currentUser) {
     console.error("Error updating add form availability:", error);
     setAddFormDisabled(true);
     setAddButtonAvailable(false);
-    setStatus("Could not confirm edit access for this tree.");
+    setStatus("Could not confirm editor access for this tree. Refresh the page, then check that this account is an owner or editor.");
   });
 }
 
@@ -191,7 +203,7 @@ if (form) {
     refreshAddFormAvailability(user);
     refreshRelationshipOptions().catch(error => {
       console.error("Error loading relationship options:", error);
-      setStatus("Could not load relationship options.");
+      setStatus("Could not load relationship options. Refresh the page if parent or spouse choices are missing.");
     });
   });
 
@@ -199,7 +211,7 @@ if (form) {
     refreshAddFormAvailability(currentUser);
     refreshRelationshipOptions().catch(error => {
       console.error("Error loading relationship options:", error);
-      setStatus("Could not load relationship options.");
+      setStatus("Could not load relationship options. Refresh the page if parent or spouse choices are missing.");
     });
   });
 }
@@ -220,7 +232,7 @@ if(form) {
     clearValidationState();
     const submitButton = form.querySelector('button[type="submit"]');
     if (submitButton) submitButton.disabled = true;
-    if (statusEl) statusEl.textContent = "Saving family member...";
+    setStatus("Saving family member...");
 
     // Get familyId from URL if present
     const familyId = getCurrentFamilyId();

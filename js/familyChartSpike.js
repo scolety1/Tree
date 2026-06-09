@@ -785,8 +785,8 @@ async function renderSpike() {
   updateSourceTreeLink();
 
   if (!people || people.length === 0) {
-    setStatus("No people are available for this chart yet.");
-    notifyTreeFrameStatus("error", "No people are available for this chart yet.");
+    setStatus("No people are available for this chart yet. Add people in the family tree, then refresh the chart.");
+    notifyTreeFrameStatus("error", "No people are available for this chart yet. Add people in the family tree, then refresh the chart.");
     return;
   }
 
@@ -859,8 +859,9 @@ if (chartContainer) {
   setupEmbedResizeObserver();
   renderSpike().catch(error => {
     console.error("Family Chart spike failed:", error);
-    setStatus(`Family Chart failed to render: ${error.message || "Unknown error"}`);
-    notifyTreeFrameStatus("error", `Family Chart failed to render: ${error.message || "Unknown error"}`);
+    const message = "The connected chart could not finish rendering. Try refreshing, or switch to Card view to keep browsing.";
+    setStatus(message);
+    notifyTreeFrameStatus("error", message);
   });
 }
 

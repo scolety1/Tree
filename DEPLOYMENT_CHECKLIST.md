@@ -328,6 +328,189 @@ Remaining live release gates:
 4. Test public signed-out `/`, `/tree`, `/tree?demo=large`, and `/search?demo=large` after deploy.
 5. Watch live console output for CSP reports and any clean-browser `MutationObserver.observe` reproduction.
 
+## June 4 While-Away Upgrades Release Checkpoint
+
+Status: Prompts 1-13 from `TREE_2026-06-04_WHILE_AWAY_UPGRADES_QUEUE.md` are complete locally. This is a release candidate for review, but it has not been committed, pushed, or deployed from this checkpoint.
+
+Proposed commit scope:
+
+- Public/signed-out route polish for Home, Sign In, Account, Tree, hidden Family Directory, and Profile.
+- Tree-page fun tools and readability upgrades: presentation/print controls, Recently Viewed, Relationship Finder, Birthdays, Missing info, Family stats, Relative spotlight, Family name cloud, and chart/card fallback cleanup.
+- Profile and photo UX tightening, including friendlier upload errors and return-path handling.
+- Account readiness/checklist polish and clearer private-tree management copy.
+- Documentation and queue updates for audit intake, release readiness, and live Firebase gates.
+
+Passed locally:
+
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only
+- Route-aware static Firebase rewrite and asset check, covering 78 references
+- Local browser smoke for Home, Large Demo Tree Chart, Large Demo Tree Card fallback, hidden Family Directory, Sign In, Account, and a large-demo Profile
+- No checked public route produced app console errors
+- No checked public route had body-level horizontal overflow
+
+Still required before birthday approval:
+
+1. Commit and push only after Spencer review.
+2. Confirm GitHub Actions passes on the pushed commit.
+3. Deploy with `firebase deploy --only hosting,firestore:rules,storage --project tree-72e80`.
+4. Run the owner live pass as `smcolety@gmail.com` for Account, invite-code copy/reset, Colety tree load, Add/Edit Person, selected-person panel, profile `?edit=1`, and profile photo upload/replace/remove.
+5. Run viewer/editor/non-member privacy checks against deployed Firestore and Storage rules.
+6. Smoke public signed-out `/`, `/tree`, `/tree?demo=large`, `/tree?demo=large&view=cards`, `/search?demo=large`, `/signin`, `/account`, and one demo profile on Firebase Hosting.
+7. Review live browser console for CSP report-only output and any clean-browser `MutationObserver.observe` reproduction.
+
+## June 4 Work Shift Prompt 1 Release Sweep
+
+Status: Changed-file release sweep passed locally. No new app-code changes were needed beyond the profile empty-image cleanup already in the local working tree. This is still not committed, pushed, or deployed.
+
+Passed locally:
+
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only
+- Route-aware Firebase rewrite and asset check, covering 78 references
+- Browser smoke for Home, Sign In, Account, Large Demo Tree Chart, Large Demo Tree Card fallback, Example Tree, hidden Family Directory, valid large-demo Profile, and missing-profile state
+- URL-state smoke for Tree `treeQuery=graham` and hidden Family Directory `query=graham`
+- No checked route produced app console errors, visible broken images, suspicious `undefined`/`null`/`NaN` text, or page-level horizontal overflow
+
+Notes:
+
+- Browser automation could not type into fields because the local automation virtual clipboard was unavailable; equivalent query-state flows were smoke-tested through URLs.
+- Remaining Vercel mentions are in legacy/deferred docs or the ignored `api/funfact.js` endpoint, not Firebase-hosted app calls.
+- Live owner/editor/viewer and Storage photo tests remain the release gate.
+
+## June 4 Work Shift Prompt 2 Audit Baseline
+
+Status: Commit scope and future external-audit package scope are documented. No zip/package was created for this checkpoint, and nothing was committed, pushed, or deployed.
+
+Current proposed commit scope:
+
+- Public/signed-out polish for Home, Sign In, Account, Tree, hidden Family Directory, and Profile.
+- Tree page improvements: embedded chart defaults, card fallback, presentation/print controls, guided tour, Find person, Recently Viewed, selected-person details, Relationship Finder, Birthdays, Missing info, Family stats, Relative spotlight, Family name cloud, and clearer empty/loading/error states.
+- Profile/photo polish: intentional empty-photo placeholders, warmer profile states, friendlier photo validation/error copy, and safer return-path handling.
+- Account readiness polish: private-tree management copy, invite-code guidance, owner checklist, and clearer signed-out account state.
+- Release documentation and audit queues for the current local release candidate.
+
+Future external audit package should include:
+
+- App shell/routes: `404.html`, `html/*.html`, `css/*.css`, `js/*.js`, and `assets/*` if present.
+- Firebase/release config: `firebase.json`, `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `package.json`, and `.gitignore`.
+- Current docs: `README.md`, `DEPLOYMENT_CHECKLIST.md`, `5-21_WORKSHEET.md`, `SPENCER_PHASE_CHECKLIST.md`, `BIRTHDAY_RELEASE_ROADMAP.md`, `BIRTHDAY_RELEASE_PUNCH_LIST.md`, `BIRTHDAY_RELEASE_ISSUES.md`, `TREE_2026-06-04_AUDIT_INTAKE_QUEUE.md`, `TREE_2026-06-04_WHILE_AWAY_UPGRADES_QUEUE.md`, and `TREE_2026-06-04_WORK_SHIFT_UPGRADES_QUEUE.md`.
+- Optional historical context only if the auditor needs it: older `TREE_2026-*QUEUE.md` files and `ROADMAP.md`.
+
+Keep out of git and audit commits:
+
+- Generated audit packages/reports: `TREE_EXTERNAL_AUDIT_*`, `TREE_EXTERNAL_AUDIT_PACKAGE_*`, and `TREE_QA_REVIEW_*`.
+- Firebase local artifacts: `.firebase/`, `firestore-debug.log`, and any `firebase-debug.log`.
+- Dependencies/build artifacts: `node_modules/` and temporary local server files such as `.tmp_*`.
+- Secrets or credentials. Test account details should be shared only in the audit prompt if Spencer explicitly approves.
+
+Latest local readiness:
+
+- `npm.cmd run check` passed.
+- `git diff --check` passed with Windows line-ending warnings only.
+- Route-aware Firebase rewrite/asset check passed with 78 references checked.
+- Public browser smoke passed in Work Shift Prompt 1.
+- External audit should wait until Spencer either approves this local candidate or asks to package it anyway.
+
+## June 4 Work Shift Prompt 3 Tree First Impression
+
+Status: Tree first-impression polish is complete locally. Nothing was committed, pushed, or deployed for this checkpoint.
+
+Ready locally:
+
+- Tree pages now show a contextual subtitle for large demo, example, missing, archived, and private tree states.
+- Public tree helper copy now starts with "Start here" guidance and tells visitors to search a name or click a person card.
+- The tour/key copy better explains selected people, relationship lines, and C1/C2 couple markers.
+- Chart fallback copy now says "Use card list instead."
+- Mobile first viewport keeps the chart visible sooner by placing the canvas before the deeper tool stack at narrow widths.
+- Mobile header, title, subtitle, and print controls wrap without page-level horizontal overflow.
+
+Passed locally:
+
+- Desktop smoke for public large demo Chart view, Card list fallback, and real-tree shell route.
+- Phone-width CDP smoke for public large demo Chart view at 390px, with no body/document horizontal overflow.
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only.
+
+Still required live:
+
+- After deploy, spot-check signed-in private-tree title/subtitle/copy with the owner account.
+- Confirm the mobile chart-first order feels right on a real phone browser.
+
+## June 4 Work Shift Prompt 4 Selected Person Actions
+
+Status: Selected-person action polish is complete locally. Nothing was committed, pushed, or deployed for this checkpoint.
+
+Ready locally:
+
+- Selected-person panel now has a compact Clear control.
+- Clear selection hides the panel, removes focused-card styling, and clears stale `focus` URL state.
+- Public demo selections now expose `View demo details` through the existing read-only demo profile route.
+- Owner/editor-capable private trees still use `Edit profile`; viewer/read-only states do not show edit controls.
+- Selected-person action copy is clearer for demo, owner/editor, and private viewer states.
+- Mobile selected-person actions meet 44px tap-target checks.
+
+Passed locally:
+
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only.
+- Desktop selected-person smoke in public large-demo Chart view.
+- Read-only demo profile smoke from the selected-person panel.
+- Phone-width selected-person smoke at 390px, with no body/document horizontal overflow.
+
+Still required live:
+
+- Verify owner/editor selected-person `Edit profile` appears after signed-in Firebase access is confirmed.
+- Verify viewer and signed-out states do not expose edit controls on private trees.
+
+## June 4 Work Shift Prompt 5 Tree Tools Drawer Cleanup
+
+Status: Tree sidebar drawer cleanup is complete locally. Nothing was committed, pushed, or deployed for this checkpoint.
+
+Ready locally:
+
+- Sidebar tools are grouped into `Map basics`, `Explore`, and `Review`.
+- Drawer labels are clearer: `Map key`, `View settings`, `Relationship finder`, `Birthdays`, `Profiles to finish`, `Family snapshot`, and `Data checks`.
+- Each drawer has a short description so users can tell what it does before opening it.
+- Drawer summaries now look like compact controls with plus/minus affordances.
+- Map key and view settings sit near the primary map actions; review/audit tools sit lower so they do not distract from finding relatives.
+
+Passed locally:
+
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only.
+- Browser smoke for public large-demo Chart view, Card list fallback, and 390px mobile.
+- Browser smoke confirmed 7 tool drawers, 3 group labels, no empty summaries, and no body/document horizontal overflow.
+
+Still required live:
+
+- Spot-check tool content with the real signed-in Colety tree after deploy, since live people/photos/birthdays can change panel content length.
+
+## June 4 Work Shift Prompt 6 Profile Page Story Pass
+
+Status: Profile page story polish is complete locally. Nothing was committed, pushed, or deployed for this checkpoint.
+
+Ready locally:
+
+- Profile pages now have a story lead that adapts to demo, private, missing, and real-person states.
+- Empty profile facts now read like intentional placeholders instead of blanks: birthday, parents, spouse/partner, children, bio, and birthday note.
+- Profiles without photos keep a styled initials/photo placeholder so the layout still feels complete.
+- Missing-person, wrong-family, and signed-out private states have complete copy and protected-data messaging.
+- Back links preserve tree focus/view context and People Directory query/sort context, with clearer titles and aria labels.
+- Edit modal behavior remains in place, with slightly clearer dialog/help wiring.
+
+Passed locally:
+
+- `npm.cmd run check`
+- `git diff --check` with Windows line-ending warnings only.
+- Browser smoke for valid large-demo profile, People Directory return path, missing profile, signed-out private profile, and 390px mobile profile.
+
+Still required live:
+
+- Verify signed-in owner/editor profile edit controls still appear for the real Colety tree.
+- Verify live Firebase Storage photo display/upload/replace/remove behavior.
+- Spot-check real Colety profile return paths after deploy.
+
 ## Final Release Order
 
 1. Finish code changes locally.

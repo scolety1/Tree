@@ -46,10 +46,99 @@
     font-size: 0.86rem;
 }
 
-#treeTitle {
+.tree-page-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: start;
     margin: 12px 0 24px;
+}
+
+.tree-title-copy {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+#treeTitle {
+    margin: 0;
     color: var(--brand-strong);
     font-size: clamp(2.1rem, 5vw, 4.3rem);
+}
+
+.tree-subtitle {
+    max-width: 760px;
+    margin: 0;
+    color: var(--muted);
+    font-size: clamp(1rem, 1.5vw, 1.18rem);
+    line-height: 1.55;
+}
+
+.tree-print-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 4px;
+}
+
+.tree-print-controls .button {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
+body.tree-presentation-mode {
+    background: #f9fbf7;
+}
+
+body.tree-presentation-mode header,
+body.tree-presentation-mode footer,
+body.tree-presentation-mode .join-code-display,
+body.tree-presentation-mode .tree-toolbar,
+body.tree-presentation-mode #addPersonBtn {
+    display: none !important;
+}
+
+body.tree-presentation-mode .tree-main {
+    width: min(100% - 24px, 1680px);
+    padding-top: 18px;
+}
+
+body.tree-presentation-mode .tree-page-heading {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    align-items: center;
+    margin: -18px -12px 14px;
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(249, 251, 247, 0.94);
+    backdrop-filter: blur(12px);
+}
+
+body.tree-presentation-mode #treeTitle {
+    font-size: clamp(1.6rem, 3vw, 2.8rem);
+}
+
+body.tree-presentation-mode .tree-workspace {
+    display: block;
+}
+
+body.tree-presentation-mode .tree-canvas-panel {
+    min-height: calc(100vh - 96px);
+}
+
+body.tree-presentation-mode .tree-chart-view,
+body.tree-presentation-mode .tree-chart-frame {
+    min-height: calc(100vh - 118px);
+}
+
+body.tree-presentation-mode .tree-chart-frame {
+    height: calc(100vh - 118px);
+}
+
+body.tree-presentation-mode .tree-layout {
+    min-height: calc(100vh - 118px);
 }
 
 .tree-main {
@@ -119,6 +208,94 @@
 .tree-scroll-hint {
     color: var(--muted);
     font-size: 0.84rem;
+}
+
+.tree-action-hint {
+    margin: 2px 0 0;
+    color: var(--brand-strong);
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1.4;
+}
+
+.tree-tour-toggle {
+    display: inline-flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+    padding: 0 12px;
+    border: 1px solid #b7c7b3;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    color: var(--brand-strong);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 850;
+    box-shadow: 0 6px 14px rgba(32, 47, 36, 0.06);
+}
+
+.tree-tour-toggle:hover,
+.tree-tour-toggle[aria-expanded="true"] {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+}
+
+.tree-tour-panel {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius);
+    background: #fff8eb;
+    box-shadow: 0 14px 28px rgba(93, 67, 24, 0.1);
+}
+
+.tree-tour-panel[hidden] {
+    display: none;
+}
+
+.tree-tour-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tree-tour-header h2 {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 1rem;
+}
+
+.tree-tour-steps {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.tree-tour-steps li::marker {
+    color: var(--gold);
+    font-weight: 900;
+}
+
+.tree-tour-steps strong {
+    color: var(--ink);
+}
+
+.tree-tour-note {
+    margin: 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(183, 131, 47, 0.28);
+    color: #735018;
+    font-size: 0.86rem;
+    line-height: 1.45;
 }
 
 .tree-focus-controls {
@@ -256,12 +433,38 @@
     margin: 0;
 }
 
+.tree-selected-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .tree-selected-eyebrow {
     color: #8a5a08;
     font-size: 0.72rem;
     font-weight: 900;
     letter-spacing: 0;
     text-transform: uppercase;
+}
+
+.tree-selected-clear {
+    min-height: 34px;
+    padding: 0 9px;
+    border: 1px solid #cbd8c7;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--brand-strong);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 850;
+}
+
+.tree-selected-clear:hover,
+.tree-selected-clear:focus-visible {
+    border-color: var(--brand);
+    background: var(--brand-soft);
 }
 
 .tree-selected-person-panel h2 {
@@ -406,6 +609,15 @@
     min-height: 42px;
 }
 
+.tree-tool-group-label {
+    margin: 4px 0 -4px;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .tree-density-controls {
     display: grid;
     grid-template-columns: 1fr;
@@ -486,6 +698,12 @@
     color: var(--brand-strong);
 }
 
+.tree-advanced-tools .tree-density-controls,
+.tree-advanced-tools .tree-view-switch {
+    width: auto;
+    margin: 0 12px 12px;
+}
+
 .tree-toolbar.is-chart-view {
     display: flex;
 }
@@ -499,28 +717,136 @@
 .tree-birthday-tool,
 .tree-missing-info-tool,
 .tree-stats-tool,
+.tree-data-health-tool,
 .tree-key,
 .tree-advanced-tools {
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: rgba(249, 251, 247, 0.72);
 }
 
 .tree-relationship-tool summary,
 .tree-birthday-tool summary,
 .tree-missing-info-tool summary,
 .tree-stats-tool summary,
+.tree-data-health-tool summary,
 .tree-key summary,
 .tree-advanced-tools summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
+    align-items: center;
+    min-height: 48px;
+    padding: 9px 12px;
     color: var(--ink);
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 900;
+    list-style: none;
+}
+
+.tree-relationship-tool summary::-webkit-details-marker,
+.tree-birthday-tool summary::-webkit-details-marker,
+.tree-missing-info-tool summary::-webkit-details-marker,
+.tree-stats-tool summary::-webkit-details-marker,
+.tree-data-health-tool summary::-webkit-details-marker,
+.tree-key summary::-webkit-details-marker,
+.tree-advanced-tools summary::-webkit-details-marker {
+    display: none;
+}
+
+.tree-relationship-tool summary::after,
+.tree-birthday-tool summary::after,
+.tree-missing-info-tool summary::after,
+.tree-stats-tool summary::after,
+.tree-data-health-tool summary::after,
+.tree-key summary::after,
+.tree-advanced-tools summary::after {
+    content: "+";
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    border: 1px solid #cbd8c7;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--brand-strong);
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.tree-relationship-tool[open] summary::after,
+.tree-birthday-tool[open] summary::after,
+.tree-missing-info-tool[open] summary::after,
+.tree-stats-tool[open] summary::after,
+.tree-data-health-tool[open] summary::after,
+.tree-key[open] summary::after,
+.tree-advanced-tools[open] summary::after {
+    content: "-";
+    border-color: var(--brand);
+    background: var(--brand-soft);
+}
+
+.tree-relationship-tool summary:hover,
+.tree-birthday-tool summary:hover,
+.tree-missing-info-tool summary:hover,
+.tree-stats-tool summary:hover,
+.tree-data-health-tool summary:hover,
+.tree-key summary:hover,
+.tree-advanced-tools summary:hover,
+.tree-relationship-tool summary:focus-visible,
+.tree-birthday-tool summary:focus-visible,
+.tree-missing-info-tool summary:focus-visible,
+.tree-stats-tool summary:focus-visible,
+.tree-data-health-tool summary:focus-visible,
+.tree-key summary:focus-visible,
+.tree-advanced-tools summary:focus-visible {
+    background: #ffffff;
+}
+
+.tree-relationship-tool summary span,
+.tree-birthday-tool summary span,
+.tree-missing-info-tool summary span,
+.tree-stats-tool summary span,
+.tree-data-health-tool summary span,
+.tree-key summary span,
+.tree-advanced-tools summary span {
+    min-width: 0;
+}
+
+.tree-relationship-tool summary small,
+.tree-birthday-tool summary small,
+.tree-missing-info-tool summary small,
+.tree-stats-tool summary small,
+.tree-data-health-tool summary small,
+.tree-key summary small,
+.tree-advanced-tools summary small {
+    grid-column: 1;
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.tree-relationship-tool[open],
+.tree-birthday-tool[open],
+.tree-missing-info-tool[open],
+.tree-stats-tool[open],
+.tree-data-health-tool[open],
+.tree-key[open],
+.tree-advanced-tools[open] {
+    background: #ffffff;
+    box-shadow: 0 10px 22px rgba(32, 47, 36, 0.05);
 }
 
 .relationship-finder-form {
     display: grid;
     gap: 8px;
-    margin-top: 12px;
+    padding: 0 12px 12px;
 }
 
 .relationship-finder-form label {
@@ -543,7 +869,7 @@
 .relationship-finder-result {
     display: grid;
     gap: 8px;
-    margin-top: 12px;
+    margin: 0 12px 12px;
     padding: 12px;
     border: 1px dashed #b7c7b3;
     border-radius: var(--radius-sm);
@@ -555,6 +881,90 @@
 
 .relationship-finder-result strong {
     color: var(--brand-strong);
+}
+
+.relationship-story {
+    display: grid;
+    gap: 8px;
+}
+
+.relationship-story p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.relationship-story-note {
+    gap: 4px;
+}
+
+.relationship-story-intro {
+    color: var(--muted);
+}
+
+.relationship-path-readable {
+    padding: 8px 10px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    color: var(--ink) !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.78rem !important;
+    overflow-wrap: anywhere;
+}
+
+.relationship-path-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius-sm);
+    background: #fff8eb;
+}
+
+.relationship-path-person,
+.relationship-path-connector {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 850;
+    line-height: 1.15;
+}
+
+.relationship-path-person {
+    padding: 4px 8px;
+    border: 1px solid #b7c7b3;
+    background: #ffffff;
+    color: var(--brand-strong);
+}
+
+.relationship-path-connector {
+    position: relative;
+    padding: 4px 9px;
+    border: 1px solid rgba(47, 111, 78, 0.2);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.relationship-path-connector::before,
+.relationship-path-connector::after {
+    content: "";
+    width: 9px;
+    height: 1px;
+    background: rgba(47, 111, 78, 0.46);
+}
+
+.relationship-path-connector::before {
+    margin-right: 6px;
+}
+
+.relationship-path-connector::after {
+    margin-left: 6px;
 }
 
 .relationship-path-list {
@@ -584,10 +994,43 @@
 .birthday-calendar-panel {
     display: grid;
     gap: 14px;
-    margin-top: 12px;
+    padding: 0 12px 12px;
     color: var(--muted);
     font-size: 0.84rem;
     line-height: 1.38;
+}
+
+.birthday-summary {
+    display: grid;
+    gap: 8px;
+}
+
+.birthday-summary-card {
+    display: grid;
+    gap: 2px;
+    padding: 10px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius-sm);
+    background: #fff8eb;
+}
+
+.birthday-summary-card strong {
+    color: var(--brand-strong);
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+.birthday-summary-card span {
+    color: var(--ink);
+    font-size: 0.75rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.birthday-summary-card small {
+    color: #735018;
+    font-size: 0.76rem;
+    line-height: 1.35;
 }
 
 .birthday-section {
@@ -647,7 +1090,12 @@
 }
 
 .birthday-month-pill {
-    padding: 5px 8px;
+    display: grid;
+    grid-template-columns: 32px minmax(42px, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
     border: 1px solid #d9c6a0;
     border-radius: 999px;
     background: #fff7e8;
@@ -656,9 +1104,39 @@
     font-weight: 850;
 }
 
+.birthday-month-meter {
+    position: relative;
+    display: block;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(183, 131, 47, 0.18);
+}
+
+.birthday-month-meter::before {
+    content: "";
+    display: block;
+    width: var(--birthday-month-fill, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--gold);
+}
+
+.birthday-month-pill strong {
+    color: var(--brand-strong);
+    font-size: 0.78rem;
+}
+
 .birthday-missing-list {
     margin: 0;
     padding-left: 18px;
+}
+
+.birthday-missing-note {
+    margin: -2px 0 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
 .birthday-empty-note {
@@ -672,7 +1150,7 @@
 .missing-info-panel {
     display: grid;
     gap: 14px;
-    margin-top: 12px;
+    padding: 0 12px 12px;
     color: var(--muted);
     font-size: 0.84rem;
     line-height: 1.38;
@@ -757,7 +1235,7 @@
 .family-stats-panel {
     display: grid;
     gap: 14px;
-    margin-top: 12px;
+    padding: 0 12px 12px;
     color: var(--muted);
     font-size: 0.84rem;
     line-height: 1.38;
@@ -790,6 +1268,56 @@
     font-size: 0.72rem;
     font-weight: 850;
     text-transform: uppercase;
+}
+
+.family-spotlight-card {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #c4d8cb;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, #ffffff 0%, #f4faf5 100%);
+}
+
+.family-spotlight-card h3 {
+    margin: 0;
+    color: var(--brand-strong);
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.family-spotlight-name {
+    color: var(--brand-strong);
+    font-size: 1.02rem;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+a.family-spotlight-name:hover,
+a.family-spotlight-name:focus-visible {
+    text-decoration: underline;
+}
+
+.family-spotlight-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.family-spotlight-meta span {
+    padding: 5px 7px;
+    border: 1px solid #d4e1d0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.family-spotlight-note {
+    margin: 0;
+    color: var(--muted);
 }
 
 .family-stats-section {
@@ -827,6 +1355,41 @@
     color: var(--brand-strong);
 }
 
+.family-name-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.family-name-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 5px 9px;
+    border: 1px solid #d4e1d0;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--brand-strong);
+    font-weight: 850;
+}
+
+.family-name-chip.is-large {
+    background: var(--brand-soft);
+    font-size: 0.92rem;
+}
+
+.family-name-chip.is-medium {
+    font-size: 0.82rem;
+}
+
+.family-name-chip.is-small {
+    color: var(--muted);
+    font-size: 0.74rem;
+}
+
 .family-stats-note {
     margin: 0;
     padding: 10px;
@@ -835,10 +1398,117 @@
     background: rgba(249, 251, 247, 0.88);
 }
 
+.data-health-panel {
+    display: grid;
+    gap: 12px;
+    padding: 0 12px 12px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.38;
+}
+
+.data-health-summary {
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px dashed #b7c7b3;
+    border-radius: var(--radius-sm);
+    background: rgba(249, 251, 247, 0.88);
+}
+
+.data-health-summary strong {
+    color: var(--brand-strong);
+}
+
+.data-health-score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.data-health-score {
+    display: grid;
+    gap: 2px;
+    padding: 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.data-health-score strong {
+    color: var(--brand-strong);
+    font-size: 1.05rem;
+}
+
+.data-health-score span {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.data-health-issue-group {
+    display: grid;
+    gap: 8px;
+}
+
+.data-health-issue-group h3 {
+    margin: 0;
+    color: var(--ink);
+    font-size: 0.86rem;
+}
+
+.data-health-issue-list {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.data-health-issue {
+    display: grid;
+    gap: 4px;
+    padding: 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.data-health-issue strong {
+    color: var(--brand-strong);
+}
+
+.data-health-issue span {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.data-health-issue.is-warning {
+    border-color: #d9c6a0;
+    background: #fff8eb;
+}
+
+.data-health-issue.is-error {
+    border-color: #f0b8b3;
+    background: #fff5f4;
+}
+
+.data-health-empty {
+    margin: 0;
+    padding: 10px;
+    border: 1px solid #b7c7b3;
+    border-radius: var(--radius-sm);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    font-weight: 850;
+}
+
 .tree-key dl {
     display: grid;
     gap: 10px;
-    margin: 12px 0 0;
+    margin: 0;
+    padding: 0 12px 12px;
 }
 
 .tree-key dl div {
@@ -1020,6 +1690,18 @@
 .tree-state-message strong {
     color: var(--brand-strong);
     font-size: 1.05rem;
+}
+
+.tree-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.tree-state-actions .button {
+    min-height: 42px;
 }
 
 .tree-layout > .tree-overview-note {
@@ -1410,6 +2092,41 @@
 }
 
 @media (max-width: 640px) {
+    .tree-page-heading {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .tree-title-copy {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    #treeTitle {
+        font-size: clamp(1.75rem, 8vw, 2.35rem);
+        line-height: 1.08;
+        overflow-wrap: anywhere;
+    }
+
+    .tree-subtitle {
+        font-size: 0.98rem;
+        overflow-wrap: anywhere;
+    }
+
+    .tree-print-controls {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-content: stretch;
+    }
+
+    .tree-print-controls .button {
+        width: 100%;
+        min-height: 44px;
+        padding-inline: 10px;
+        white-space: normal;
+    }
+
     .join-code-display {
         margin: -4px auto 18px;
     }
@@ -1423,14 +2140,25 @@
     }
 
     .tree-workspace {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 10px;
     }
 
     .tree-toolbar {
+        order: 2;
+        align-self: auto;
         align-items: stretch;
         gap: 12px;
         padding: 12px;
+    }
+
+    .tree-canvas-panel {
+        order: 1;
+    }
+
+    .tree-tool-section {
+        gap: 8px;
     }
 
     .tree-focus-row {
@@ -1453,6 +2181,12 @@
     .tree-focus-row input,
     .tree-focus-row button,
     .tree-density-controls button,
+    .tree-print-controls .button,
+    .tree-tour-toggle,
+    .tree-text-button,
+    .tree-selected-clear,
+    .tree-selected-actions .button,
+    .tree-selected-actions button,
     .tree-collapse-button,
     .tree-chart-beta-link,
     .tree-view-switch button {
@@ -1506,11 +2240,16 @@
 
     .tree-chart-view,
     .tree-chart-frame {
-        min-height: 760px;
+        min-height: clamp(460px, 62vh, 640px);
     }
 
     .tree-chart-frame {
-        height: 86vh;
+        height: 62vh;
+    }
+
+    .tree-chart-status {
+        inset: 10px;
+        padding: 16px;
     }
 
     body.tree-card-cue-ready .tree-mobile-scroll-cue {
@@ -1588,6 +2327,16 @@
         grid-column: 1 / -1;
     }
 
+    .relationship-path-chain,
+    .tree-tour-steps,
+    .birthday-calendar-list,
+    .missing-info-list,
+    .family-stats-list,
+    .data-health-issue-list {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
     .generation {
         align-items: flex-start;
         padding: 16px 0;
@@ -1617,8 +2366,23 @@
 
 @media (max-width: 420px) {
     #treeTitle {
-        margin-bottom: 16px;
-        font-size: clamp(2rem, 13vw, 3.25rem);
+        margin-bottom: 6px;
+        font-size: clamp(1.75rem, 8vw, 2.35rem);
+    }
+
+    .tree-print-controls,
+    .tree-density-controls,
+    .tree-view-switch,
+    .tree-overview-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .tree-focus-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tree-focus-row button[type="submit"] {
+        grid-column: 1 / -1;
     }
 
     .tree-density-controls button {
@@ -1635,5 +2399,137 @@
         --tree-card-max: 144px;
         --tree-card-padding: 9px;
         --tree-avatar-size: 34px;
+    }
+
+    .tree-overview-mode .spouse-pair,
+    .tree-overview-mode .divorced-pair {
+        grid-template-columns: 1fr;
+    }
+
+    .tree-canvas-panel:fullscreen {
+        padding: 8px;
+    }
+
+    .tree-canvas-panel:fullscreen .tree-chart-view,
+    .tree-canvas-panel:fullscreen .tree-chart-frame,
+    .tree-canvas-panel:fullscreen .tree-layout {
+        height: calc(100vh - 16px);
+        min-height: calc(100vh - 16px);
+    }
+}
+
+@media print {
+    @page {
+        size: landscape;
+        margin: 0.35in;
+    }
+
+    html,
+    body {
+        width: auto;
+        min-height: auto;
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #111811 !important;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    header,
+    footer,
+    .join-code-display,
+    .tree-toolbar,
+    .tree-print-controls,
+    .tree-mobile-scroll-cue,
+    .tree-chart-status,
+    #addPersonBtn,
+    .modal {
+        display: none !important;
+    }
+
+    main.tree-main {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .tree-page-heading {
+        display: block;
+        margin: 0 0 0.18in !important;
+    }
+
+    #treeTitle {
+        margin: 0 !important;
+        color: #163c2b !important;
+        font-size: 24pt !important;
+        line-height: 1.05 !important;
+    }
+
+    .tree-workspace {
+        display: block !important;
+    }
+
+    .tree-canvas-panel,
+    .tree-chart-view,
+    .tree-layout {
+        width: 100% !important;
+        max-width: none !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+    }
+
+    .tree-chart-view[hidden],
+    .tree-layout:empty {
+        display: none !important;
+    }
+
+    .tree-chart-view,
+    .tree-chart-frame {
+        display: block !important;
+        height: 7.2in !important;
+        min-height: 7.2in !important;
+        border: 1px solid #cad7c6 !important;
+        page-break-inside: avoid;
+    }
+
+    .tree-chart-frame {
+        width: 100% !important;
+        background: #ffffff !important;
+    }
+
+    .tree-layout {
+        padding: 0.18in !important;
+        border: 1px solid #cad7c6 !important;
+        background-color: #ffffff !important;
+        background-size: 0.24in 0.24in !important;
+        page-break-inside: avoid;
+    }
+
+    .tree-overview-summary,
+    .tree-overview-note,
+    .tree-collapse-panel {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .generation {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .person-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none !important;
+    }
+
+    a {
+        color: inherit !important;
+        text-decoration: none !important;
     }
 }

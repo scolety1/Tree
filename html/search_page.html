@@ -31,9 +31,9 @@
         <section class="search-section">
             <h2>Family directory</h2>
             <p class="secondary-surface-note">Secondary owner/testing view. For the family demo, start with the Family Tree page and use Find person there.</p>
-            <p id="searchContext" class="search-context">Checking which tree to search...</p>
+            <p id="searchContext" class="search-context" role="status" aria-live="polite">Checking which tree to search...</p>
 
-            <form id="search-form" class="directory-controls">
+            <form id="search-form" class="directory-controls" role="search" aria-describedby="searchContext">
                 <div>
                     <label for="search-input">Filter family members by name</label>
                     <input
@@ -55,8 +55,8 @@
                 <button type="submit">Apply</button>
             </form>
 
-            <div id="search-results" class="search-results">
-                <p>Loading people...</p>
+            <div id="search-results" class="search-results" role="region" aria-label="Family directory results" aria-live="polite">
+                <div class="loading-state" aria-hidden="true"></div>
             </div>
         </section>
 
@@ -65,22 +65,22 @@
                 <h2 id="memoryWallTitle">Memory wall</h2>
                 <p>Photos and story notes appear here once profiles have real memories attached.</p>
             </div>
-            <div id="memoryWall" class="memory-wall" aria-live="polite">
+            <div id="memoryWall" class="memory-wall" role="region" aria-label="Family memory cards" aria-live="polite">
             </div>
         </section>
         
-        <button id="addPersonBtn" title="Add family member" aria-label="Add family member" hidden disabled>
+        <button id="addPersonBtn" title="Add family member" aria-label="Add family member" aria-haspopup="dialog" aria-controls="addModal" aria-expanded="false" hidden disabled>
             <span aria-hidden="true">+</span>
             <span>Add Person</span>
         </button>
 
-        <div id="addModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addPersonModalTitle" hidden>
+        <div id="addModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addPersonModalTitle" aria-describedby="addPersonModalIntro addPersonStatus" hidden>
             <div class="modal-content" tabindex="-1">
                 <button class="close" type="button" aria-label="Close add family member form">&times;</button>
                 <h2 id="addPersonModalTitle">Add Family Member</h2>
-                <p class="modal-intro">Add someone without leaving search. The results will refresh after saving.</p>
-                <p id="addPersonStatus" class="form-status" aria-live="polite"></p>
-                <form id="addPersonForm">
+                <p id="addPersonModalIntro" class="modal-intro">Add someone without leaving search. The results will refresh after saving.</p>
+                <p id="addPersonStatus" class="form-status" role="status" aria-live="polite"></p>
+                <form id="addPersonForm" aria-describedby="addPersonStatus relationshipHelp personImageHelp">
                     <label for="firstName">First name</label>
                     <input type="text" id="firstName" placeholder="e.g., John" required>
                     <label for="middleInitial">Middle initial (optional)</label>
@@ -95,7 +95,7 @@
                     <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg">
                     <label for="personImageFile">Upload photo (optional)</label>
                     <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                    <p class="field-note">Photos must be JPG, PNG, WebP, or GIF and under 5 MB.</p>
+                    <p id="personImageHelp" class="field-note">Photos must be JPG, PNG, WebP, or GIF and under 5 MB.</p>
                     <fieldset class="form-fieldset">
                         <legend>Relationships</legend>
                         <p id="relationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person has not been added yet. Add parents first when you can.</p>
