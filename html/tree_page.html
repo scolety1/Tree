@@ -148,6 +148,7 @@
                     </button>
                     <p id="treeFullscreenStatus" class="tree-focus-status" aria-live="polite"></p>
                 </div>
+                <p class="tree-more-tools-cue">More tools below: map key, relationship finder, birthdays, and cleanup checks.</p>
                 <p class="tree-tool-group-label">Map basics</p>
                 <details class="tree-key">
                     <summary>
@@ -191,10 +192,16 @@
                         <small>Connect two relatives</small>
                     </summary>
                     <form id="relationshipFinderForm" class="relationship-finder-form" aria-describedby="relationshipFinderResult">
-                        <label for="relationshipPersonA">Person one</label>
-                        <input id="relationshipPersonA" type="search" list="treePersonList" placeholder="Type a name">
-                        <label for="relationshipPersonB">Person two</label>
-                        <input id="relationshipPersonB" type="search" list="treePersonList" placeholder="Type a name">
+                        <div class="relationship-person-field">
+                            <label for="relationshipPersonA">Person one</label>
+                            <input id="relationshipPersonA" type="search" placeholder="Type a name" autocomplete="off" aria-autocomplete="list" aria-controls="relationshipPersonASuggestions" aria-expanded="false">
+                            <div id="relationshipPersonASuggestions" class="relationship-suggestions" role="listbox" aria-label="Person one suggestions" hidden></div>
+                        </div>
+                        <div class="relationship-person-field">
+                            <label for="relationshipPersonB">Person two</label>
+                            <input id="relationshipPersonB" type="search" placeholder="Type a name" autocomplete="off" aria-autocomplete="list" aria-controls="relationshipPersonBSuggestions" aria-expanded="false">
+                            <div id="relationshipPersonBSuggestions" class="relationship-suggestions" role="listbox" aria-label="Person two suggestions" hidden></div>
+                        </div>
                         <button class="button" type="submit">Find Relationship</button>
                     </form>
                     <div id="relationshipFinderResult" class="relationship-finder-result" role="status" aria-live="polite">

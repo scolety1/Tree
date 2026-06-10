@@ -1872,8 +1872,27 @@ body.add-person-modal-open #addPersonBtn {
         padding-top: 18px;
     }
 
+    header {
+        padding: 10px 12px;
+    }
+
+    header h1 {
+        max-width: 100%;
+    }
+
     .nav {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .nav a {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        text-align: center;
+    }
+
+    .account-link {
+        max-width: 100%;
     }
 
     .account-button,

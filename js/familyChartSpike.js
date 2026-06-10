@@ -424,12 +424,13 @@ function createPersonCardHtml(d) {
   const fullName = escapeHtml(data.originalName || `${firstName} ${lastName}`.trim());
   const birthday = escapeHtml(data.birthday || "Unknown birthday");
   const birthYear = data.birthYear ? `Born ${escapeHtml(data.birthYear)}` : birthday;
+  const cardLabel = escapeHtml(`${data.originalName || `${firstName} ${lastName}`.trim()}, ${data.birthYear ? `born ${data.birthYear}` : birthday}`);
   const initials = escapeHtml(data.initials || "?");
   const image = getSafeImageSrc(data.image);
   const duplicateTag = d.duplicate ? `<span class="f3-card-duplicate-tag">x${escapeHtml(d.duplicate)}</span>` : "";
 
   return `
-    <div class="card-inner tree-card-node" data-person-id="${personId}">
+    <div class="card-inner tree-card-node" data-person-id="${personId}" title="${cardLabel}" aria-label="${cardLabel}">
       <div class="tree-card-media" aria-hidden="true">
         ${image ? `<img class="tree-card-photo" src="${escapeHtml(image)}" alt="" loading="lazy">` : `<span class="tree-card-initials">${initials}</span>`}
       </div>

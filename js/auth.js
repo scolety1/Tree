@@ -98,6 +98,10 @@ function getFriendlyAuthError(error, createMode = false) {
     : "Could not sign in. Check the details and try again.";
 }
 
+function isLikelyEmail(value = "") {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+}
+
 function updateAuthStatus(user) {
   const authStatus = document.getElementById("authStatus");
   const accountEmail = document.getElementById("accountEmail");
@@ -175,16 +179,20 @@ function setupAuthForm() {
   const form = document.getElementById("authForm");
   const googleBtn = document.getElementById("googleSignInBtn");
   const resetBtn = document.getElementById("resetPasswordBtn");
+  const resetBackBtn = document.getElementById("authResetBackBtn");
   const modeToggle = document.getElementById("authModeToggle");
   const title = document.getElementById("authTitle");
+  const intro = document.getElementById("authIntro");
   const submitBtn = document.getElementById("authSubmitBtn");
   const status = document.getElementById("authFormStatus");
+  const passwordGroup = document.getElementById("authPasswordGroup");
   let createMode = false;
+  let resetMode = false;
 
   function getAuthStatusTone(message = "") {
     if (!message) return "";
     if (/creating|signing in|opening|sending/i.test(message)) return "loading";
-    if (/signed in|email sent/i.test(message)) return "success";
+    if (/signed in|reset link|sent/i.test(message)) return "success";
     return "error";
   }
 
@@ -197,23 +205,64 @@ function setupAuthForm() {
   }
 
   function renderMode() {
-    if (title) title.textContent = createMode ? "Create Your Account" : "Sign In";
-    if (submitBtn) submitBtn.textContent = createMode ? "Create Account" : "Sign In";
     const passwordInput = document.getElementById("authPassword");
+
+    if (resetMode) {
+      if (title) title.textContent = "Reset password";
+      if (intro) intro.textContent = "Enter the email for your family tree account. If it exists, Firebase will send a reset link.";
+      if (submitBtn) submitBtn.textContent = "Send reset link";
+      if (passwordGroup) passwordGroup.hidden = true;
+      if (passwordInput) {
+        passwordInput.disabled = true;
+        passwordInput.required = false;
+        passwordInput.removeAttribute("aria-invalid");
+      }
+      if (googleBtn) googleBtn.hidden = true;
+      if (modeToggle) modeToggle.hidden = true;
+      if (resetBtn) resetBtn.hidden = true;
+      if (resetBackBtn) resetBackBtn.hidden = false;
+      return;
+    }
+
+    if (title) title.textContent = createMode ? "Create Your Account" : "Sign In";
+    if (intro) {
+      intro.textContent = createMode
+        ? "Create a private family tree account when you are ready to add people, photos, and stories."
+        : "Browse the example tree without signing in. Sign in when you want to create, edit, or share a private family tree.";
+    }
+    if (submitBtn) submitBtn.textContent = createMode ? "Create Account" : "Sign In";
+    if (passwordGroup) passwordGroup.hidden = false;
     if (passwordInput) {
+      passwordInput.disabled = false;
+      passwordInput.required = true;
       passwordInput.autocomplete = createMode ? "new-password" : "current-password";
     }
+    if (googleBtn) googleBtn.hidden = false;
     if (modeToggle) {
+      modeToggle.hidden = false;
       modeToggle.textContent = createMode ? "Already have an account? Sign in" : "New here? Create an account";
       modeToggle.setAttribute("aria-pressed", createMode ? "true" : "false");
     }
+    if (resetBtn) resetBtn.hidden = createMode;
+    if (resetBackBtn) resetBackBtn.hidden = true;
   }
 
   if (modeToggle) {
     modeToggle.addEventListener("click", () => {
       createMode = !createMode;
+      resetMode = false;
       setStatus("");
       renderMode();
+    });
+  }
+
+  if (resetBackBtn) {
+    resetBackBtn.addEventListener("click", () => {
+      resetMode = false;
+      createMode = false;
+      setStatus("");
+      renderMode();
+      document.getElementById("authEmail")?.focus();
     });
   }
 
@@ -227,6 +276,40 @@ function setupAuthForm() {
 
       emailInput?.removeAttribute("aria-invalid");
       passwordInput?.removeAttribute("aria-invalid");
+
+      if (resetMode) {
+        if (!email) {
+          emailInput?.setAttribute("aria-invalid", "true");
+          setStatus("Enter your email to send a reset link.");
+          emailInput?.focus();
+          return;
+        }
+
+        if (!isLikelyEmail(email)) {
+          emailInput?.setAttribute("aria-invalid", "true");
+          setStatus("Enter a valid email address.");
+          emailInput?.focus();
+          return;
+        }
+
+        if (submitBtn) submitBtn.disabled = true;
+        setStatus("Sending reset link...");
+        try {
+          await resetPassword(email);
+          setStatus("If an account exists for that email, a reset link has been sent.", "success");
+        } catch (error) {
+          const safeResetCodes = new Set(["auth/user-not-found", "auth/invalid-credential"]);
+          if (safeResetCodes.has(error?.code)) {
+            setStatus("If an account exists for that email, a reset link has been sent.", "success");
+          } else {
+            console.error("Password reset error:", error);
+            setStatus(getFriendlyAuthError(error));
+          }
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+        return;
+      }
 
       if (!email || !password) {
         if (!email) emailInput?.setAttribute("aria-invalid", "true");
@@ -274,29 +357,12 @@ function setupAuthForm() {
   }
 
   if (resetBtn) {
-    resetBtn.addEventListener("click", async () => {
-      if (resetBtn.disabled) return;
-      const email = document.getElementById("authEmail")?.value.trim();
-      const emailInput = document.getElementById("authEmail");
-      emailInput?.removeAttribute("aria-invalid");
-      if (!email) {
-        emailInput?.setAttribute("aria-invalid", "true");
-        setStatus("Enter your email first, then reset your password.");
-        emailInput?.focus();
-        return;
-      }
-
-      resetBtn.disabled = true;
-      setStatus("Sending password reset email...");
-      try {
-        await resetPassword(email);
-        setStatus("Password reset email sent.");
-      } catch (error) {
-        console.error("Password reset error:", error);
-        setStatus(getFriendlyAuthError(error));
-      } finally {
-        resetBtn.disabled = false;
-      }
+    resetBtn.addEventListener("click", () => {
+      resetMode = true;
+      createMode = false;
+      setStatus("");
+      renderMode();
+      document.getElementById("authEmail")?.focus();
     });
   }
 

@@ -60,6 +60,9 @@ const PROFILE_SOURCE_ROUTES = {
   },
 };
 
+const EMPTY_RELATIONSHIP_LABEL = "None listed";
+const EMPTY_BIO_LABEL = "No story has been added yet. Add a favorite memory, nickname, or bit of family context when this becomes a private family tree.";
+
 function getProfileSourceFromParams(params = new URLSearchParams(window.location.search)) {
   const from = params.get("from");
   const source = params.get("source");
@@ -355,7 +358,7 @@ function setLoadedProfileStoryLead({ fullName, parentItems = [], spouseItems = [
   if (children.length > 0) relationshipNotes.push("children");
 
   if (profileDemoContext) {
-    setProfileStoryLead(`${firstName}'s read-only sample profile shows how family details, relatives, and birthday notes fit together.`);
+    setProfileStoryLead(`This read-only demo shows how ${firstName}'s private family profile can collect relatives, birthday details, and story notes in one place.`);
     return;
   }
 
@@ -364,7 +367,7 @@ function setLoadedProfileStoryLead({ fullName, parentItems = [], spouseItems = [
     if (relationshipNotes.length > 0) pieces.push("family relationships");
     if (hasBio) pieces.push("a story note");
     if (hasPhoto) pieces.push("a photo");
-    setProfileStoryLead(`${firstName}'s profile has ${pieces.join(", ")}. Add memories over time so this page becomes more personal.`);
+    setProfileStoryLead(`${firstName}'s profile has ${pieces.join(", ")}. Add memories over time so this page feels more personal.`);
     return;
   }
 
@@ -572,7 +575,7 @@ async function loadProfile() {
       });
     }
 
-    renderRelationshipList("parents", parentItems, "Parents not listed yet.", "and");
+    renderRelationshipList("parents", parentItems, EMPTY_RELATIONSHIP_LABEL, "and");
 
     // SPOUSE
     const spouseIds = resolvePersonSpouseIds(person, allPeople);
@@ -594,27 +597,29 @@ async function loadProfile() {
       spouseItems.push(matchedSpouse ? { person: matchedSpouse } : { label: legacySpouseName });
     }
 
-    renderRelationshipList("spouse", spouseItems, "No spouse or partner listed yet.", "and");
+    renderRelationshipList("spouse", spouseItems, EMPTY_RELATIONSHIP_LABEL, "and");
 
     // CHILDREN
     const children = getChildren(person, allPeople);
     renderRelationshipList(
       "children",
       children.map(child => ({ person: child })),
-      "No children listed yet."
+      EMPTY_RELATIONSHIP_LABEL
     );
 
     // BIO
     setFactText(
       "bio",
-      data.bio || "No story has been added yet. Add a favorite memory, nickname, or bit of family context when you have it.",
+      data.bio || EMPTY_BIO_LABEL,
       { empty: !data.bio }
     );
 
     setProfilePhoto(data.image, {
       name: fullName,
-      placeholderTitle: "Photo coming later",
-      placeholderText: "This spot is ready for a portrait, snapshot, or family memory.",
+      placeholderTitle: "No photo yet",
+      placeholderText: profileDemoContext
+        ? "Photo can be added in a private family tree."
+        : "Add a portrait, snapshot, or family memory when you have one.",
     });
 
     setLoadedProfileStoryLead({
@@ -665,9 +670,9 @@ async function loadProfile() {
       buildFullName(data.spouseFirstName, data.spouseLastName)
     );
 
-    fillRelationshipSelect(editParent1, allPeople, selectedParent1Id, "Unknown / not listed yet");
-    fillRelationshipSelect(editParent2, allPeople, selectedParent2Id, "Unknown / not listed yet");
-    fillRelationshipSelect(editSpouse, allPeople, selectedSpouseId, "No spouse or not listed yet");
+    fillRelationshipSelect(editParent1, allPeople, selectedParent1Id, "None listed");
+    fillRelationshipSelect(editParent2, allPeople, selectedParent2Id, "None listed");
+    fillRelationshipSelect(editSpouse, allPeople, selectedSpouseId, "None listed");
 
     if (editBio) {
         editBio.value = data.bio || "";
@@ -767,7 +772,7 @@ function createRelationshipLink(person) {
     if (searchQuery) params.set("query", searchQuery);
     if (directorySort) params.set("sort", directorySort);
   } else {
-    const treeQuery = currentParams.get("treeQuery") || "";
+    const treeQuery = getDisplayName(person) || currentParams.get("treeQuery") || "";
     if (treeQuery) params.set("treeQuery", treeQuery);
   }
   const returnView = getReturnTreeView();

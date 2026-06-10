@@ -45,6 +45,7 @@ const CHART_READY_TIMEOUT_MS = 9000;
 const OVERVIEW_MODE_THRESHOLD = 34;
 const OVERVIEW_COLLAPSE_AFTER_GENERATION = 3;
 const MOBILE_OVERVIEW_COLLAPSE_AFTER_GENERATION = 2;
+const RELATIONSHIP_SUGGESTION_LIMIT = 7;
 
 function isLargeDemoMode() {
   return new URLSearchParams(window.location.search).get("demo") === "large";
@@ -895,9 +896,9 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
       ? "Owner/editor view. Edit profile details, photos, relationships, or focus this branch."
       : "Private-tree person. View details or focus this branch. Editing is owner/editor only.";
   document.getElementById("treeSelectedBirthday").textContent = formatSelectedBirthDate(person);
-  document.getElementById("treeSelectedParents").textContent = formatSelectedRelationshipList(parents, "Unknown");
-  document.getElementById("treeSelectedSpouse").textContent = formatSelectedRelationshipList(spouses, "No spouse or partner listed.");
-  document.getElementById("treeSelectedChildren").textContent = formatSelectedRelationshipList(children, "No children listed.");
+  document.getElementById("treeSelectedParents").textContent = formatSelectedRelationshipList(parents, "None listed");
+  document.getElementById("treeSelectedSpouse").textContent = formatSelectedRelationshipList(spouses, "None listed");
+  document.getElementById("treeSelectedChildren").textContent = formatSelectedRelationshipList(children, "None listed");
 
   const selectedName = getPersonDisplayName(person);
   const profileLink = document.getElementById("treeSelectedProfileLink");
@@ -1123,6 +1124,8 @@ function getRelationshipFinderElements() {
     form: document.getElementById("relationshipFinderForm"),
     personAInput: document.getElementById("relationshipPersonA"),
     personBInput: document.getElementById("relationshipPersonB"),
+    personASuggestions: document.getElementById("relationshipPersonASuggestions"),
+    personBSuggestions: document.getElementById("relationshipPersonBSuggestions"),
     result: document.getElementById("relationshipFinderResult"),
   };
 }
@@ -1152,6 +1155,135 @@ function findPersonByRelationshipInput(value) {
     sortedPeople.find(person => getPersonSearchText(person).includes(query)) ||
     null
   );
+}
+
+function getRelationshipInputPerson(input) {
+  if (!input) return null;
+
+  const selectedId = input.dataset.personId || "";
+  if (selectedId) {
+    const selectedPerson = getPersonById(selectedId);
+    if (selectedPerson) return selectedPerson;
+  }
+
+  const matchedPerson = findPersonByRelationshipInput(input.value);
+  if (matchedPerson) {
+    input.dataset.personId = matchedPerson.id;
+  }
+  return matchedPerson;
+}
+
+function getRelationshipSuggestions(query) {
+  const normalizedQuery = normalizeTreeSearch(query);
+  if (!normalizedQuery) return [];
+
+  return [...lastRenderedPeople]
+    .filter(person => getPersonSearchText(person).includes(normalizedQuery))
+    .sort((a, b) => getPersonDisplayName(a).localeCompare(getPersonDisplayName(b)))
+    .slice(0, RELATIONSHIP_SUGGESTION_LIMIT);
+}
+
+function hideRelationshipSuggestions(input, suggestionsEl) {
+  if (suggestionsEl) {
+    suggestionsEl.hidden = true;
+    suggestionsEl.replaceChildren();
+  }
+  input?.setAttribute("aria-expanded", "false");
+}
+
+function selectRelationshipSuggestion(input, suggestionsEl, person) {
+  if (!input || !person) return;
+
+  input.value = getPersonDisplayName(person);
+  input.dataset.personId = person.id;
+  hideRelationshipSuggestions(input, suggestionsEl);
+  input.focus();
+}
+
+function moveRelationshipSuggestionFocus(currentButton, direction) {
+  const buttons = [...currentButton.closest(".relationship-suggestions")?.querySelectorAll("button") || []];
+  if (buttons.length === 0) return;
+
+  const currentIndex = buttons.indexOf(currentButton);
+  const nextIndex = (currentIndex + direction + buttons.length) % buttons.length;
+  buttons[nextIndex]?.focus();
+}
+
+function renderRelationshipSuggestions(input, suggestionsEl) {
+  if (!input || !suggestionsEl) return;
+
+  const suggestions = getRelationshipSuggestions(input.value);
+  suggestionsEl.replaceChildren();
+
+  if (suggestions.length === 0) {
+    hideRelationshipSuggestions(input, suggestionsEl);
+    return;
+  }
+
+  suggestions.forEach((person, index) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "relationship-suggestion";
+    option.setAttribute("role", "option");
+    option.id = `${suggestionsEl.id}-option-${index}`;
+    option.dataset.personId = person.id;
+    option.textContent = getPersonDisplayName(person);
+    option.addEventListener("click", () => {
+      selectRelationshipSuggestion(input, suggestionsEl, person);
+    });
+    option.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        moveRelationshipSuggestionFocus(option, 1);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        moveRelationshipSuggestionFocus(option, -1);
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        hideRelationshipSuggestions(input, suggestionsEl);
+        input.focus();
+      }
+    });
+    suggestionsEl.appendChild(option);
+  });
+
+  suggestionsEl.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+}
+
+function setupRelationshipSuggestionInput(input, suggestionsEl) {
+  if (!input || !suggestionsEl) return;
+
+  input.addEventListener("input", () => {
+    delete input.dataset.personId;
+    renderRelationshipSuggestions(input, suggestionsEl);
+  });
+
+  input.addEventListener("focus", () => {
+    if (input.value.trim()) {
+      renderRelationshipSuggestions(input, suggestionsEl);
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      if (!suggestionsEl.contains(document.activeElement)) {
+        hideRelationshipSuggestions(input, suggestionsEl);
+      }
+    }, 120);
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" && !suggestionsEl.hidden) {
+      const firstSuggestion = suggestionsEl.querySelector("button");
+      if (firstSuggestion) {
+        event.preventDefault();
+        firstSuggestion.focus();
+      }
+    } else if (event.key === "Escape") {
+      hideRelationshipSuggestions(input, suggestionsEl);
+    }
+  });
 }
 
 function addRelationshipEdge(graph, fromId, toId, label) {
@@ -1341,8 +1473,11 @@ function renderRelationshipPath(path, people) {
 }
 
 function setupRelationshipFinder() {
-  const { form, personAInput, personBInput } = getRelationshipFinderElements();
+  const { form, personAInput, personBInput, personASuggestions, personBSuggestions } = getRelationshipFinderElements();
   if (!form || !personAInput || !personBInput) return;
+
+  setupRelationshipSuggestionInput(personAInput, personASuggestions);
+  setupRelationshipSuggestionInput(personBInput, personBSuggestions);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1355,8 +1490,8 @@ function setupRelationshipFinder() {
       return;
     }
 
-    const personA = findPersonByRelationshipInput(personAInput.value);
-    const personB = findPersonByRelationshipInput(personBInput.value);
+    const personA = getRelationshipInputPerson(personAInput);
+    const personB = getRelationshipInputPerson(personBInput);
 
     if (!personA || !personB) {
       setRelationshipResult(renderRelationshipMessage(
@@ -1375,6 +1510,11 @@ function setupRelationshipFinder() {
       return;
     }
 
+    updateTreeFocusUrl({
+      personId: personB.id,
+      query: getPersonDisplayName(personB),
+    });
+    focusPersonInTree(personB.id);
     focusPersonInChartFrame(personB.id, getPersonDisplayName(personB));
     setSelectedPersonPanel(personB.id, {
       source: "relationship",
@@ -1456,10 +1596,39 @@ function createProfileLink(person, familyId, isDemoMode, className = "") {
   return link;
 }
 
+function focusPersonFromSidebarList(person, sourceLabel = "sidebar") {
+  if (!person?.id) return;
+
+  const displayName = getPersonDisplayName(person);
+  updateTreeFocusUrl({
+    personId: person.id,
+    query: displayName,
+  });
+  focusPersonInTree(person.id);
+  focusPersonInChartFrame(person.id, displayName);
+  setSelectedPersonPanel(person.id, {
+    source: sourceLabel,
+    scroll: true,
+  });
+  setTreeFocusStatus(`Focused ${displayName}.`);
+}
+
+function createSidebarPersonFocusButton(person, className = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = getPersonDisplayName(person);
+  button.setAttribute("aria-label", `Focus ${getPersonDisplayName(person)} in the family map`);
+  button.addEventListener("click", () => {
+    focusPersonFromSidebarList(person, "sidebar");
+  });
+  return button;
+}
+
 function createBirthdayItem(person, info, familyId, isDemoMode) {
   const item = document.createElement("li");
   item.className = "birthday-item";
-  item.appendChild(createProfileLink(person, familyId, isDemoMode, "birthday-item-name"));
+  item.appendChild(createSidebarPersonFocusButton(person, "birthday-item-name"));
 
   const date = document.createElement("span");
   date.className = "birthday-date";
@@ -1636,7 +1805,7 @@ function renderBirthdayCalendar(people, familyId = null, options = {}) {
     missingList.className = "birthday-missing-list";
     missingPeople.slice(0, 5).forEach(person => {
       const item = document.createElement("li");
-      item.appendChild(createProfileLink(person, familyId, isDemoMode, "birthday-item-name"));
+      item.appendChild(createSidebarPersonFocusButton(person, "birthday-item-name"));
       missingList.appendChild(item);
     });
     if (missingPeople.length > 5) {
