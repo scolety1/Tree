@@ -409,15 +409,33 @@ function addLegacyNameMatch(idSet, name, nameToPerson) {
   }
 }
 
+export function normalizeRelationshipIds(ids) {
+  if (Array.isArray(ids)) {
+    return ids
+      .map(id => String(id || "").trim())
+      .filter(Boolean);
+  }
+
+  if (typeof ids === "string") {
+    const trimmedId = ids.trim();
+    if (!trimmedId) return [];
+    return trimmedId
+      .split(",")
+      .map(id => id.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 export function resolvePersonParentIds(person, allPeople) {
   if (!person) return [];
 
   const { idToPerson, nameToPerson } = getRelationshipLookups(allPeople);
   const parentIds = new Set();
 
-  if (Array.isArray(person.parentIds)) {
-    person.parentIds.forEach(parentId => addKnownId(parentIds, parentId, idToPerson));
-  }
+  normalizeRelationshipIds(person.parentIds)
+    .forEach(parentId => addKnownId(parentIds, parentId, idToPerson));
 
   [person.parent1, person.parent2].forEach(parentName => {
     addLegacyNameMatch(parentIds, parentName, nameToPerson);
@@ -433,9 +451,8 @@ export function resolvePersonSpouseIds(person, allPeople) {
   const spouseIds = new Set();
   const personName = getPersonNameKey(person);
 
-  if (Array.isArray(person.spouseIds)) {
-    person.spouseIds.forEach(spouseId => addKnownId(spouseIds, spouseId, idToPerson));
-  }
+  normalizeRelationshipIds(person.spouseIds)
+    .forEach(spouseId => addKnownId(spouseIds, spouseId, idToPerson));
 
   addLegacyNameMatch(
     spouseIds,
@@ -446,7 +463,7 @@ export function resolvePersonSpouseIds(person, allPeople) {
   people.forEach(candidate => {
     if (!candidate?.id || candidate.id === person.id) return;
 
-    if (Array.isArray(candidate.spouseIds) && candidate.spouseIds.includes(person.id)) {
+    if (normalizeRelationshipIds(candidate.spouseIds).includes(person.id)) {
       spouseIds.add(candidate.id);
       return;
     }
@@ -528,8 +545,8 @@ export async function findPersonByFullName(firstName, lastName, familyId = null)
 export function areSpouses(personA, personB) {
   if (!personA || !personB) return false;
 
-  const aSpouseIds = Array.isArray(personA.spouseIds) ? personA.spouseIds : [];
-  const bSpouseIds = Array.isArray(personB.spouseIds) ? personB.spouseIds : [];
+  const aSpouseIds = normalizeRelationshipIds(personA.spouseIds);
+  const bSpouseIds = normalizeRelationshipIds(personB.spouseIds);
 
   if (aSpouseIds.includes(personB.id) || bSpouseIds.includes(personA.id)) {
     return true;
@@ -555,7 +572,7 @@ export function areSpouses(personA, personB) {
 
 export function hasParents(person) {
   if (!person) return false;
-  if (Array.isArray(person.parentIds) && person.parentIds.length > 0) return true;
+  if (normalizeRelationshipIds(person.parentIds).length > 0) return true;
   return Boolean(
     (person.parent1 && person.parent1.trim() !== "") ||
     (person.parent2 && person.parent2.trim() !== "")
@@ -564,7 +581,7 @@ export function hasParents(person) {
 
 export function hasTwoParents(person) {
   if (!person) return false;
-  if (Array.isArray(person.parentIds) && person.parentIds.length >= 2) return true;
+  if (normalizeRelationshipIds(person.parentIds).length >= 2) return true;
   return Boolean(
     (person.parent1 && person.parent1.trim() !== "") &&
     (person.parent2 && person.parent2.trim() !== "")
@@ -591,8 +608,8 @@ export function getSiblings(person, allPeople) {
       p.parent1 === person.parent2 &&
       p.parent2 === person.parent1;
 
-    const personParentIds = Array.isArray(person.parentIds) ? person.parentIds : [];
-    const otherParentIds = Array.isArray(p.parentIds) ? p.parentIds : [];
+    const personParentIds = normalizeRelationshipIds(person.parentIds);
+    const otherParentIds = normalizeRelationshipIds(p.parentIds);
     const sameParentIds =
       personParentIds.length > 0 &&
       personParentIds.length === otherParentIds.length &&
@@ -610,9 +627,8 @@ export function getSharedChildren(personA, personB, allPeople) {
   const bName = buildFullName(personB.firstName, personB.lastName);
 
   return allPeople.filter(child => {
-    if (Array.isArray(child.parentIds)) {
-      return child.parentIds.includes(personA.id) && child.parentIds.includes(personB.id);
-    }
+    const parentIds = normalizeRelationshipIds(child.parentIds);
+    if (parentIds.length) return parentIds.includes(personA.id) && parentIds.includes(personB.id);
 
     const parents = [child.parent1, child.parent2].filter(Boolean);
     return parents.includes(aName) && parents.includes(bName);
@@ -629,8 +645,9 @@ export function getCoParents(person, allPeople) {
 
   // Find all name-strings of people who are the "other" parent
   allPeople.forEach(child => {
-    if (Array.isArray(child.parentIds) && child.parentIds.includes(person.id)) {
-      child.parentIds.forEach(parentId => {
+    const parentIds = normalizeRelationshipIds(child.parentIds);
+    if (parentIds.includes(person.id)) {
+      parentIds.forEach(parentId => {
         if (parentId !== person.id) coParentIds.add(parentId);
       });
     }
@@ -674,8 +691,8 @@ export function getHalfSiblings(person, allPeople) {
     if (p.id === person.id) return false; // skip self
 
     // share at least one parent (either slot)
-    const personParentIds = Array.isArray(person.parentIds) ? person.parentIds : [];
-    const otherParentIds = Array.isArray(p.parentIds) ? p.parentIds : [];
+    const personParentIds = normalizeRelationshipIds(person.parentIds);
+    const otherParentIds = normalizeRelationshipIds(p.parentIds);
     const shareAnyId =
       personParentIds.length > 0 &&
       personParentIds.some(parentId => otherParentIds.includes(parentId));
@@ -707,8 +724,8 @@ export function areSiblings(personA, personB) {
 
   const parentsA = [personA.parent1, personA.parent2].filter(Boolean);
   const parentsB = [personB.parent1, personB.parent2].filter(Boolean);
-  const parentIdsA = Array.isArray(personA.parentIds) ? personA.parentIds : [];
-  const parentIdsB = Array.isArray(personB.parentIds) ? personB.parentIds : [];
+  const parentIdsA = normalizeRelationshipIds(personA.parentIds);
+  const parentIdsB = normalizeRelationshipIds(personB.parentIds);
 
   if (parentIdsA.some(parentId => parentIdsB.includes(parentId))) return true;
   if (parentsA.length === 0 || parentsB.length === 0) return false;
@@ -757,15 +774,12 @@ function buildChildrenMap(people) {
   const childrenMap = new Map();
 
   people.forEach(child => {
-    if (Array.isArray(child.parentIds)) {
-      child.parentIds.forEach(parentId => {
-        if (!parentId) return;
-        if (!childrenMap.has(parentId)) {
-          childrenMap.set(parentId, []);
-        }
-        childrenMap.get(parentId).push(child);
-      });
-    }
+    normalizeRelationshipIds(child.parentIds).forEach(parentId => {
+      if (!childrenMap.has(parentId)) {
+        childrenMap.set(parentId, []);
+      }
+      childrenMap.get(parentId).push(child);
+    });
 
     [child.parent1, child.parent2].forEach(parentName => {
       if (!parentName) return;
@@ -821,8 +835,9 @@ function alignCoParentGenerations(people) {
   const idToPerson = buildIdToPerson(people);
 
   people.forEach(child => {
-    if (Array.isArray(child.parentIds) && child.parentIds.length >= 2) {
-      const parents = child.parentIds
+    const childParentIds = normalizeRelationshipIds(child.parentIds);
+    if (childParentIds.length >= 2) {
+      const parents = childParentIds
         .map(parentId => idToPerson.get(parentId))
         .filter(Boolean);
 
@@ -877,8 +892,7 @@ function assignGenerationsBFS(people) {
   const roots = [];
   people.forEach(p => {
     const hasParentIds =
-      Array.isArray(p.parentIds) &&
-      p.parentIds.some(parentId => idToPerson.has(parentId));
+      normalizeRelationshipIds(p.parentIds).some(parentId => idToPerson.has(parentId));
     const hasParent1 = !!p.parent1 && nameToPerson.has(p.parent1);
     const hasParent2 = !!p.parent2 && nameToPerson.has(p.parent2);
     if (!hasParentIds && !hasParent1 && !hasParent2) {

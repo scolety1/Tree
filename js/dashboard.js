@@ -24,6 +24,7 @@ import {
   setFamilyId,
 } from "./helpers.js?v=20260522-11";
 import {
+  STARTER_TREE_ID,
   STARTER_TREE_NAME,
   createStarterColetyTree,
 } from "./starterTree.js?v=20260522-11";
@@ -550,6 +551,7 @@ function chooseCurrentTree(trees) {
   const storedFamilyId = getStoredFamilyId();
   return (
     trees.find(tree => tree.id === storedFamilyId) ||
+    trees.find(tree => tree.id === STARTER_TREE_ID) ||
     trees.find(tree => tree.birthdayDemoTree) ||
     trees.find(tree => tree.name === STARTER_TREE_NAME) ||
     trees[0]

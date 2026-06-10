@@ -9,7 +9,10 @@ import {
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260522-11";
-import { createStarterColetyTree } from "./starterTree.js?v=20260522-11";
+import {
+  STARTER_TREE_ID,
+  createStarterColetyTree,
+} from "./starterTree.js?v=20260522-11";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 
@@ -109,6 +112,7 @@ export async function resolveCurrentUserFamilyId() {
   const storedFamilyId = getStoredFamilyId();
   const currentFamily = (
     families.find((family) => family.id === storedFamilyId) ||
+    families.find((family) => family.id === STARTER_TREE_ID) ||
     families.find((family) => family.birthdayDemoTree) ||
     families.find((family) => family.starterTree || family.name === STARTER_TREE_NAME) ||
     families[0]
