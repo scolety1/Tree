@@ -30,11 +30,19 @@
         "destination": "/html/tree_page.html"
       },
       {
+        "source": "/p/tree",
+        "destination": "/html/tree_page.html"
+      },
+      {
         "source": "/tree-spike",
         "destination": "/html/family_chart_spike.html"
       },
       {
         "source": "/search",
+        "destination": "/html/search_page.html"
+      },
+      {
+        "source": "/p/search",
         "destination": "/html/search_page.html"
       },
       {
@@ -47,6 +55,10 @@
       },
       {
         "source": "/account",
+        "destination": "/html/dashboard.html"
+      },
+      {
+        "source": "/p/account",
         "destination": "/html/dashboard.html"
       },
       {
