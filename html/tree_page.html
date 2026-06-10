@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/family_tree.css?v=20260522-11">
 
 </head>
-<body>
+<body class="is-auth-loading">
 
     <header>
         <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
@@ -21,7 +21,7 @@
         </nav>
         <div class="account-area">
             <p id="authStatus" class="auth-status">Checking sign-in...</p>
-            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
                 <span class="account-icon" aria-hidden="true"></span>
                 <span class="account-link-text">Sign In</span>
             </a>
@@ -41,6 +41,33 @@
                 </button>
                 <button id="treePrintBtn" class="button button-secondary" type="button" aria-label="Print or save this family tree as a PDF">
                     Print / PDF
+                </button>
+            </div>
+        </div>
+        <div id="publicDemoBanner" class="demo-route-banner" role="note" hidden>
+            <strong>Example Tree &middot; Read-only</strong>
+            <span>Fictional sample data</span>
+        </div>
+        <div id="largeTreeHint" class="large-tree-hint" role="note" hidden>
+            <strong>Tip:</strong>
+            <span>drag or scroll to move around the tree. Use Find person to jump to someone.</span>
+        </div>
+        <div id="treePresentationEscapeBar" class="tree-presentation-escape-bar" aria-label="Presentation controls" hidden>
+            <button id="treePresentationExitBtn" class="button" type="button">
+                Exit presentation
+            </button>
+            <button id="treePresentationBackBtn" class="button button-secondary" type="button">
+                Back to tree
+            </button>
+            <div class="tree-presentation-zoom-controls" role="group" aria-label="Presentation zoom controls">
+                <button id="treePresentationZoomOutBtn" class="button button-secondary" type="button" aria-label="Zoom out">
+                    -
+                </button>
+                <button id="treePresentationZoomInBtn" class="button button-secondary" type="button" aria-label="Zoom in">
+                    +
+                </button>
+                <button id="treePresentationZoomResetBtn" class="button button-secondary" type="button">
+                    Reset
                 </button>
             </div>
         </div>

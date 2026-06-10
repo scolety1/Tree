@@ -324,8 +324,20 @@ body.chart-embed .selected-person-actions {
 }
 
 .tree-card-node.is-selected {
-    box-shadow: 0 0 0 4px rgba(198, 135, 35, 0.28), 0 18px 38px rgba(21, 44, 30, 0.2);
-    outline: 3px solid rgba(198, 135, 35, 0.58);
+    box-shadow:
+        0 0 0 3px #ffffff,
+        0 0 0 8px rgba(198, 135, 35, 0.5),
+        0 20px 42px rgba(21, 44, 30, 0.24);
+    outline: 3px solid rgba(198, 135, 35, 0.74);
+}
+
+.family-chart-spike div.card .tree-card-node.is-selected,
+.family-chart-spike div.card-main .tree-card-node.is-selected {
+    box-shadow:
+        0 0 0 3px #ffffff,
+        0 0 0 8px rgba(198, 135, 35, 0.5),
+        0 20px 42px rgba(21, 44, 30, 0.24);
+    outline: 3px solid rgba(198, 135, 35, 0.74);
 }
 
 .tree-card-node.is-immediate-family {
@@ -677,7 +689,7 @@ body.chart-embed .selected-person-actions {
 
     html.chart-embed-page .selected-person-panel,
     body.chart-embed .selected-person-panel {
-        order: 0;
+        display: none;
     }
 
     .selected-person-panel h2 {
@@ -694,7 +706,7 @@ body.chart-embed .selected-person-actions {
 
     html.chart-embed-page .selected-person-details,
     body.chart-embed .selected-person-details {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     html.chart-embed-page .selected-person-details div,

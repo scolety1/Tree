@@ -159,11 +159,11 @@ function createBirthdayPrepChecklist(tree, isOwner) {
 
   const heading = document.createElement("h3");
   heading.id = `birthday-prep-${tree.id}`;
-  heading.textContent = "Birthday demo checklist";
+  heading.textContent = "Getting ready";
   header.appendChild(heading);
 
   const intro = document.createElement("p");
-  intro.textContent = "A quick owner pass before showing the tree.";
+  intro.textContent = "A quick owner pass before sharing this tree with relatives.";
   header.appendChild(intro);
   section.appendChild(header);
 
@@ -172,7 +172,11 @@ function createBirthdayPrepChecklist(tree, isOwner) {
 
   list.appendChild(createChecklistItem({
     label: "Photos",
-    detail: peopleCount ? `${prep.photoCount} of ${peopleCount} profiles have photos.` : "Add people before photo prep.",
+    detail: peopleCount
+      ? prep.photoCount > 0
+        ? `${prep.photoCount} profile${prep.photoCount === 1 ? "" : "s"} include family photos. Add more whenever you have them.`
+        : "No photos yet. The tree still works with initials until the family adds pictures."
+      : "Add people first, then photos can come later.",
     status: peopleCount > 0 && prep.photoCount === peopleCount ? "done" : "todo",
     href: directoryUrl,
   }));
@@ -189,12 +193,12 @@ function createBirthdayPrepChecklist(tree, isOwner) {
   }));
 
   list.appendChild(createChecklistItem({
-    label: "Bios",
+    label: "Stories",
     detail: peopleCount === 0
-      ? "Add people before bio prep."
+      ? "Add people before story prep."
       : prep.missingBios === 0
-      ? "Every profile has a real bio."
-      : `${prep.missingBios} profile${prep.missingBios === 1 ? "" : "s"} still have empty or starter bios.`,
+      ? "Every profile has a story note."
+      : `${prep.missingBios} profile${prep.missingBios === 1 ? "" : "s"} could use a story or note.`,
     status: peopleCount > 0 && prep.missingBios === 0 ? "done" : "todo",
     href: directoryUrl,
   }));
@@ -214,19 +218,6 @@ function createBirthdayPrepChecklist(tree, isOwner) {
     label: "Invite code",
     detail: tree.joinCode ? "Ready to copy for trusted relatives." : "Missing an invite code.",
     status: tree.joinCode ? "done" : "todo",
-  }));
-
-  list.appendChild(createChecklistItem({
-    label: "Public demo",
-    detail: "Open the example tree once before family sees it.",
-    status: "review",
-    href: "/tree?demo=large",
-  }));
-
-  list.appendChild(createChecklistItem({
-    label: "Domain and DNS",
-    detail: "Final live check for coletys.com after the domain move.",
-    status: "review",
   }));
 
   section.appendChild(list);
@@ -354,6 +345,34 @@ function createTreeCard(tree) {
     resetButton.setAttribute("aria-label", `Reset invite code for ${tree.name || "this family tree"}`);
     codeActions.appendChild(resetButton);
     code.appendChild(codeActions);
+
+    const resetConfirm = document.createElement("div");
+    resetConfirm.className = "invite-code-confirm";
+    resetConfirm.hidden = true;
+    resetConfirm.setAttribute("role", "group");
+    resetConfirm.setAttribute("aria-label", "Confirm invite code reset");
+
+    const resetConfirmText = document.createElement("p");
+    resetConfirmText.textContent = "Reset this invite code? The old code will stop working.";
+    resetConfirm.appendChild(resetConfirmText);
+
+    const resetConfirmActions = document.createElement("div");
+    resetConfirmActions.className = "invite-code-confirm-actions";
+
+    const cancelResetButton = document.createElement("button");
+    cancelResetButton.type = "button";
+    cancelResetButton.className = "text-action cancel-reset-code-button";
+    cancelResetButton.textContent = "Cancel";
+    resetConfirmActions.appendChild(cancelResetButton);
+
+    const confirmResetButton = document.createElement("button");
+    confirmResetButton.type = "button";
+    confirmResetButton.className = "text-action confirm-reset-code-button";
+    confirmResetButton.textContent = "Reset code";
+    resetConfirmActions.appendChild(confirmResetButton);
+
+    resetConfirm.appendChild(resetConfirmActions);
+    code.appendChild(resetConfirm);
 
     const helper = document.createElement("details");
     helper.className = "invite-helper";
@@ -758,8 +777,7 @@ async function copyInviteCode(card, joinCode) {
   try {
     await navigator.clipboard.writeText(joinCode);
     setCardStatus(card, "Access code copied.", "success");
-  } catch (error) {
-    console.error("Copy failed:", error);
+  } catch {
     setCardStatus(card, "Select the access code and copy it manually.", "error");
   }
 }
@@ -791,9 +809,6 @@ function setInviteMessageVariant(card, tree, variant) {
 }
 
 async function resetInviteCode(card, tree) {
-  const confirmed = confirm(`Reset the access code for "${tree.name || "this family tree"}"? The old code will stop working.`);
-  if (!confirmed) return;
-
   setCardStatus(card, "Resetting access code...", "loading");
 
   try {
@@ -819,6 +834,8 @@ async function resetInviteCode(card, tree) {
     if (codeText) codeText.textContent = newCode;
     const activeVariant = card.querySelector(".invite-message-variant-button[aria-pressed='true']")?.dataset.inviteVariant || "friendly";
     setInviteMessageVariant(card, tree, activeVariant);
+    const confirmPanel = card.querySelector(".invite-code-confirm");
+    if (confirmPanel) confirmPanel.hidden = true;
     setCardStatus(card, "Access code reset.", "success");
   } catch (error) {
     console.error("Error resetting access code:", error);
@@ -944,6 +961,9 @@ function setupTreeCardActions(card, tree, isOwner) {
   const copyBtn = card.querySelector(".copy-code-button");
   const copyInviteMessageBtn = card.querySelector(".copy-invite-message-button");
   const resetCodeBtn = card.querySelector(".reset-code-button");
+  const resetConfirmPanel = card.querySelector(".invite-code-confirm");
+  const cancelResetCodeBtn = card.querySelector(".cancel-reset-code-button");
+  const confirmResetCodeBtn = card.querySelector(".confirm-reset-code-button");
   const archiveBtn = card.querySelector(".archive-tree-button");
   const leaveBtn = card.querySelector(".leave-tree-button");
   const removeMemberBtns = card.querySelectorAll(".remove-member-button");
@@ -970,7 +990,24 @@ function setupTreeCardActions(card, tree, isOwner) {
   });
 
   if (resetCodeBtn && isOwner) {
-    resetCodeBtn.addEventListener("click", () => resetInviteCode(card, tree));
+    resetCodeBtn.addEventListener("click", () => {
+      if (!resetConfirmPanel) return;
+      resetConfirmPanel.hidden = false;
+      setCardStatus(card, "");
+      confirmResetCodeBtn?.focus({ preventScroll: true });
+    });
+  }
+
+  if (cancelResetCodeBtn) {
+    cancelResetCodeBtn.addEventListener("click", () => {
+      if (resetConfirmPanel) resetConfirmPanel.hidden = true;
+      setCardStatus(card, "Invite code reset canceled.");
+      resetCodeBtn?.focus({ preventScroll: true });
+    });
+  }
+
+  if (confirmResetCodeBtn && isOwner) {
+    confirmResetCodeBtn.addEventListener("click", () => resetInviteCode(card, tree));
   }
 
   if (archiveBtn) {

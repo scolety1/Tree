@@ -7,7 +7,7 @@
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/global.css?v=20260522-11">
 </head>
-<body>
+<body class="is-auth-loading">
 
     <header>
         <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
@@ -19,7 +19,7 @@
         </nav>
         <div class="account-area">
             <p id="authStatus" class="auth-status">Checking sign-in...</p>
-            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
                 <span class="account-icon" aria-hidden="true"></span>
                 <span class="account-link-text">Sign In</span>
             </a>
@@ -30,7 +30,11 @@
     <main>
         <section class="search-section">
             <h2>Family directory</h2>
-            <p class="secondary-surface-note">Secondary owner/testing view. For the family demo, start with the Family Tree page and use Find person there.</p>
+            <div id="publicDemoBanner" class="demo-route-banner" role="note" hidden>
+                <strong>Example Tree &middot; Read-only</strong>
+                <span>Fictional sample data</span>
+            </div>
+            <p class="secondary-surface-note">Browse everyone in this family tree, search by name, and open profiles.</p>
             <p id="searchContext" class="search-context" role="status" aria-live="polite">Checking which tree to search...</p>
 
             <form id="search-form" class="directory-controls" role="search" aria-describedby="searchContext">

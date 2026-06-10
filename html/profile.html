@@ -10,7 +10,7 @@
 
 
 </head>
-<body>
+<body class="is-auth-loading">
   <header>
     <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
     <nav aria-label="Main">
@@ -21,7 +21,7 @@
     </nav>
     <div class="account-area">
       <p id="authStatus" class="auth-status">Checking sign-in...</p>
-      <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+      <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
         <span class="account-icon" aria-hidden="true"></span>
         <span class="account-link-text">Sign In</span>
       </a>
@@ -36,13 +36,17 @@
         <div id="profilePhotoPlaceholder" class="profile-photo-placeholder" role="img" aria-label="No profile photo yet">
           <span id="profilePhotoInitials" class="profile-photo-initials">FT</span>
           <strong id="profilePhotoPlaceholderTitle">No photo yet</strong>
-          <span id="profilePhotoPlaceholderText">Add one when this profile is ready.</span>
+          <span id="profilePhotoPlaceholderText">Add a photo later.</span>
         </div>
       </div>
 
       <!-- RIGHT: DETAILS -->
       <div class="profile-details">
         <h1 id="name">Loading profile</h1>
+        <div id="publicDemoBanner" class="demo-route-banner" role="note" hidden>
+          <strong>Example Tree &middot; Read-only</strong>
+          <span>Fictional sample data</span>
+        </div>
         <p id="profileStatus" class="form-status profile-status is-loading" role="status" aria-live="polite">Getting profile details...</p>
         <p id="profileEditState" class="profile-edit-state" aria-live="polite">Checking edit access...</p>
         <p id="profileStoryLead" class="profile-story-lead">Profiles collect the person, relationships, photos, and family notes in one place.</p>

@@ -7,7 +7,7 @@
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/global.css?v=20260522-11">
 </head>
-<body>
+<body class="is-auth-loading">
 
     <header>
         <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
@@ -19,7 +19,7 @@
         </nav>
         <div class="account-area">
             <p id="authStatus" class="auth-status">Checking sign-in...</p>
-            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
                 <span class="account-icon" aria-hidden="true"></span>
                 <span class="account-link-text">Sign In</span>
             </a>
@@ -223,8 +223,8 @@
                     <li>A historical fun fact based on their birthday</li>
                 </ul>
                 <p>
-                    From the profile page, you can update details after live testing confirms edits
-                    are working in your Firebase project.
+                    From the profile page, signed-in family members with edit access can update details,
+                    photos, and relationships.
                 </p>
             </div>
 

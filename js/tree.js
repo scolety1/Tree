@@ -952,11 +952,19 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
     setTreeFocusStatus(`Focused ${getPersonDisplayName(person)}.`);
   }
 
-  if (scroll || window.matchMedia("(max-width: 820px)").matches) {
+  const isMobileTreeLayout = window.matchMedia("(max-width: 640px)").matches;
+  const motionPreference = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  if (isMobileTreeLayout) {
+    document.querySelector(".tree-canvas-panel")?.scrollIntoView({
+      block: "start",
+      inline: "nearest",
+      behavior: motionPreference,
+    });
+  } else if (scroll || window.matchMedia("(max-width: 820px)").matches) {
     panel.scrollIntoView({
       block: "nearest",
       inline: "nearest",
-      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      behavior: motionPreference,
     });
   }
 }
@@ -1828,6 +1836,8 @@ function hasMeaningfulBio(person) {
     "placeholder",
     "starter profile",
     "add photos",
+    "sample family profile",
+    "add real memories",
     "replace this",
   ].some(marker => normalized.includes(marker));
 }
@@ -1835,7 +1845,6 @@ function hasMeaningfulBio(person) {
 function getMissingInfoLabels(person, people) {
   const labels = [];
   if (!getBirthdayDate(person)) labels.push("Birthday");
-  if (!person?.image) labels.push("Photo");
   if (resolvePersonParentIds(person, people).length < 2) labels.push("Parents");
   if (resolvePersonSpouseIds(person, people).length === 0) labels.push("Spouse/partner");
   if (derivePersonChildren(person, people).length === 0) labels.push("Children");
@@ -2290,7 +2299,6 @@ function createDataHealthReport(people) {
 
   const missingBirthdays = people.filter(person => !getBirthdayDate(person));
   const missingBios = people.filter(person => !hasMeaningfulBio(person));
-  const missingPhotos = people.filter(person => !person?.image);
   const peopleWithNoParents = people.filter(person => resolvePersonParentIds(person, people).length === 0);
   const peopleWithNoSpouses = people.filter(person => resolvePersonSpouseIds(person, people).length === 0);
   const peopleWithNoChildren = people.filter(person => derivePersonChildren(person, people).length === 0);
@@ -2302,7 +2310,6 @@ function createDataHealthReport(people) {
     warningCount: issues.filter(issue => issue.severity !== "error").length,
     missingBirthdays,
     missingBios,
-    missingPhotos,
     peopleWithNoParents,
     peopleWithNoSpouses,
     peopleWithNoChildren,
@@ -2364,7 +2371,6 @@ function renderDataHealthInspector(people, options = {}) {
   const completenessIssues = [
     ["Missing birthdays", report.missingBirthdays.length],
     ["Missing bios", report.missingBios.length],
-    ["Missing photos", report.missingPhotos.length],
     ["No parents listed", report.peopleWithNoParents.length],
     ["No spouse/partner", report.peopleWithNoSpouses.length],
     ["No children listed", report.peopleWithNoChildren.length],
@@ -2873,11 +2879,18 @@ function setupTreeFullscreenButton() {
 function setupTreePresentationControls() {
   const presentationButton = document.getElementById("treePresentationBtn");
   const printButton = document.getElementById("treePrintBtn");
+  const escapeBar = document.getElementById("treePresentationEscapeBar");
+  const exitButton = document.getElementById("treePresentationExitBtn");
+  const backButton = document.getElementById("treePresentationBackBtn");
+  const zoomInButton = document.getElementById("treePresentationZoomInBtn");
+  const zoomOutButton = document.getElementById("treePresentationZoomOutBtn");
+  const zoomResetButton = document.getElementById("treePresentationZoomResetBtn");
   const canvasPanel = document.querySelector(".tree-canvas-panel");
   if (!presentationButton && !printButton) return;
 
   function setPresentationMode(isActive, { scrollToTree = false } = {}) {
     document.body.classList.toggle("tree-presentation-mode", isActive);
+    if (escapeBar) escapeBar.hidden = !isActive;
     if (presentationButton) {
       presentationButton.textContent = isActive ? "Exit Presentation" : "Presentation View";
       presentationButton.setAttribute("aria-pressed", isActive ? "true" : "false");
@@ -2896,10 +2909,56 @@ function setupTreePresentationControls() {
     }
   }
 
+  function exitPresentation({ restoreFocus = true } = {}) {
+    setPresentationMode(false);
+    if (restoreFocus) {
+      presentationButton?.focus({ preventScroll: true });
+    }
+  }
+
+  function clickChartControl(selector, fallbackMessage) {
+    const frame = document.getElementById("treeChartFrame");
+    const control = frame?.contentDocument?.querySelector(selector);
+    if (control instanceof HTMLElement) {
+      control.click();
+      return;
+    }
+
+    if (fallbackMessage) {
+      const status = document.getElementById("treeChartStatusMessage");
+      if (status) status.textContent = fallbackMessage;
+    }
+  }
+
   presentationButton?.addEventListener("click", () => {
     setPresentationMode(!document.body.classList.contains("tree-presentation-mode"), {
       scrollToTree: true,
     });
+  });
+
+  exitButton?.addEventListener("click", () => {
+    exitPresentation();
+  });
+
+  backButton?.addEventListener("click", () => {
+    exitPresentation();
+    document.querySelector(".tree-page-heading")?.scrollIntoView({
+      block: "start",
+      inline: "nearest",
+      behavior: "smooth",
+    });
+  });
+
+  zoomInButton?.addEventListener("click", () => {
+    clickChartControl("#zoomInChartBtn", "Zoom is available after the connected chart loads.");
+  });
+
+  zoomOutButton?.addEventListener("click", () => {
+    clickChartControl("#zoomOutChartBtn", "Zoom is available after the connected chart loads.");
+  });
+
+  zoomResetButton?.addEventListener("click", () => {
+    clickChartControl("#resetChartBtn", "Reset is available after the connected chart loads.");
   });
 
   printButton?.addEventListener("click", () => {
@@ -2908,8 +2967,7 @@ function setupTreePresentationControls() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape" || !document.body.classList.contains("tree-presentation-mode")) return;
-    setPresentationMode(false);
-    presentationButton?.focus({ preventScroll: true });
+    exitPresentation();
   });
 }
 
@@ -2950,6 +3008,18 @@ function setTreeSubtitle(message) {
   if (subtitleEl) subtitleEl.textContent = message;
 }
 
+function setPublicDemoBannerVisible(isVisible) {
+  const banner = document.getElementById("publicDemoBanner");
+  if (!banner) return;
+  banner.hidden = !isVisible;
+}
+
+function setLargeTreeHintVisible(isVisible) {
+  const hint = document.getElementById("largeTreeHint");
+  if (!hint) return;
+  hint.hidden = !isVisible;
+}
+
 async function updateTreeTitle(familyId, user = null) {
   const titleEl = document.getElementById("treeTitle");
   const joinCodeDisplay = document.getElementById("joinCodeDisplay");
@@ -2958,6 +3028,7 @@ async function updateTreeTitle(familyId, user = null) {
   if (!titleEl) return;
 
   if (isLargeDemoMode()) {
+    setPublicDemoBannerVisible(true);
     titleEl.textContent = "Large Demo Family Tree";
     document.title = "Large Demo Family Tree";
     setTreeSubtitle("A made-up Johnson family tree for stress-testing big families. Search a name or click any card to understand the branches.");
@@ -2969,6 +3040,7 @@ async function updateTreeTitle(familyId, user = null) {
 
   // Example tree: no familyId, so keep sample copy and hide the join code.
   if (!familyId) {
+    setPublicDemoBannerVisible(true);
     titleEl.textContent = "Example Family Tree";
     document.title = "Our Family Tree";
     setTreeSubtitle("A read-only sample tree. Use Find person or click a card to see how profiles and relationships work.");
@@ -2977,6 +3049,8 @@ async function updateTreeTitle(familyId, user = null) {
     }
     return;
   }
+
+  setPublicDemoBannerVisible(false);
 
   try {
     const familyRef = doc(db, "families", familyId);
@@ -3134,6 +3208,7 @@ async function loadFamilyTree() {
     const genMap = groupByGeneration(allPeople);
     const genKeys = sortGenerationKeys(genMap);
     const overviewMode = allPeople.length >= OVERVIEW_MODE_THRESHOLD || isPublicDemoMode;
+    setLargeTreeHintVisible(overviewMode);
     setTreeModeCopy(overviewMode);
     setTreeView(getPreferredTreeView(overviewMode, familyId), { persist: false, updateUrl: false });
     updateChartFrameSource(familyId, isPublicDemoMode);
@@ -3236,6 +3311,7 @@ function setTreeMessage(treeLayout, message, actions = []) {
   lastRenderedPeople = [];
   renderRecentPeople();
   document.body.classList.remove("tree-card-layout-ready", "tree-card-cue-ready");
+  setLargeTreeHintVisible(false);
   treeLayout.replaceChildren();
   treeLayout.classList.remove("tree-overview-mode");
   setTreeModeCopy(false);

@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/family-chart@0.9.0/dist/styles/family-chart.css">
     <link rel="stylesheet" href="/css/family_chart_spike.css?v=20260522-11">
 </head>
-<body>
+<body class="is-auth-loading">
     <header>
         <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
         <nav aria-label="Main">
@@ -21,7 +21,7 @@
         </nav>
         <div class="account-area">
             <p id="authStatus" class="auth-status">Checking sign-in...</p>
-            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in">
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
                 <span class="account-icon" aria-hidden="true"></span>
                 <span class="account-link-text">Sign In</span>
             </a>

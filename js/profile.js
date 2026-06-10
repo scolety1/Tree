@@ -102,6 +102,12 @@ function resolveProfileFamilyId(params = new URLSearchParams(window.location.sea
   return getFamilyIdFromHelper();
 }
 
+function setPublicDemoBannerVisible(isVisible) {
+  const banner = document.getElementById("publicDemoBanner");
+  if (!banner) return;
+  banner.hidden = !isVisible;
+}
+
 function getReturnTreeView() {
   const view = new URLSearchParams(window.location.search).get("view");
   return view === "chart" || view === "cards" ? view : "";
@@ -162,7 +168,7 @@ function getProfileInitials(name) {
 function setProfilePhotoPlaceholder({
   name = "",
   title = "No photo yet",
-  text = "Add one when this profile is ready.",
+  text = "Add a photo later.",
   initials = "",
   isPrivate = false,
 } = {}) {
@@ -184,7 +190,7 @@ function setProfilePhoto(imageUrl, {
   name = "",
   isPrivate = false,
   placeholderTitle = "No photo yet",
-  placeholderText = "Add one when this profile is ready.",
+  placeholderText = "Add a photo later.",
 } = {}) {
   const profileImgEl = document.getElementById("profileImage");
   const profileCardEl = document.getElementById("profileCard");
@@ -422,6 +428,7 @@ async function loadProfile() {
   profileSource = getProfileSourceFromParams(params);
   
   familyId = resolveProfileFamilyId(params);
+  setPublicDemoBannerVisible(Boolean(profileDemoContext));
   updateBackLink();
 
   if (!personId) {

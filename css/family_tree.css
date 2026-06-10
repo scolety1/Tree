@@ -141,6 +141,46 @@ body.tree-presentation-mode .tree-layout {
     min-height: calc(100vh - 118px);
 }
 
+.tree-presentation-escape-bar {
+    position: fixed;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    z-index: 120;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100vw - 24px);
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(12px);
+}
+
+.tree-presentation-escape-bar[hidden] {
+    display: none !important;
+}
+
+.tree-presentation-escape-bar .button {
+    min-height: 40px;
+    padding: 0 14px;
+    white-space: nowrap;
+}
+
+.tree-presentation-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 8px;
+    border-left: 1px solid var(--line);
+}
+
+.tree-presentation-zoom-controls .button {
+    min-width: 40px;
+    padding: 0 10px;
+}
+
 .tree-main {
     width: min(100% - 24px, 1480px);
 }
@@ -2040,8 +2080,9 @@ a.family-spotlight-name:focus-visible {
 .person-card-focused {
     border-color: var(--gold);
     box-shadow:
-        0 0 0 5px rgba(183, 131, 47, 0.24),
-        0 20px 38px rgba(32, 47, 36, 0.2);
+        0 0 0 3px #ffffff,
+        0 0 0 8px rgba(183, 131, 47, 0.46),
+        0 22px 42px rgba(32, 47, 36, 0.24);
     transform: translateY(-3px);
 }
 
@@ -2161,6 +2202,27 @@ a.family-spotlight-name:focus-visible {
 }
 
 @media (max-width: 640px) {
+    .tree-presentation-escape-bar {
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .tree-presentation-escape-bar .button {
+        flex: 1 1 auto;
+    }
+
+    .tree-presentation-zoom-controls {
+        flex: 1 1 100%;
+        justify-content: center;
+        padding-left: 0;
+        padding-top: 8px;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+    }
+
     main.tree-main {
         padding-top: 22px;
     }
@@ -2292,17 +2354,46 @@ a.family-spotlight-name:focus-visible {
         font-size: 0.84rem;
     }
 
+    .tree-recent-people-panel {
+        gap: 8px;
+        padding: 10px 0;
+    }
+
+    .tree-recent-people-list {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
+    }
+
+    .tree-recent-people-list .tree-relative-chip,
+    .tree-recent-people-list button {
+        flex: 0 0 auto;
+        max-width: 180px;
+    }
+
     .tree-selected-person-panel {
+        position: fixed;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: max(10px, env(safe-area-inset-left));
+        z-index: 115;
+        max-height: min(52vh, 440px);
         padding: 12px;
+        overflow: auto;
+        border-color: #b7c7b3;
+        box-shadow: 0 -16px 34px rgba(32, 47, 36, 0.18);
+        overscroll-behavior: contain;
     }
 
     .tree-selected-details {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0 12px;
     }
 
     .tree-selected-actions {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .tree-selected-actions .button,
@@ -2311,12 +2402,18 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-relative-chip-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: thin;
     }
 
     .tree-relative-chip {
-        width: 100%;
+        width: auto;
+        min-width: max-content;
+        max-width: 220px;
         min-height: 40px;
         padding: 7px 9px;
         justify-content: flex-start;
@@ -2354,6 +2451,10 @@ a.family-spotlight-name:focus-visible {
 
     .tree-chart-frame {
         height: 70vh;
+    }
+
+    .tree-canvas-panel {
+        padding-bottom: 170px;
     }
 
     .tree-chart-status {
@@ -2476,6 +2577,15 @@ a.family-spotlight-name:focus-visible {
     .person-card .meta {
         font-size: 0.78rem;
     }
+
+    #addPersonBtn {
+        position: static;
+        z-index: auto;
+        width: 100%;
+        min-height: 50px;
+        margin: 14px 0 0;
+        border-radius: var(--radius-sm);
+    }
 }
 
 @media (max-width: 420px) {
@@ -2536,8 +2646,25 @@ a.family-spotlight-name:focus-visible {
         font-size: 0.82rem;
     }
 
-    .tree-relative-chip-list {
+    .tree-selected-person-panel {
+        max-height: min(58vh, 460px);
+    }
+
+    .tree-selected-person-panel h2 {
+        font-size: 1.2rem;
+    }
+
+    .tree-selected-meta {
+        font-size: 0.8rem;
+    }
+
+    .tree-selected-details,
+    .tree-selected-actions {
         grid-template-columns: 1fr;
+    }
+
+    .tree-canvas-panel {
+        padding-bottom: 210px;
     }
 
     .tree-layout {

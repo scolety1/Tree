@@ -109,22 +109,24 @@ function updateAuthStatus(user) {
   const signOutBtn = document.getElementById("signOutBtn");
   const linkText = authLink?.querySelector(".account-link-text");
   const isSignedIn = Boolean(user);
-  const displayEmail = user?.email || "Family member";
+  const accountLabel = "your account";
 
+  document.body.classList.remove("is-auth-loading");
+  document.body.classList.add("is-auth-resolved");
   document.body.classList.toggle("is-signed-in", isSignedIn);
   document.body.classList.toggle("is-signed-out", !isSignedIn);
 
   if (authStatus) {
-    authStatus.textContent = user ? displayEmail : "Browsing as guest";
+    authStatus.textContent = user ? "Signed in" : "Browsing as guest";
   }
 
   if (accountEmail) {
-    accountEmail.textContent = user ? `Signed in as ${displayEmail}` : "Sign in to manage your family tree account.";
+    accountEmail.textContent = user ? "Signed in with your family tree account." : "Sign in to manage your family tree account.";
   }
 
   if (authLink) {
     authLink.href = user ? "/account" : "/signin";
-    authLink.setAttribute("aria-label", user ? `Open account settings for ${displayEmail}` : "Sign in");
+    authLink.setAttribute("aria-label", user ? `Open account settings for ${accountLabel}` : "Sign in");
     authLink.hidden = !user && window.location.pathname === "/signin";
   }
 
@@ -370,6 +372,7 @@ function setupAuthForm() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  document.body.classList.add("is-auth-loading");
   setupSignOutButton();
   setupAuthForm();
   watchAuth((user) => {

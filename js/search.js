@@ -32,6 +32,12 @@ function setSearchContext(message) {
   if (contextEl) contextEl.textContent = message;
 }
 
+function setPublicDemoBannerVisible(isVisible) {
+  const banner = document.getElementById("publicDemoBanner");
+  if (!banner) return;
+  banner.hidden = !isVisible;
+}
+
 function setSearchFormDisabled(form, disabled) {
   if (!form) return;
   form.querySelectorAll("input, button, select, textarea").forEach(control => {
@@ -59,6 +65,8 @@ function hasMeaningfulMemoryBio(person) {
     "placeholder",
     "starter profile",
     "add photos",
+    "sample family profile",
+    "add real memories",
     "replace this",
   ].some(marker => normalized.includes(marker));
 }
@@ -98,7 +106,6 @@ function formatDirectoryBirthday(person) {
 function getMissingInfoLabels(person, people) {
   const labels = [];
   if (!getBirthdayDate(person)) labels.push("birthday");
-  if (!person?.image) labels.push("photo");
   if (resolvePersonParentIds(person, people).length < 2) labels.push("parents");
   if (resolvePersonSpouseIds(person, people).length === 0) labels.push("partner");
   if (derivePersonChildren(person, people).length === 0) labels.push("children");
@@ -192,16 +199,17 @@ function createResultCard(person, familyId = null) {
     tag.textContent = "story";
     badges.appendChild(tag);
   }
-  missing.slice(0, 3).forEach(label => {
+  const visibleMissing = missing.filter(label => label !== "Photo");
+  visibleMissing.slice(0, 3).forEach(label => {
     const tag = document.createElement("span");
     tag.className = "directory-badge is-warning";
     tag.textContent = `needs ${label}`;
     badges.appendChild(tag);
   });
-  if (missing.length > 3) {
+  if (visibleMissing.length > 3) {
     const tag = document.createElement("span");
     tag.className = "directory-badge is-warning";
-    tag.textContent = `+${missing.length - 3} more`;
+    tag.textContent = `+${visibleMissing.length - 3} more`;
     badges.appendChild(tag);
   }
   link.appendChild(badges);
@@ -451,6 +459,7 @@ async function initSearchPage() {
     : await resolveCurrentUserFamilyId();
   currentFamilyId = resolvedFamily.familyId;
   const usePublicDemoData = explicitDemoSearch || (!currentFamilyId && !resolvedFamily.user);
+  setPublicDemoBannerVisible(usePublicDemoData);
   const searchLabel = usePublicDemoData ? "the read-only example family" : await getFamilySearchLabel(currentFamilyId);
   currentSearchScope = currentFamilyId ? searchLabel : "the read-only example family";
   if (usePublicDemoData && !currentDemoContext) currentDemoContext = "example";
