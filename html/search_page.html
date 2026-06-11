@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Directory | Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
+    <link rel="stylesheet" href="/css/global.css?v=20260610-12">
 </head>
 <body class="is-auth-loading">
 
@@ -95,21 +95,23 @@
                     <input type="date" id="birthDate">
                     <label for="personBio">Bio note (optional)</label>
                     <textarea id="personBio" rows="3" placeholder="A short memory, nickname, or context for this person"></textarea>
-                    <label for="personImageUrl">Photo URL (optional)</label>
-                    <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg">
-                    <label for="personImageFile">Upload photo (optional)</label>
-                    <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                    <p id="personImageHelp" class="field-note">Photos must be JPG, PNG, WebP, or GIF and under 5 MB.</p>
+                    <div class="photo-choice-panel">
+                        <label for="personImageUrl">Photo URL (optional)</label>
+                        <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg" aria-describedby="personImageHelp">
+                        <label for="personImageFile">Upload photo (optional)</label>
+                        <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" aria-describedby="personImageHelp">
+                        <p id="personImageHelp" class="field-note">Use either a secure photo URL or an uploaded JPG, PNG, WebP, or GIF under 5 MB.</p>
+                    </div>
                     <fieldset class="form-fieldset">
                         <legend>Relationships</legend>
-                        <p id="relationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person has not been added yet. Add parents first when you can.</p>
+                        <p id="relationshipHelp" class="field-note">Choose relatives already in this tree. Parent order does not matter, and blank is fine when someone is not listed yet.</p>
                         <label for="parent1">Parent one (optional)</label>
                         <select id="parent1" aria-describedby="relationshipHelp">
-                            <option value="">Unknown / not listed yet</option>
+                            <option value="">Not listed yet</option>
                         </select>
                         <label for="parent2">Parent two (optional)</label>
                         <select id="parent2" aria-describedby="relationshipHelp">
-                            <option value="">Unknown / not listed yet</option>
+                            <option value="">Not listed yet</option>
                         </select>
                         <label for="spouse">Spouse or partner (optional)</label>
                         <select id="spouse" aria-describedby="relationshipHelp">
@@ -124,9 +126,9 @@
 
         
     <footer>
-        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+        <small>Copyright &copy; <span id="year"></span> Family Tree</small>
     </footer>
     
-    <script type="module" src="/js/main.js?v=20260522-11"></script>
+    <script type="module" src="/js/main.js?v=20260610-12"></script>
 </body>
 </html>

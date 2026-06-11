@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Family Profile</title>
   <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
-    <link rel="stylesheet" href="/css/profile.css?v=20260522-11">
+    <link rel="stylesheet" href="/css/global.css?v=20260610-12">
+    <link rel="stylesheet" href="/css/profile.css?v=20260610-12">
 
 
 </head>
@@ -83,6 +83,12 @@
           </p>
         </div>
 
+        <section class="profile-memory-panel" aria-labelledby="profileMemoryTitle">
+          <h2 id="profileMemoryTitle">Family notes</h2>
+          <p id="profileMemorySummary">Open a profile to see which stories, photos, and family details are already here.</p>
+          <ul id="profileMemoryPrompts" class="profile-memory-prompts"></ul>
+        </section>
+
         <div class="profile-buttons">
           <a id="profileBackLink" href="/tree" class="button profile-btn secondary">
             Back to Family Tree
@@ -122,7 +128,7 @@
         </label>
         <fieldset class="form-fieldset">
           <legend>Relationships</legend>
-          <p id="editRelationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person is not in this tree yet.</p>
+          <p id="editRelationshipHelp" class="field-note">Choose relatives already in this tree. Parent order does not matter, and blank is fine when someone is not listed yet.</p>
             <label class="form-label">
               Parent one
               <select id="editParent1" aria-describedby="editRelationshipHelp">
@@ -146,15 +152,17 @@
           Bio
           <textarea id="editBio" placeholder="Add a short note, memory, or context..." rows="4"></textarea><br>
         </label>
-        <label class="form-label">
-          Photo URL
-          <input type="url" id="editImageUrl" placeholder="https://example.com/photo.jpg"><br>
-        </label>
-        <label class="form-label">
-          Upload profile photo
-          <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"><br>
-          <span id="editPhotoHelp" class="field-note">Use JPG, PNG, WebP, or GIF under 5 MB. HEIC photos need to be exported first.</span>
-        </label>
+        <div class="photo-choice-panel">
+          <label class="form-label">
+            Photo URL
+            <input type="url" id="editImageUrl" placeholder="https://example.com/photo.jpg" aria-describedby="editPhotoHelp"><br>
+          </label>
+          <label class="form-label">
+            Upload profile photo
+            <input type="file" id="editImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" aria-describedby="editPhotoHelp"><br>
+            <span id="editPhotoHelp" class="field-note">Use either a secure photo URL or an uploaded JPG, PNG, WebP, or GIF under 5 MB. HEIC photos need to be exported first.</span>
+          </label>
+        </div>
         <label class="form-label checkbox-label">
           <input type="checkbox" id="removeImage">
           Remove current photo
@@ -165,11 +173,11 @@
   </div>
 
   <footer>
-    <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+    <small>Copyright &copy; <span id="year"></span> Family Tree</small>
   </footer>
 
-  <script type="module" src="/js/main.js?v=20260522-11"></script>
-  <script type="module" src="/js/profile.js?v=20260522-11"></script>
+  <script type="module" src="/js/main.js?v=20260610-12"></script>
+  <script type="module" src="/js/profile.js?v=20260610-12"></script>
 </body>
 
 </html>

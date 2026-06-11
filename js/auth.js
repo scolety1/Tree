@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260522-11";
+import { auth, db } from "./firebase.js?v=20260610-12";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,

@@ -1,4 +1,4 @@
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260522-11";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260610-12";
 import {
   canEditFamily,
   derivePersonChildren,
@@ -7,9 +7,9 @@ import {
   resolvePersonSpouseIds,
   toTitle,
   toTitleFullName,
-} from "./helpers.js?v=20260522-11";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260522-11";
-import { db } from "./firebase.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260610-12";
+import { db } from "./firebase.js?v=20260610-12";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
 const statusEl = document.getElementById("layoutSpikeStatus");
@@ -166,7 +166,7 @@ function formatBirthDate(value) {
     });
   }
 
-  return "Unknown birthday";
+  return "Birthday not listed";
 }
 
 function getBirthYear(value) {
@@ -229,7 +229,7 @@ function getChartPerson(personId) {
 
 function getPersonLabel(personId) {
   const person = getChartPerson(personId);
-  return person?.data?.originalName || personId || "Unknown";
+  return person?.data?.originalName || personId || "Not listed yet";
 }
 
 function formatRelationshipList(personIds) {
@@ -238,7 +238,7 @@ function formatRelationshipList(personIds) {
     .map(getPersonLabel)
     .filter(Boolean);
 
-  if (labels.length === 0) return "Unknown";
+  if (labels.length === 0) return "Not listed yet";
   if (labels.length <= 4) return labels.join(", ");
   return `${labels.slice(0, 4).join(", ")} and ${labels.length - 4} more`;
 }
@@ -422,7 +422,7 @@ function createPersonCardHtml(d) {
   const firstName = escapeHtml(data["first name"]);
   const lastName = escapeHtml(data["last name"]);
   const fullName = escapeHtml(data.originalName || `${firstName} ${lastName}`.trim());
-  const birthday = escapeHtml(data.birthday || "Unknown birthday");
+  const birthday = escapeHtml(data.birthday || "Birthday not listed");
   const birthYear = data.birthYear ? `Born ${escapeHtml(data.birthYear)}` : birthday;
   const cardLabel = escapeHtml(`${data.originalName || `${firstName} ${lastName}`.trim()}, ${data.birthYear ? `born ${data.birthYear}` : birthday}`);
   const initials = escapeHtml(data.initials || "?");
@@ -528,12 +528,12 @@ function updateSelectedPersonPanel(personId) {
   if (selectedPersonName) selectedPersonName.textContent = person.data.originalName || person.id;
   if (selectedPersonMeta) {
     selectedPersonMeta.textContent = currentSource.isDemo
-      ? "Read-only demo person. Use this panel to understand the selected branch."
+      ? "Read-only example person. Use this panel to understand the selected branch."
       : currentSource.canEdit
         ? "Private-tree person. Edit details, photos, and relationships from here."
         : "Private-tree person. Open More details to view the full profile.";
   }
-  if (selectedPersonBirthday) selectedPersonBirthday.textContent = person.data.birthday || "Unknown";
+  if (selectedPersonBirthday) selectedPersonBirthday.textContent = person.data.birthday || "Birthday not listed";
   if (selectedPersonParents) selectedPersonParents.textContent = formatRelationshipList(person.rels?.parents);
   if (selectedPersonSpouses) selectedPersonSpouses.textContent = formatRelationshipList(person.rels?.spouses);
   if (selectedPersonChildren) selectedPersonChildren.textContent = formatRelationshipList(person.rels?.children);
@@ -637,6 +637,30 @@ function handleParentTreeFocusRequest(data) {
   });
 }
 
+function handleParentTreeControlRequest(data) {
+  if (!data || data.type !== "tree-chart-control") return;
+
+  if (data.action === "fit") {
+    fitChart();
+    setStatus("Fitted the full family overview.");
+    return;
+  }
+
+  if (data.action === "reset") {
+    resetChartView();
+    return;
+  }
+
+  if (data.action === "zoom-in") {
+    zoomChart(1.2);
+    return;
+  }
+
+  if (data.action === "zoom-out") {
+    zoomChart(0.84);
+  }
+}
+
 function fitChart(transitionTime = 450) {
   if (!chart) {
     setStatus("The chart is still loading. Try Fit tree again in a moment.");
@@ -722,7 +746,7 @@ function updateSourceTreeLink() {
 
   if (currentSource.isDemo || !currentSource.familyId) {
     sourceTreeLink.href = "/tree?demo=large";
-    sourceTreeLink.textContent = "Back to current demo";
+    sourceTreeLink.textContent = "Back to current tree";
     return;
   }
 
@@ -869,6 +893,7 @@ if (chartContainer) {
 window.addEventListener("message", (event) => {
   if (event.origin !== window.location.origin) return;
   handleParentTreeFocusRequest(event.data);
+  handleParentTreeControlRequest(event.data);
 });
 
 if (focusSelect) {

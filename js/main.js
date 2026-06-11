@@ -1,11 +1,11 @@
-import "./helpers.js?v=20260522-11";
-import "./postPeople.js?v=20260522-11";
-import "./tree.js?v=20260522-11";
-import "./search.js?v=20260522-11";
-import "./home.js?v=20260522-11";
-import { signOutCurrentUser } from "./auth.js?v=20260522-11";
-import "./dashboard.js?v=20260522-11";
-import { getCurrentFamilyId } from "./helpers.js?v=20260522-11";
+import "./helpers.js?v=20260610-12";
+import "./postPeople.js?v=20260610-12";
+import "./tree.js?v=20260610-12";
+import "./search.js?v=20260610-12";
+import "./home.js?v=20260610-12";
+import { signOutCurrentUser } from "./auth.js?v=20260610-12";
+import "./dashboard.js?v=20260610-12";
+import { getCurrentFamilyId } from "./helpers.js?v=20260610-12";
 
 document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname;
@@ -135,16 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
         function getDirectoryUrl(familyId, isSignedIn) {
             const demoContext = getDemoContextParams();
 
-            if (familyId) {
-                return buildAppUrl("/search", { familyId });
-            }
-
             if (demoContext.demo) {
                 return buildAppUrl("/search", demoContext);
             }
 
-            if (!isSignedIn && (currentPath.includes("/tree") || currentPath.includes("/search") || currentPath.includes("/profile"))) {
+            if (!isSignedIn) {
                 return buildAppUrl("/search", { demo: "large" });
+            }
+
+            if (familyId) {
+                return buildAppUrl("/search", { familyId });
             }
 
             return "";

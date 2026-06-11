@@ -642,6 +642,20 @@ select:disabled {
     font-size: 1.12rem;
 }
 
+.welcome-section .hero-demo-note {
+    display: inline-flex;
+    max-width: 680px;
+    margin: 2px 0 0;
+    padding: 10px 12px;
+    border: 1px solid #d9c294;
+    border-radius: var(--radius-sm);
+    background: #fff8eb;
+    color: #6f4b09;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
 .welcome-section .eyebrow,
 .family-preview .eyebrow {
     max-width: none;
@@ -1337,6 +1351,100 @@ select:disabled {
     line-height: 1.35;
 }
 
+.tree-health-details {
+    display: grid;
+    gap: 12px;
+    margin: 14px 0;
+    padding: 14px;
+    border: 1px solid #d7c198;
+    border-radius: var(--radius);
+    background: #fffaf0;
+}
+
+.tree-health-details summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    color: var(--ink);
+    font-weight: 900;
+}
+
+.tree-health-details summary small {
+    color: #765117;
+    font-weight: 800;
+}
+
+.tree-health-note,
+.tree-health-empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.tree-health-scores {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.tree-health-score {
+    display: grid;
+    gap: 2px;
+    padding: 10px;
+    border: 1px solid #ead8b6;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.tree-health-score strong {
+    color: var(--brand-strong);
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.tree-health-score small {
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.tree-health-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tree-health-issue {
+    display: grid;
+    gap: 3px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-left: 4px solid #c68a2e;
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+}
+
+.tree-health-issue.is-error {
+    border-left-color: #b42318;
+}
+
+.tree-health-issue strong {
+    color: var(--ink);
+    font-size: 0.86rem;
+}
+
+.tree-health-issue span {
+    color: var(--muted);
+    font-size: 0.8rem;
+    line-height: 1.35;
+}
+
 .member-details {
     color: var(--muted);
 }
@@ -1737,6 +1845,30 @@ body.add-person-modal-open #addPersonBtn {
 .modal-content label {
     display: block;
     margin: 12px 0 6px;
+}
+
+.photo-choice-panel {
+    display: grid;
+    gap: 8px;
+    margin: 14px 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: #f9fbf7;
+}
+
+.photo-choice-panel label {
+    margin: 0;
+}
+
+.photo-choice-panel input {
+    margin-bottom: 2px;
+}
+
+.modal-content form > button[type="submit"] {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 12px;
 }
 
 .close {

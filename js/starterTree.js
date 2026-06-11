@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260522-11";
+import { db } from "./firebase.js?v=20260610-12";
 import {
   addDoc,
   collection,
@@ -11,11 +11,11 @@ import {
 import {
   ACCESS_CODE_LENGTH,
   generateAccessCode,
-} from "./helpers.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
 
 export const STARTER_TREE_ID = "colety-birthday-tree";
 export const STARTER_TREE_NAME = "Colety Family Tree";
-export const STARTER_TREE_DESCRIPTION = "A simple Colety starter tree. Edit names, photos, and relationships as you add real family details.";
+export const STARTER_TREE_DESCRIPTION = "A private Colety family tree for collecting relatives, photos, birthdays, and stories.";
 
 async function generateAvailableJoinCode(length = ACCESS_CODE_LENGTH) {
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -41,8 +41,8 @@ function starterPerson(ref, firstName, lastName, birthDate, parentRefs = [], spo
     parentIds: parentRefs.map(parentRef => parentRef.id),
     spouseIds: spouseRefs.map(spouseRef => spouseRef.id),
     bio: `${firstName} ${lastName}`.trim() === "Spencer Colety"
-      ? "Starter profile. Replace this with real family stories when you are ready."
-      : "Starter profile for the Colety family tree. Add photos, memories, and better details as you go.",
+      ? "Part of the Colety family tree. Add favorite stories, photos, and details when you are ready."
+      : "Part of the Colety family tree. Add favorite memories, photos, and details as the family fills this in.",
   };
 }
 

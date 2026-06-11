@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260522-11";
+import { db, storage } from "./firebase.js?v=20260610-12";
 import {
   doc,
   getDoc,
@@ -33,10 +33,10 @@ import {
   resolvePersonParentIds,
   resolvePersonSpouseIds,
   safeImageFileName,
-} from "./helpers.js?v=20260522-11";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
-import { getAuthUserOnce } from "./familyContext.js?v=20260522-11";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260610-12";
+import { getAuthUserOnce } from "./familyContext.js?v=20260610-12";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260610-12";
 
 
 let personId = null;
@@ -62,6 +62,7 @@ const PROFILE_SOURCE_ROUTES = {
 
 const EMPTY_RELATIONSHIP_LABEL = "None listed";
 const EMPTY_BIO_LABEL = "No story has been added yet. Add a favorite memory, nickname, or bit of family context when this becomes a private family tree.";
+const DEFAULT_MEMORY_SUMMARY = "Open a profile to see which stories, photos, and family details are already here.";
 
 function getProfileSourceFromParams(params = new URLSearchParams(window.location.search)) {
   const from = params.get("from");
@@ -153,6 +154,63 @@ function setFactText(id, value, { empty = false } = {}) {
 function setProfileStoryLead(message = "") {
   const element = document.getElementById("profileStoryLead");
   if (element) element.textContent = message || "Profiles collect the person, relationships, photos, and family notes in one place.";
+}
+
+function setProfileMemoryPanel({
+  fullName = "",
+  hasBirthday = false,
+  hasBio = false,
+  hasPhoto = false,
+  parentItems = [],
+  spouseItems = [],
+  children = [],
+  summary = "",
+  prompts = [],
+} = {}) {
+  const summaryEl = document.getElementById("profileMemorySummary");
+  const promptsEl = document.getElementById("profileMemoryPrompts");
+  if (!summaryEl || !promptsEl) return;
+
+  const firstName = getFirstNameForLead(fullName);
+  const hasRelationships = parentItems.length > 0 || spouseItems.length > 0 || children.length > 0;
+  const notes = [...prompts];
+
+  if (notes.length === 0 && !hasBio) {
+    notes.push(`Add a favorite memory, nickname, or story about ${firstName}.`);
+  }
+  if (notes.length === 0 && !hasPhoto) {
+    notes.push(`Add a photo that family members will recognize.`);
+  }
+  if (notes.length === 0 && !hasBirthday) {
+    notes.push(`Add a birthday or approximate year if the exact date is not known.`);
+  }
+  if (notes.length === 0 && !hasRelationships) {
+    notes.push(`Connect parents, a partner, or children when they are added to the tree.`);
+  }
+  if (notes.length === 0) {
+    notes.push(`Keep adding small memories over time: places, traditions, photos, or favorite stories.`);
+  }
+
+  if (summary) {
+    summaryEl.textContent = summary;
+  } else if (profileDemoContext) {
+    summaryEl.textContent = "This read-only example shows where a private family tree can collect story notes without making the profile feel cluttered.";
+  } else if (hasBio || hasPhoto || hasRelationships) {
+    const pieces = [];
+    if (hasBio) pieces.push("a story note");
+    if (hasPhoto) pieces.push("a photo");
+    if (hasRelationships) pieces.push("family connections");
+    summaryEl.textContent = `${firstName}'s profile already includes ${pieces.join(", ")}. This section can grow as relatives add more context.`;
+  } else {
+    summaryEl.textContent = `${firstName}'s profile is ready for memories, photos, and family context when the family fills it in.`;
+  }
+
+  promptsEl.replaceChildren();
+  notes.slice(0, 4).forEach(note => {
+    const item = document.createElement("li");
+    item.textContent = note;
+    promptsEl.appendChild(item);
+  });
 }
 
 function getProfileInitials(name) {
@@ -251,6 +309,11 @@ function setProfileUnavailable({
   setFactText("children", children, { empty: /-|unknown|private/i.test(String(children)) });
   setFactText("bio", bio, { empty: /-|no matching|private|belongs to/i.test(String(bio)) });
   setFactText("funFact", funFact, { empty: /-|sign in|open a family|birthday/i.test(String(funFact)) });
+  setProfileMemoryPanel({
+    fullName: title || "This profile",
+    summary: storyLead || status || DEFAULT_MEMORY_SUMMARY,
+    prompts: [editMessage || "Open a family member from the tree to see their notes."],
+  });
   clearProfilePhoto({
     isPrivate: /private|sign in/i.test(`${status} ${bio} ${birthday}`),
     placeholderTitle: /private|sign in/i.test(`${status} ${bio} ${birthday}`)
@@ -391,14 +454,34 @@ function fillRelationshipSelect(select, people, selectedId, placeholder) {
 
   people
     .filter(person => person.id !== personId)
+    .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)))
     .forEach(person => {
       const option = document.createElement("option");
       option.value = person.id;
-      option.textContent = getDisplayName(person);
+      option.textContent = getRelationshipOptionLabel(person);
       select.appendChild(option);
     });
 
-  select.value = selectedId || "";
+  select.value = [...select.options].some(option => option.value === selectedId) ? selectedId : "";
+}
+
+function getPersonBirthYear(person) {
+  const birthDate = person?.birthDate;
+  if (!birthDate) return "";
+  if (typeof birthDate.toDate === "function") {
+    return String(birthDate.toDate().getFullYear());
+  }
+  if (birthDate instanceof Date) {
+    return String(birthDate.getFullYear());
+  }
+  const parsedDate = new Date(birthDate);
+  return Number.isNaN(parsedDate.getTime()) ? "" : String(parsedDate.getFullYear());
+}
+
+function getRelationshipOptionLabel(person) {
+  const name = getDisplayName(person);
+  const birthYear = getPersonBirthYear(person);
+  return birthYear ? `${name} - born ${birthYear}` : name;
 }
 
 function resolveLegacyPersonId(name) {
@@ -544,7 +627,8 @@ async function loadProfile() {
     setProfileStatus("");
 
     // BIRTHDATE
-    if (data.birthDate && typeof data.birthDate.toDate === "function") {
+    const hasBirthday = Boolean(data.birthDate && typeof data.birthDate.toDate === "function");
+    if (hasBirthday) {
       setFactText("birthDate", data.birthDate
         .toDate()
         .toLocaleDateString("en-US", {
@@ -638,8 +722,18 @@ async function loadProfile() {
       hasPhoto: Boolean(data.image),
     });
 
+    setProfileMemoryPanel({
+      fullName,
+      hasBirthday,
+      hasBio: Boolean(data.bio),
+      hasPhoto: Boolean(data.image),
+      parentItems,
+      spouseItems,
+      children,
+    });
+
     // FUN FACT
-    if (data.birthDate && typeof data.birthDate.toDate === "function") {
+    if (hasBirthday) {
         const birthDate = data.birthDate.toDate();
         await fetchFunFact(birthDate);
     } else {
@@ -790,6 +884,8 @@ function createRelationshipLink(person) {
   link.href = `/profile?${params.toString()}`;
   link.className = "profile-relation-link";
   link.textContent = getDisplayName(person);
+  link.title = `Open ${getDisplayName(person)}'s profile`;
+  link.setAttribute("aria-label", link.title);
   return link;
 }
 
@@ -815,7 +911,10 @@ function renderRelationshipList(elementId, items, emptyText, joinWord = "and") {
     if (item.person) {
       element.appendChild(createRelationshipLink(item.person));
     } else {
-      element.append(item.label);
+      const label = document.createElement("span");
+      label.className = "profile-relation-label";
+      label.textContent = item.label;
+      element.append(label);
     }
   });
 }
@@ -1006,6 +1105,21 @@ if (editForm) {
 
     if (rawImageUrl && !normalizedImageUrl) {
       showEditValidationError("Use a secure https:// photo URL, or upload an image file instead.", document.getElementById("editImageUrl"));
+      finishSubmit();
+      return;
+    }
+
+    if (rawImageUrl && imageFile) {
+      setEditFieldInvalid(document.getElementById("editImageUrl"), true);
+      showEditValidationError("Choose either a photo URL or an upload, not both.", imageFileInput);
+      finishSubmit();
+      return;
+    }
+
+    const isReplacingUrlWhileRemoving = Boolean(removeImage && rawImageUrl && rawImageUrl !== currentProfileImageUrl);
+    if (removeImage && (isReplacingUrlWhileRemoving || imageFile)) {
+      setEditFieldInvalid(document.getElementById("removeImage"), true);
+      showEditValidationError("Choose either a new photo or remove the current one.", isReplacingUrlWhileRemoving ? document.getElementById("editImageUrl") : imageFileInput);
       finishSubmit();
       return;
     }

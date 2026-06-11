@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase.js?v=20260522-11";
+import { db, storage } from "./firebase.js?v=20260610-12";
 import {
   addDoc,
   collection,
@@ -23,8 +23,8 @@ import {
   normalizeImageUrl,
   prepareImageFileForUpload,
   safeImageFileName,
-} from "./helpers.js?v=20260522-11";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260610-12";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
@@ -137,6 +137,25 @@ function getSelectedPerson(selectId) {
   return peopleOptions.find(person => person.id === select.value) || null;
 }
 
+function getPersonBirthYear(person) {
+  const birthDate = person?.birthDate;
+  if (!birthDate) return "";
+  if (typeof birthDate.toDate === "function") {
+    return String(birthDate.toDate().getFullYear());
+  }
+  if (birthDate instanceof Date) {
+    return String(birthDate.getFullYear());
+  }
+  const parsedDate = new Date(birthDate);
+  return Number.isNaN(parsedDate.getTime()) ? "" : String(parsedDate.getFullYear());
+}
+
+function getRelationshipOptionLabel(person) {
+  const name = getDisplayName(person);
+  const year = getPersonBirthYear(person);
+  return year ? `${name} - born ${year}` : name;
+}
+
 function populateRelationshipSelects(people) {
   const selects = ["parent1", "parent2", "spouse"]
     .map(id => document.getElementById(id))
@@ -152,14 +171,16 @@ function populateRelationshipSelects(people) {
     emptyOption.textContent = placeholder;
     select.appendChild(emptyOption);
 
-    people.forEach(person => {
+    [...people]
+      .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)))
+      .forEach(person => {
       const option = document.createElement("option");
       option.value = person.id;
-      option.textContent = getDisplayName(person);
+      option.textContent = getRelationshipOptionLabel(person);
       select.appendChild(option);
     });
 
-    select.value = currentValue;
+    select.value = [...select.options].some(option => option.value === currentValue) ? currentValue : "";
   });
 }
 
@@ -212,6 +233,13 @@ if (form) {
     refreshRelationshipOptions().catch(error => {
       console.error("Error loading relationship options:", error);
       setStatus("Could not load relationship options. Refresh the page if parent or spouse choices are missing.");
+    });
+  });
+
+  window.addEventListener("add-person-modal-opened", () => {
+    refreshRelationshipOptions().catch(error => {
+      console.error("Error refreshing relationship options:", error);
+      setStatus("Could not refresh relationship choices. You can still type basics and save, then reload.");
     });
   });
 }
@@ -307,6 +335,13 @@ if(form) {
       if (submitButton) submitButton.disabled = false;
       return;
     }
+
+    if (rawImageUrl && imageFile) {
+      setFieldInvalid(imageUrlInput, true);
+      showValidationError("Choose either a photo URL or an upload, not both.", document.getElementById("personImageFile"));
+      if (submitButton) submitButton.disabled = false;
+      return;
+    }
     
     let spouseFirstName = "";
     let spouseLastName = "";
@@ -357,6 +392,7 @@ if(form) {
         const personRef = doc(collection(db, collectionName));
         savedPersonId = personRef.id;
         try {
+          setStatus("Uploading photo...");
           personData.image = await uploadPersonImage(familyId, personRef.id, imageFile);
         } catch (error) {
           console.error("Error uploading person photo:", error);

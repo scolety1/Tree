@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260522-11";
+import { db } from "./firebase.js?v=20260610-12";
 import {
   collection,
   deleteDoc,
@@ -14,20 +14,21 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260522-11";
+import { watchAuth } from "./auth.js?v=20260610-12";
 import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
   generateAccessCode,
   getFamilyRole,
   getStoredFamilyId,
+  normalizeRelationshipIds,
   setFamilyId,
-} from "./helpers.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
 import {
   STARTER_TREE_ID,
   STARTER_TREE_NAME,
   createStarterColetyTree,
-} from "./starterTree.js?v=20260522-11";
+} from "./starterTree.js?v=20260610-12";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
@@ -70,7 +71,12 @@ function getTreeInviteUrl(tree) {
 function hasMeaningfulBio(person) {
   const bio = String(person?.bio || "").trim();
   if (!bio) return false;
-  return !bio.toLowerCase().startsWith("starter profile");
+  const lowerBio = bio.toLowerCase();
+  return !(
+    lowerBio.startsWith("starter profile") ||
+    lowerBio.includes("placeholder") ||
+    lowerBio.includes("for testing")
+  );
 }
 
 function hasBirthDate(person) {
@@ -83,13 +89,174 @@ function hasProfilePhoto(person) {
 
 function hasRelationshipData(person, linkedPersonIds) {
   return Boolean(
-    (Array.isArray(person?.parentIds) && person.parentIds.length > 0) ||
-    (Array.isArray(person?.spouseIds) && person.spouseIds.length > 0) ||
+    normalizeRelationshipIds(person?.parentIds).length > 0 ||
+    normalizeRelationshipIds(person?.spouseIds).length > 0 ||
     person?.parent1 ||
     person?.parent2 ||
     person?.spouse ||
     linkedPersonIds.has(person.id)
   );
+}
+
+function getPersonDisplayName(person) {
+  const firstName = String(person?.firstName || "").trim();
+  const lastName = String(person?.lastName || "").trim();
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  return name || person?.id || "Unnamed person";
+}
+
+function normalizeHealthText(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function createHealthIssue(label, detail, severity = "warning") {
+  return { label, detail, severity };
+}
+
+function summarizeRelationshipHealth(people) {
+  const idToPerson = new Map();
+  const issues = [];
+
+  people.forEach(person => {
+    if (person?.id && !idToPerson.has(person.id)) {
+      idToPerson.set(person.id, person);
+    }
+  });
+
+  people.forEach(person => {
+    const name = getPersonDisplayName(person);
+    const parentIds = normalizeRelationshipIds(person.parentIds);
+    const spouseIds = normalizeRelationshipIds(person.spouseIds);
+
+    if (typeof person.parentIds === "string") {
+      issues.push(createHealthIssue("Legacy parent IDs", `${name} stores parent IDs as text. The app can read it, but saving this profile will modernize it.`));
+    }
+
+    if (typeof person.spouseIds === "string") {
+      issues.push(createHealthIssue("Legacy spouse IDs", `${name} stores spouse IDs as text. The app can read it, but saving this profile will modernize it.`));
+    }
+
+    parentIds.forEach(parentId => {
+      if (parentId === person.id) {
+        issues.push(createHealthIssue("Self parent link", `${name} lists themselves as a parent.`, "error"));
+      } else if (!idToPerson.has(parentId)) {
+        issues.push(createHealthIssue("Missing parent", `${name} points to missing parent ID ${parentId}.`, "error"));
+      }
+    });
+
+    spouseIds.forEach(spouseId => {
+      if (spouseId === person.id) {
+        issues.push(createHealthIssue("Self spouse link", `${name} lists themselves as spouse/partner.`, "error"));
+        return;
+      }
+
+      const spouse = idToPerson.get(spouseId);
+      if (!spouse) {
+        issues.push(createHealthIssue("Missing spouse", `${name} points to missing spouse ID ${spouseId}.`, "error"));
+        return;
+      }
+
+      if (!normalizeRelationshipIds(spouse.spouseIds).includes(person.id)) {
+        issues.push(createHealthIssue(
+          "One-way spouse link",
+          `${name} lists ${getPersonDisplayName(spouse)}, but ${getPersonDisplayName(spouse)} does not list them back.`
+        ));
+      }
+    });
+
+    if (parentIds.length > 2) {
+      issues.push(createHealthIssue("Many parents", `${name} has ${parentIds.length} parent links. Confirm this is intentional.`));
+    }
+
+    if (parentIds.length >= 2) {
+      const knownParents = parentIds
+        .map(parentId => idToPerson.get(parentId))
+        .filter(Boolean);
+
+      for (let i = 0; i < knownParents.length; i += 1) {
+        for (let j = i + 1; j < knownParents.length; j += 1) {
+          const parentA = knownParents[i];
+          const parentB = knownParents[j];
+          const parentASpouses = normalizeRelationshipIds(parentA.spouseIds);
+          const parentBSpouses = normalizeRelationshipIds(parentB.spouseIds);
+
+          if (!parentASpouses.includes(parentB.id) && !parentBSpouses.includes(parentA.id)) {
+            issues.push(createHealthIssue(
+              "Parent pair not linked",
+              `${name} lists ${getPersonDisplayName(parentA)} and ${getPersonDisplayName(parentB)} as parents, but those parent profiles are not linked as spouses/partners.`
+            ));
+          }
+        }
+      }
+    }
+  });
+
+  const linkedPersonIds = new Set();
+  people.forEach(person => {
+    normalizeRelationshipIds(person.parentIds).forEach(id => linkedPersonIds.add(id));
+    normalizeRelationshipIds(person.spouseIds).forEach(id => linkedPersonIds.add(id));
+  });
+
+  const disconnected = people
+    .filter(person => !hasRelationshipData(person, linkedPersonIds))
+    .map(getPersonDisplayName);
+
+  return {
+    issues,
+    disconnected,
+    errorCount: issues.filter(issue => issue.severity === "error").length,
+    warningCount: issues.filter(issue => issue.severity !== "error").length + disconnected.length,
+  };
+}
+
+function getDuplicateTreeIssues(tree, allTrees) {
+  if (!Array.isArray(allTrees) || allTrees.length <= 1) return [];
+
+  const treeName = normalizeHealthText(tree.name);
+  const sameNameTrees = allTrees.filter(other => (
+    other.id !== tree.id &&
+    treeName &&
+    normalizeHealthText(other.name) === treeName
+  ));
+
+  const flaggedTrees = allTrees.filter(other => (
+    other.id !== tree.id &&
+    (other.starterTree || other.birthdayDemoTree) &&
+    (tree.starterTree || tree.birthdayDemoTree)
+  ));
+
+  const issues = [];
+  if (sameNameTrees.length > 0) {
+    issues.push(createHealthIssue(
+      "Similar family tree",
+      `${sameNameTrees.length} other accessible tree${sameNameTrees.length === 1 ? "" : "s"} use the same name. Confirm you are opening the right one.`
+    ));
+  }
+
+  if (flaggedTrees.length > 0) {
+    issues.push(createHealthIssue(
+      "Multiple primary trees",
+      `${flaggedTrees.length} other accessible tree${flaggedTrees.length === 1 ? " is" : "s are"} marked as a primary birthday tree.`
+    ));
+  }
+
+  return issues;
+}
+
+function createAccountHealthReport(tree, allTrees = []) {
+  const people = tree.prepSummary?.people || [];
+  const relationshipReport = summarizeRelationshipHealth(people);
+  const duplicateTreeIssues = getDuplicateTreeIssues(tree, allTrees);
+  const issues = [...duplicateTreeIssues, ...relationshipReport.issues];
+  const warningCount = relationshipReport.warningCount + duplicateTreeIssues.length;
+
+  return {
+    peopleCount: people.length,
+    issues,
+    disconnected: relationshipReport.disconnected,
+    errorCount: relationshipReport.errorCount,
+    warningCount,
+  };
 }
 
 function buildInviteMessage(tree, variant = "friendly") {
@@ -119,7 +286,7 @@ function createChecklistItem({ label, detail, status = "todo", href = "" }) {
   const marker = document.createElement("span");
   marker.className = "birthday-prep-marker";
   marker.setAttribute("aria-hidden", "true");
-  marker.textContent = status === "done" ? "✓" : status === "review" ? "!" : "•";
+  marker.textContent = status === "done" ? "Ã¢Å“â€œ" : status === "review" ? "!" : "Ã¢â‚¬Â¢";
   item.appendChild(marker);
 
   const copy = document.createElement("span");
@@ -175,7 +342,7 @@ function createBirthdayPrepChecklist(tree, isOwner) {
     label: "Photos",
     detail: peopleCount
       ? prep.photoCount > 0
-        ? `${prep.photoCount} profile${prep.photoCount === 1 ? "" : "s"} include family photos. Add more whenever you have them.`
+        ? `${prep.photoCount} profile${prep.photoCount === 1 ? "" : "s"} include profile images. Replace temporary avatars with real family photos whenever you have them.`
         : "No photos yet. The tree still works with initials until the family adds pictures."
       : "Add people first, then photos can come later.",
     status: peopleCount > 0 && prep.photoCount === peopleCount ? "done" : "todo",
@@ -223,6 +390,86 @@ function createBirthdayPrepChecklist(tree, isOwner) {
 
   section.appendChild(list);
   return section;
+}
+
+function createAccountHealthDetails(tree, isOwner) {
+  if (!isOwner) return null;
+
+  const report = tree.healthReport;
+  if (!report) return null;
+
+  const totalNotes = report.errorCount + report.warningCount;
+  const details = document.createElement("details");
+  details.className = "tree-health-details";
+
+  const summary = document.createElement("summary");
+  const label = document.createElement("span");
+  label.textContent = "Tree data health";
+  const note = document.createElement("small");
+  note.textContent = totalNotes === 0
+    ? "No relationship issues found"
+    : `${totalNotes} ${totalNotes === 1 ? "note" : "notes"} to review`;
+  summary.append(label, note);
+  details.appendChild(summary);
+
+  const intro = document.createElement("p");
+  intro.className = "tree-health-note";
+  intro.textContent = "Owner-only read-only check. Nothing changes here; use it to spot broken links, old relationship formats, or duplicate tree records before sharing.";
+  details.appendChild(intro);
+
+  const scoreList = document.createElement("div");
+  scoreList.className = "tree-health-scores";
+  [
+    ["Errors", report.errorCount],
+    ["Warnings", report.warningCount],
+    ["People", report.peopleCount],
+  ].forEach(([scoreLabel, value]) => {
+    const score = document.createElement("span");
+    score.className = "tree-health-score";
+    const valueEl = document.createElement("strong");
+    valueEl.textContent = String(value);
+    const labelEl = document.createElement("small");
+    labelEl.textContent = scoreLabel;
+    score.append(valueEl, labelEl);
+    scoreList.appendChild(score);
+  });
+  details.appendChild(scoreList);
+
+  const issues = [
+    ...report.issues,
+    ...report.disconnected.map(name => createHealthIssue("Disconnected profile", `${name} is not connected to parents, spouse/partner, or children yet.`)),
+  ];
+
+  if (issues.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "tree-health-empty";
+    empty.textContent = "This tree is in good shape for the current account checks.";
+    details.appendChild(empty);
+    return details;
+  }
+
+  const list = document.createElement("ul");
+  list.className = "tree-health-list";
+  issues.slice(0, 8).forEach(issue => {
+    const item = document.createElement("li");
+    item.className = `tree-health-issue is-${issue.severity === "error" ? "error" : "warning"}`;
+    const issueLabel = document.createElement("strong");
+    issueLabel.textContent = issue.label;
+    const issueDetail = document.createElement("span");
+    issueDetail.textContent = issue.detail;
+    item.append(issueLabel, issueDetail);
+    list.appendChild(item);
+  });
+
+  if (issues.length > 8) {
+    const extra = document.createElement("li");
+    extra.className = "tree-health-issue";
+    extra.textContent = `+${issues.length - 8} more notes. Open the tree Data checks panel for a fuller review.`;
+    list.appendChild(extra);
+  }
+
+  details.appendChild(list);
+  return details;
 }
 
 async function generateAvailableJoinCode() {
@@ -431,6 +678,11 @@ function createTreeCard(tree) {
   const prepChecklist = createBirthdayPrepChecklist(tree, isOwner);
   if (prepChecklist) {
     detailsWrap.appendChild(prepChecklist);
+  }
+
+  const healthDetails = createAccountHealthDetails(tree, isOwner);
+  if (healthDetails) {
+    detailsWrap.appendChild(healthDetails);
   }
 
   const memberDetails = document.createElement("details");
@@ -680,12 +932,13 @@ async function loadBirthdayPrepSummary(familyId) {
     const linkedPersonIds = new Set();
 
     people.forEach(person => {
-      (Array.isArray(person.parentIds) ? person.parentIds : []).forEach(id => linkedPersonIds.add(id));
-      (Array.isArray(person.spouseIds) ? person.spouseIds : []).forEach(id => linkedPersonIds.add(id));
+      normalizeRelationshipIds(person.parentIds).forEach(id => linkedPersonIds.add(id));
+      normalizeRelationshipIds(person.spouseIds).forEach(id => linkedPersonIds.add(id));
     });
 
     return {
       peopleCount: people.length,
+      people,
       photoCount: people.filter(hasProfilePhoto).length,
       missingBirthdays: people.filter(person => !hasBirthDate(person)).length,
       missingBios: people.filter(person => !hasMeaningfulBio(person)).length,
@@ -1088,13 +1341,13 @@ async function loadFamilyTrees(user) {
     }
 
     if (docs.length === 0) {
-      setStatus("Creating a starter Colety family tree...", "loading");
+      setStatus("Preparing your Colety family tree...", "loading");
       renderDashboardLoadingState();
       try {
         await createAndRenderStarterTree(user);
       } catch (error) {
         console.error("Error creating starter tree:", error);
-        setStatus("Could not create the starter family tree. You can still start one manually.", "error");
+        setStatus("Could not prepare the Colety family tree. You can still start one manually.", "error");
         renderDashboardEmptyState();
       }
       return;
@@ -1108,13 +1361,13 @@ async function loadFamilyTrees(user) {
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     if (activeTrees.length === 0) {
-      setStatus("Creating a starter Colety family tree...", "loading");
+      setStatus("Preparing your Colety family tree...", "loading");
       renderDashboardLoadingState();
       try {
         await createAndRenderStarterTree(user);
       } catch (error) {
         console.error("Error creating starter tree:", error);
-        setStatus("Could not create the starter family tree. You can still start one manually.", "error");
+        setStatus("Could not prepare the Colety family tree. You can still start one manually.", "error");
         renderDashboardEmptyState();
       }
       return;
@@ -1128,6 +1381,7 @@ async function loadFamilyTrees(user) {
     }
 
     activeTrees.forEach(tree => {
+      tree.healthReport = createAccountHealthReport(tree, activeTrees);
       listEl.appendChild(createTreeCard(tree));
     });
   } catch (error) {

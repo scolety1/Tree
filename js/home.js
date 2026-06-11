@@ -1,5 +1,5 @@
 // js/home.js
-import { db } from "./firebase.js?v=20260522-11";
+import { db } from "./firebase.js?v=20260610-12";
 import {
   addDoc,
   collection,
@@ -16,8 +16,8 @@ import {
     generateAccessCode,
     normalizeAccessCode,
     setFamilyId,
-} from "./helpers.js?v=20260522-11";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260522-11";
+} from "./helpers.js?v=20260610-12";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260610-12";
 
 const createTreeBtn      = document.getElementById("createTreeBtn");
 const joinTreeBtn        = document.getElementById("joinTreeBtn");

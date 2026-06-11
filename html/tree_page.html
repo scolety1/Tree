@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260522-11">
-    <link rel="stylesheet" href="/css/family_tree.css?v=20260522-11">
+    <link rel="stylesheet" href="/css/global.css?v=20260610-12">
+    <link rel="stylesheet" href="/css/family_tree.css?v=20260610-12">
 
 </head>
 <body class="is-auth-loading">
@@ -53,6 +53,13 @@
             <span>drag or scroll to move around the tree. Use Find person to jump to someone.</span>
         </div>
         <div id="treePresentationEscapeBar" class="tree-presentation-escape-bar" aria-label="Presentation controls" hidden>
+            <form id="treePresentationFindForm" class="tree-presentation-find" role="search" aria-label="Find a person in presentation view">
+                <label class="sr-only" for="treePresentationFindInput">Find person</label>
+                <input id="treePresentationFindInput" type="search" list="treePersonList" placeholder="Find person" autocomplete="off" spellcheck="false" aria-describedby="treePresentationStatus">
+                <button class="button button-secondary" type="submit">
+                    Find
+                </button>
+            </form>
             <button id="treePresentationExitBtn" class="button" type="button">
                 Exit presentation
             </button>
@@ -70,6 +77,7 @@
                     Reset
                 </button>
             </div>
+            <span id="treePresentationStatus" class="tree-presentation-status" role="status" aria-live="polite"></span>
         </div>
         
         <div id="joinCodeDisplay" class="join-code-display" style="display: none;">
@@ -144,6 +152,7 @@
                     </div>
                     <h2 id="treeSelectedPersonName">Choose someone</h2>
                     <p id="treeSelectedPersonMeta" class="tree-selected-meta">Use Find person or click a card in the family map.</p>
+                    <p id="treeSelectedBranchNote" class="tree-selected-branch-note">Select someone to see their closest relatives and branch context.</p>
                     <dl class="tree-selected-details">
                         <div>
                             <dt>Birthday</dt>
@@ -170,6 +179,17 @@
                     </div>
                 </section>
                 <div class="tree-view-actions" aria-label="Map actions">
+                    <div class="tree-map-control-grid" role="group" aria-label="Quick map controls">
+                        <button id="treeMapOverviewBtn" class="button button-secondary" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout">
+                            Full overview
+                        </button>
+                        <button id="treeMapZoomInBtn" class="button button-secondary" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView">
+                            Zoom in
+                        </button>
+                        <button id="treeMapZoomOutBtn" class="button button-secondary" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView">
+                            Zoom out
+                        </button>
+                    </div>
                     <button id="treeFullscreenBtn" class="button button-secondary" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout">
                         Full screen map
                     </button>
@@ -218,15 +238,16 @@
                         <span>Relationship finder</span>
                         <small>Connect two relatives</small>
                     </summary>
+                    <p class="relationship-finder-intro">Pick any two people and get the family-gathering answer in plain English.</p>
                     <form id="relationshipFinderForm" class="relationship-finder-form" aria-describedby="relationshipFinderResult">
                         <div class="relationship-person-field">
                             <label for="relationshipPersonA">Person one</label>
-                            <input id="relationshipPersonA" type="search" placeholder="Type a name" autocomplete="off" aria-autocomplete="list" aria-controls="relationshipPersonASuggestions" aria-expanded="false">
+                            <input id="relationshipPersonA" type="search" placeholder="Type a name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-autocomplete="list" aria-controls="relationshipPersonASuggestions" aria-expanded="false">
                             <div id="relationshipPersonASuggestions" class="relationship-suggestions" role="listbox" aria-label="Person one suggestions" hidden></div>
                         </div>
                         <div class="relationship-person-field">
                             <label for="relationshipPersonB">Person two</label>
-                            <input id="relationshipPersonB" type="search" placeholder="Type a name" autocomplete="off" aria-autocomplete="list" aria-controls="relationshipPersonBSuggestions" aria-expanded="false">
+                            <input id="relationshipPersonB" type="search" placeholder="Type a name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-autocomplete="list" aria-controls="relationshipPersonBSuggestions" aria-expanded="false">
                             <div id="relationshipPersonBSuggestions" class="relationship-suggestions" role="listbox" aria-label="Person two suggestions" hidden></div>
                         </div>
                         <button class="button" type="submit">Find Relationship</button>
@@ -318,21 +339,23 @@
                     <input type="date" id="birthDate">
                     <label for="personBio">Bio note (optional)</label>
                     <textarea id="personBio" rows="3" placeholder="A short memory, nickname, or context for this person"></textarea>
-                    <label for="personImageUrl">Photo URL (optional)</label>
-                    <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg">
-                    <label for="personImageFile">Upload photo (optional)</label>
-                    <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif">
-                    <p id="personImageHelp" class="field-note">Photos must be JPG, PNG, WebP, or GIF and under 5 MB.</p>
+                    <div class="photo-choice-panel">
+                        <label for="personImageUrl">Photo URL (optional)</label>
+                        <input type="url" id="personImageUrl" placeholder="https://example.com/photo.jpg" aria-describedby="personImageHelp">
+                        <label for="personImageFile">Upload photo (optional)</label>
+                        <input type="file" id="personImageFile" accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif" aria-describedby="personImageHelp">
+                        <p id="personImageHelp" class="field-note">Use either a secure photo URL or an uploaded JPG, PNG, WebP, or GIF under 5 MB.</p>
+                    </div>
                     <fieldset class="form-fieldset">
                         <legend>Relationships</legend>
-                        <p id="relationshipHelp" class="field-note">Leave a relationship blank when it is unknown or the person has not been added yet. Add parents first when you can.</p>
+                        <p id="relationshipHelp" class="field-note">Choose relatives already in this tree. Parent order does not matter, and blank is fine when someone is not listed yet.</p>
                         <label for="parent1">Parent one (optional)</label>
                         <select id="parent1" aria-describedby="relationshipHelp">
-                            <option value="">Unknown / not listed yet</option>
+                            <option value="">Not listed yet</option>
                         </select>
                         <label for="parent2">Parent two (optional)</label>
                         <select id="parent2" aria-describedby="relationshipHelp">
-                            <option value="">Unknown / not listed yet</option>
+                            <option value="">Not listed yet</option>
                         </select>
                         <label for="spouse">Spouse or partner (optional)</label>
                         <select id="spouse" aria-describedby="relationshipHelp">
@@ -346,9 +369,9 @@
     </main>
         
     <footer>
-        <small>Copyright &copy; <span id="year"></span> Family Tree App</small>
+        <small>Copyright &copy; <span id="year"></span> Family Tree</small>
     </footer>
 
-    <script type="module" src="/js/main.js?v=20260522-11"></script>
+    <script type="module" src="/js/main.js?v=20260610-12"></script>
 </body>
 </html>
