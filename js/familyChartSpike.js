@@ -388,8 +388,8 @@ function getProfileUrl(personId, options = {}) {
 
 function formatChartStatus() {
   const label = currentSource.source === "demo-fallback"
-    ? "Showing demo chart"
-    : currentSource.isDemo ? "Demo chart" : "Private family chart";
+    ? "Showing example chart"
+    : currentSource.isDemo ? "Example chart" : "Private family chart";
   const sourceDetail = currentSource.isDemo
     ? ""
     : "";
@@ -397,7 +397,7 @@ function formatChartStatus() {
     ? " Sign in to preview the requested private family tree."
     : "";
   const warningDetail = relationshipAudit.warnings.length > 0
-    ? ` ${relationshipAudit.warnings.length} relationship note${relationshipAudit.warnings.length === 1 ? "" : "s"} need review.`
+    ? ` ${relationshipAudit.warnings.length} family connection note${relationshipAudit.warnings.length === 1 ? "" : "s"} need review.`
     : "";
 
   return `${label}: loaded ${chartData.length} people and their family connections.${warningDetail}${sourceDetail}${fallbackDetail}`;
@@ -410,7 +410,7 @@ function updateMappingStatus() {
   }
 
   setMappingStatus(
-    `${relationshipAudit.warnings.length} relationship mapping note${relationshipAudit.warnings.length === 1 ? "" : "s"}: ${relationshipAudit.warnings.slice(0, 2).join(" ")}${relationshipAudit.warnings.length > 2 ? " More are available in the browser console." : ""}`,
+    `${relationshipAudit.warnings.length} family connection note${relationshipAudit.warnings.length === 1 ? "" : "s"}: ${relationshipAudit.warnings.slice(0, 2).join(" ")}${relationshipAudit.warnings.length > 2 ? " Review relationships if something looks off." : ""}`,
     "warning"
   );
   console.warn("Family Chart relationship mapping notes:", relationshipAudit.warnings);
@@ -765,7 +765,7 @@ async function loadSpikePeople() {
   const resolvedFamily = await resolveCurrentUserFamilyId();
   if (!resolvedFamily.user || !resolvedFamily.familyId) {
     currentSource = { familyId: null, canEdit: false, isDemo: true, source: "demo-fallback" };
-    setStatus("Sign in to preview your private tree here. Showing the large demo chart for now.");
+    setStatus("Sign in to preview your private tree here. Showing the large example chart for now.");
     return generateLargeDemoTree();
   }
 

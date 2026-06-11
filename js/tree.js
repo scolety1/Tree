@@ -2023,7 +2023,7 @@ function renderMissingInfoChecklist(people, familyId = null, options = {}) {
     : `${rows.length} profiles need attention`;
   const summaryCopy = document.createElement("span");
   summaryCopy.textContent = options.isDemoMode
-    ? "Demo profiles are read-only, but this shows what the checklist will catch."
+    ? "Example profiles are read-only, but this shows what the checklist will catch."
     : "Open a profile to fill in the quickest wins first.";
   summary.append(summaryTitle, summaryCopy);
   panel.appendChild(summary);
@@ -2528,7 +2528,7 @@ function renderDataHealthInspector(people, options = {}) {
     : `${totalNotes} data health ${totalNotes === 1 ? "note" : "notes"} found`;
   const copy = document.createElement("span");
   copy.textContent = options.isDemoMode
-    ? "Public demo data is read-only. This shows the kinds of family details a private tree can keep organized."
+    ? "Example tree data is read-only. This shows the kinds of family details a private tree can keep organized."
     : "Read-only check. It does not change people, photos, or relationships.";
   summary.append(title, copy);
   panel.appendChild(summary);

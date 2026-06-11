@@ -70,7 +70,7 @@ function getProfileSourceFromParams(params = new URLSearchParams(window.location
 
   if (PROFILE_SOURCE_ROUTES[from]) return from;
   if (source === "search" || source === "directory") return "search";
-  if (params.has("query") || params.has("sort")) return "search";
+  if (params.has("query") || params.has("searchQuery") || params.has("sort")) return "search";
   return "tree";
 }
 
@@ -815,7 +815,7 @@ function updateBackLink() {
   const source = PROFILE_SOURCE_ROUTES[profileSource] ? profileSource : "tree";
   const { path, label } = PROFILE_SOURCE_ROUTES[source];
   const params = new URLSearchParams(window.location.search);
-  const searchQuery = params.get("query") || "";
+  const searchQuery = params.get("query") || params.get("searchQuery") || "";
   const directorySort = params.get("sort") || "";
   const treeQuery = params.get("treeQuery") || "";
   const backParams = new URLSearchParams();
@@ -868,7 +868,7 @@ function createRelationshipLink(person) {
   }
   params.set("from", profileSource === "search" ? "search" : "tree");
   if (profileSource === "search") {
-    const searchQuery = currentParams.get("query") || "";
+    const searchQuery = currentParams.get("query") || currentParams.get("searchQuery") || "";
     const directorySort = currentParams.get("sort") || "";
     if (searchQuery) params.set("query", searchQuery);
     if (directorySort) params.set("sort", directorySort);
