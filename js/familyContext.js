@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260612-3";
+import { auth, db } from "./firebase.js?v=20260612-4";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
@@ -8,10 +8,10 @@ import {
   query,
   where,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260612-3";
+import { getStoredFamilyId, setFamilyId } from "./helpers.js?v=20260612-4";
 import {
   STARTER_TREE_ID,
-} from "./starterTree.js?v=20260612-3";
+} from "./starterTree.js?v=20260612-4";
 
 const STARTER_TREE_NAME = "Colety Family Tree";
 
@@ -62,6 +62,17 @@ async function getUserFamilyDocs(user) {
     .filter(result => result.status === "fulfilled")
     .flatMap(result => result.value.docs));
   const storedFamilyId = getStoredFamilyId();
+
+  if (!docs.some((docSnap) => docSnap.id === STARTER_TREE_ID)) {
+    try {
+      const starterFamilySnap = await getDoc(doc(db, "families", STARTER_TREE_ID));
+      if (starterFamilySnap.exists()) {
+        docs.push(starterFamilySnap);
+      }
+    } catch (error) {
+      console.warn("Could not load birthday family tree from family context:", error);
+    }
+  }
 
   if (storedFamilyId && !docs.some((docSnap) => docSnap.id === storedFamilyId)) {
     try {

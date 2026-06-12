@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260612-3";
+import { db, storage } from "./firebase.js?v=20260612-4";
 import {
   doc,
   getDoc,
@@ -34,10 +34,10 @@ import {
   resolvePersonParentIds,
   resolvePersonSpouseIds,
   safeImageFileName,
-} from "./helpers.js?v=20260612-3";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260612-3";
-import { getAuthUserOnce } from "./familyContext.js?v=20260612-3";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-3";
+} from "./helpers.js?v=20260612-4";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260612-4";
+import { getAuthUserOnce } from "./familyContext.js?v=20260612-4";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-4";
 
 
 let personId = null;

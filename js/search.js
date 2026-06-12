@@ -6,14 +6,14 @@ import {
   derivePersonChildren,
   resolvePersonParentIds,
   resolvePersonSpouseIds,
-} from "./helpers.js?v=20260612-3";
-import { db } from "./firebase.js?v=20260612-3";
+} from "./helpers.js?v=20260612-4";
+import { db } from "./firebase.js?v=20260612-4";
 import {
   doc,
   getDoc
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-3";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-3";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-4";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-4";
 
 let allPeople = [];
 let currentFamilyId = null;

@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260612-3";
+import { db } from "./firebase.js?v=20260612-4";
 import {
   collection,
   deleteDoc,
@@ -14,7 +14,7 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260612-3";
+import { watchAuth } from "./auth.js?v=20260612-4";
 import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
@@ -23,11 +23,11 @@ import {
   getStoredFamilyId,
   normalizeRelationshipIds,
   setFamilyId,
-} from "./helpers.js?v=20260612-3";
+} from "./helpers.js?v=20260612-4";
 import {
   STARTER_TREE_ID,
   STARTER_TREE_NAME,
-} from "./starterTree.js?v=20260612-3";
+} from "./starterTree.js?v=20260612-4";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
@@ -1313,6 +1313,17 @@ async function loadFamilyTrees(user) {
 
     const docs = dedupeTrees(successfulSnapshots.flatMap(snapshot => snapshot.docs));
     const storedFamilyId = getStoredFamilyId();
+
+    if (!docs.some(docSnap => docSnap.id === STARTER_TREE_ID)) {
+      try {
+        const starterFamilySnap = await getDoc(doc(db, "families", STARTER_TREE_ID));
+        if (starterFamilySnap.exists()) {
+          docs.push(starterFamilySnap);
+        }
+      } catch (error) {
+        console.warn("Could not load the birthday family tree for this account:", error);
+      }
+    }
 
     if (storedFamilyId && !docs.some(docSnap => docSnap.id === storedFamilyId)) {
       try {
