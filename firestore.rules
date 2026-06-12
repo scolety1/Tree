@@ -81,6 +81,17 @@ service cloud.firestore {
         && !('joinCodeAttempt' in request.resource.data);
     }
 
+    function changesPersonDeletionState() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'deletedAt',
+        'deletedBy',
+        'deletedReason',
+        'deletedSource',
+        'restoredAt',
+        'restoredBy'
+      ]);
+    }
+
     match /families/{familyId} {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
@@ -126,10 +137,14 @@ service cloud.firestore {
 
       allow update: if signedIn()
         && resource.data.familyId is string
-        && isFamilyEditor(resource.data.familyId);
-      allow delete: if signedIn()
-        && resource.data.familyId is string
-        && isFamilyOwner(resource.data.familyId);
+        && (
+          isFamilyOwner(resource.data.familyId)
+          || (
+            isFamilyEditor(resource.data.familyId)
+            && !changesPersonDeletionState()
+          )
+        );
+      allow delete: if false;
     }
 
     // Keep the example tree read-only once strict rules are deployed.

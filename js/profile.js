@@ -4,8 +4,8 @@ import {
   doc,
   getDoc,
   updateDoc,
-  deleteDoc,
   deleteField,
+  serverTimestamp,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
 
@@ -328,6 +328,7 @@ function setProfileUnavailable({
       : "This profile is ready for a favorite photo.",
   });
   profileCanEdit = false;
+  profileCanDelete = false;
   setProfileEditState({
     editable: false,
     message: editMessage,
@@ -1368,13 +1369,17 @@ if (deletePersonBtn) {
     }
 
     const confirmDelete = confirm(
-      "Are you sure you want to delete this person? This action cannot be undone."
+      "Remove this person from the active tree? This will hide them from the tree and directory."
     );
     if (!confirmDelete) return;
 
     try {
       setProfileStatus("Removing person...");
-      await deleteDoc(doc(db, collectionName, personId));
+      await updateDoc(doc(db, "people", personId), {
+        deletedAt: serverTimestamp(),
+        deletedBy: getCurrentUser().uid,
+        deletedSource: "profile",
+      });
       const returnParams = new URLSearchParams();
       if (familyId) {
         returnParams.set("familyId", familyId);
@@ -1389,10 +1394,11 @@ if (deletePersonBtn) {
       }
       const redirectQuery = returnParams.toString();
       const redirectUrl = redirectQuery ? `/tree?${redirectQuery}` : "/tree";
+      setProfileStatus("Person removed from the active tree.");
       window.location.href = redirectUrl;
     } catch (error) {
-      console.error("Error deleting person:", error);
-      setProfileStatus("Could not remove this person. Check editor access and try again.");
+      console.error("Error removing person from active tree:", error);
+      setProfileStatus("Could not remove this person. Confirm owner access and try again.");
     }
   });
 }
