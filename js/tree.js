@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260612-2";
+import { db } from "./firebase.js?v=20260612-3";
 import {
   doc,
   getDoc
@@ -13,13 +13,14 @@ import {
   derivePersonChildren,
   resolvePersonParentIds,
   resolvePersonSpouseIds,
+  findPersonByNameString,
   toTitle,
   toTitleFullName,
   buildFullName
-} from "./helpers.js?v=20260612-2";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-2";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-2";
-import { STARTER_TREE_ID } from "./starterTree.js?v=20260612-2";
+} from "./helpers.js?v=20260612-3";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-3";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-3";
+import { STARTER_TREE_ID } from "./starterTree.js?v=20260612-3";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];

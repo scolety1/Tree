@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260612-2";
+import { db } from "./firebase.js?v=20260612-3";
 import {
   collection,
   deleteDoc,
@@ -14,7 +14,7 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260612-2";
+import { watchAuth } from "./auth.js?v=20260612-3";
 import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
@@ -23,11 +23,11 @@ import {
   getStoredFamilyId,
   normalizeRelationshipIds,
   setFamilyId,
-} from "./helpers.js?v=20260612-2";
+} from "./helpers.js?v=20260612-3";
 import {
   STARTER_TREE_ID,
   STARTER_TREE_NAME,
-} from "./starterTree.js?v=20260612-2";
+} from "./starterTree.js?v=20260612-3";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
