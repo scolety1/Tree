@@ -65,6 +65,7 @@ Production hosts must never connect to emulators, even with `?emulators=1`.
 ### Migration Route
 
 - Open `/admin/migrate-relationships?familyId=<disposableTreeId>`.
+- Confirm the route is blocked outside local emulator mode.
 - Signed-out blocked.
 - Viewer/editor/non-owner blocked.
 - Owner can preview manually.

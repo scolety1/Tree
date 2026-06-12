@@ -23,7 +23,7 @@ const EMULATOR_CONNECTION_KEY = "__familyTreeEmulatorsConnected";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PRODUCTION_HOSTS = new Set(["tree-72e80.web.app", "tree-72e80.firebaseapp.com"]);
 
-function shouldUseEmulators() {
+function isFirebaseEmulatorMode() {
   if (typeof window === "undefined") return false;
 
   const { hostname, searchParams } = new URL(window.location.href);
@@ -44,7 +44,7 @@ function shouldUseEmulators() {
   return localStorage.getItem(EMULATOR_OPT_IN_KEY) === "1";
 }
 
-if (shouldUseEmulators() && !globalThis[EMULATOR_CONNECTION_KEY]) {
+if (isFirebaseEmulatorMode() && !globalThis[EMULATOR_CONNECTION_KEY]) {
   connectAuthEmulator(auth, "http://127.0.0.1:19099", { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", 18080);
   connectStorageEmulator(storage, "127.0.0.1", 19199);
@@ -52,4 +52,4 @@ if (shouldUseEmulators() && !globalThis[EMULATOR_CONNECTION_KEY]) {
   console.info("Family Tree Firebase emulators enabled for local QA.");
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, isFirebaseEmulatorMode };

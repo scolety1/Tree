@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260612-emulator-qa";
+import { db, isFirebaseEmulatorMode } from "./firebase.js?v=20260612-migration-guard";
 import {
   doc,
   getDoc,
@@ -22,6 +22,8 @@ let migrationPlan = [];
 let currentFamilyId = null;
 let currentUser = null;
 let currentFamilyIsOwnedByUser = false;
+
+const EMULATOR_ONLY_MESSAGE = "Relationship migration is only available in local emulator mode. Start the Firebase emulators and open this page with ?emulators=1.";
 
 function setStatus(message, tone = "") {
   if (!statusEl) return;
@@ -47,6 +49,17 @@ function escapeHtml(value) {
 
 function getExplicitFamilyId() {
   return getCurrentFamilyId(false);
+}
+
+function blockOutsideEmulatorMode() {
+  if (isFirebaseEmulatorMode()) return false;
+
+  currentFamilyIsOwnedByUser = false;
+  migrationPlan = [];
+  if (resultsEl) resultsEl.replaceChildren();
+  setControls();
+  setStatus(EMULATOR_ONLY_MESSAGE, "error");
+  return true;
 }
 
 async function verifyOwnerAccess(user = currentUser, familyId = currentFamilyId) {
@@ -198,6 +211,7 @@ async function initializeOwnerGate(user) {
   setControls();
 
   if (!previewBtn || !applyBtn) return;
+  if (blockOutsideEmulatorMode()) return;
 
   if (!currentFamilyId) {
     setStatus("Open this tool with a familyId query parameter.", "error");
@@ -233,6 +247,8 @@ async function previewMigration() {
   migrationPlan = [];
   if (resultsEl) resultsEl.replaceChildren();
 
+  if (blockOutsideEmulatorMode()) return;
+
   if (!currentFamilyId || !currentUser) {
     await initializeOwnerGate(currentUser);
     return;
@@ -263,6 +279,8 @@ async function previewMigration() {
 }
 
 async function applyMigration() {
+  if (blockOutsideEmulatorMode()) return;
+
   const safeUpdates = migrationPlan.filter(item => item.safeToApply);
 
   if (!currentFamilyId || !safeUpdates.length || !currentFamilyIsOwnedByUser) {
