@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260612-4";
+import { auth, db } from "./firebase.js?v=20260612-emulator-qa";
 import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,

@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase.js?v=20260612-4";
+import { auth, db } from "./firebase.js?v=20260612-emulator-qa";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-auth.js";
 import {
   collection,
