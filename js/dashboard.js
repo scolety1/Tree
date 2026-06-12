@@ -32,6 +32,9 @@ import {
 } from "./starterTree.js?v=20260612-4";
 
 const listEl = document.getElementById("familyTreeList");
+const archivedTreesSectionEl = document.getElementById("archivedTreesSection");
+const archivedTreesListEl = document.getElementById("archivedTreesList");
+const archivedTreesStatusEl = document.getElementById("archivedTreesStatus");
 const removedPeopleSectionEl = document.getElementById("removedPeopleSection");
 const removedPeopleListEl = document.getElementById("removedPeopleList");
 const removedPeopleStatusEl = document.getElementById("removedPeopleStatus");
@@ -67,6 +70,20 @@ function resetRemovedPeopleSection() {
   if (removedPeopleSectionEl) removedPeopleSectionEl.hidden = true;
   if (removedPeopleListEl) removedPeopleListEl.replaceChildren();
   setRemovedPeopleStatus("");
+}
+
+function setArchivedTreesStatus(message, tone = "") {
+  if (!archivedTreesStatusEl) return;
+  archivedTreesStatusEl.textContent = message;
+  archivedTreesStatusEl.classList.toggle("is-loading", tone === "loading");
+  archivedTreesStatusEl.classList.toggle("is-error", tone === "error");
+  archivedTreesStatusEl.classList.toggle("is-success", tone === "success");
+}
+
+function resetArchivedTreesSection() {
+  if (archivedTreesSectionEl) archivedTreesSectionEl.hidden = true;
+  if (archivedTreesListEl) archivedTreesListEl.replaceChildren();
+  setArchivedTreesStatus("");
 }
 
 function getRoleLabel(role) {
@@ -860,6 +877,53 @@ function createRemovedPersonCard(person, tree) {
   return article;
 }
 
+function createArchivedTreeCard(tree) {
+  const article = document.createElement("article");
+  article.className = "family-tree-card archived-tree-card";
+  article.dataset.familyId = tree.id;
+
+  const details = document.createElement("div");
+
+  const heading = document.createElement("h3");
+  heading.textContent = tree.name || "Untitled Family Tree";
+  details.appendChild(heading);
+
+  const archivedAt = formatDate(tree.archivedAt);
+  const archivedMeta = document.createElement("p");
+  archivedMeta.className = "family-tree-meta";
+  archivedMeta.textContent = archivedAt ? `Archived ${archivedAt}` : "Archived tree";
+  details.appendChild(archivedMeta);
+
+  const countMeta = document.createElement("p");
+  countMeta.className = "family-tree-meta";
+  countMeta.textContent = [
+    `${tree.memberIds.length} ${tree.memberIds.length === 1 ? "member" : "members"}`,
+    Number.isInteger(tree.peopleCount) ? `${tree.peopleCount} ${tree.peopleCount === 1 ? "person" : "people"}` : "",
+  ].filter(Boolean).join(" | ");
+  details.appendChild(countMeta);
+
+  const status = document.createElement("p");
+  status.className = "family-tree-card-status";
+  status.setAttribute("aria-live", "polite");
+  details.appendChild(status);
+
+  article.appendChild(details);
+
+  const actions = document.createElement("div");
+  actions.className = "family-tree-card-actions";
+
+  const restoreButton = document.createElement("button");
+  restoreButton.type = "button";
+  restoreButton.className = "button button-secondary restore-archived-tree-button";
+  restoreButton.textContent = "Restore";
+  restoreButton.setAttribute("aria-label", `Restore ${tree.name || "this archived family tree"}`);
+  restoreButton.addEventListener("click", () => restoreArchivedTree(article, tree));
+  actions.appendChild(restoreButton);
+
+  article.appendChild(actions);
+  return article;
+}
+
 function dedupeTrees(trees) {
   const byId = new Map();
   trees.forEach(tree => {
@@ -988,6 +1052,21 @@ async function renderRemovedPeopleForOwnedTrees(trees) {
   removedPeopleSectionEl.hidden = false;
   setRemovedPeopleStatus(`${deletedItems.length} removed ${deletedItems.length === 1 ? "person" : "people"} available to restore.`);
   removedPeopleListEl.replaceChildren(...deletedItems.map(({ person, tree }) => createRemovedPersonCard(person, tree)));
+}
+
+function renderArchivedTreesForOwner(trees) {
+  if (!archivedTreesSectionEl || !archivedTreesListEl || !currentUser) return;
+
+  resetArchivedTreesSection();
+  const archivedTrees = (Array.isArray(trees) ? trees : [])
+    .filter(tree => tree.ownerId === currentUser.uid && tree.archivedAt)
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  if (archivedTrees.length === 0) return;
+
+  archivedTreesSectionEl.hidden = false;
+  setArchivedTreesStatus(`${archivedTrees.length} archived ${archivedTrees.length === 1 ? "tree" : "trees"} available to restore.`);
+  archivedTreesListEl.replaceChildren(...archivedTrees.map(createArchivedTreeCard));
 }
 
 function getMemberLabel(memberId, memberProfiles) {
@@ -1214,7 +1293,7 @@ async function saveTreeDetails(card, tree) {
 }
 
 async function archiveTree(card, tree) {
-  const confirmed = confirm(`Archive "${tree.name || "this family tree"}"? You can restore it later once archive management is added.`);
+  const confirmed = confirm(`Archive "${tree.name || "this family tree"}"? Owners can restore it later from Account.`);
   if (!confirmed) return;
 
   setCardStatus(card, "Archiving tree...", "loading");
@@ -1229,6 +1308,35 @@ async function archiveTree(card, tree) {
   } catch (error) {
     console.error("Error archiving tree:", error);
     setCardStatus(card, "Could not archive this tree. Check owner access and try again.", "error");
+  }
+}
+
+async function restoreArchivedTree(card, tree) {
+  if (!currentUser || tree.ownerId !== currentUser.uid) {
+    setCardStatus(card, "Only the tree owner can restore archived trees.", "error");
+    return;
+  }
+
+  const confirmed = confirm(`Restore "${tree.name || "this family tree"}" to your active account list?`);
+  if (!confirmed) return;
+
+  setCardStatus(card, "Restoring tree...", "loading");
+
+  try {
+    await updateDoc(doc(db, "families", tree.id), {
+      archivedAt: deleteField(),
+      archivedBy: deleteField(),
+      archivedReason: deleteField(),
+      archivedSource: deleteField(),
+      restoredAt: serverTimestamp(),
+      restoredBy: currentUser.uid,
+    });
+
+    setCardStatus(card, "Tree restored.", "success");
+    await loadFamilyTrees(currentUser);
+  } catch (error) {
+    console.error("Error restoring archived tree:", error);
+    setCardStatus(card, "Could not restore this tree. Confirm owner access and try again.", "error");
   }
 }
 
@@ -1409,6 +1517,7 @@ async function loadFamilyTrees(user) {
   if (!listEl) return;
   currentUser = user;
   listEl.replaceChildren();
+  resetArchivedTreesSection();
   resetRemovedPeopleSection();
 
   if (!user) {
@@ -1487,13 +1596,17 @@ async function loadFamilyTrees(user) {
     const activeTrees = trees
       .filter(tree => !tree.archivedAt)
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const hasOwnedArchivedTrees = trees.some(tree => tree.ownerId === user.uid && tree.archivedAt);
 
     if (activeTrees.length === 0) {
       setStatus("No active family tree is connected to this account yet.");
       renderDashboardEmptyState({
         title: "No active family tree yet",
-        message: "Create a private family tree or join one with an access code from a relative.",
+        message: hasOwnedArchivedTrees
+          ? "Create a private family tree, join one with an access code from a relative, or restore an archived tree below."
+          : "Create a private family tree or join one with an access code from a relative.",
       });
+      renderArchivedTreesForOwner(trees);
       return;
     }
 
@@ -1509,10 +1622,12 @@ async function loadFamilyTrees(user) {
       listEl.appendChild(createTreeCard(tree));
     });
 
+    renderArchivedTreesForOwner(trees);
     await renderRemovedPeopleForOwnedTrees(activeTrees);
   } catch (error) {
     console.error("Error loading dashboard:", error);
     setStatus("Could not load your family tree. Refresh the page, then confirm this account has access.", "error");
+    resetArchivedTreesSection();
     resetRemovedPeopleSection();
     renderDashboardUnavailableState();
   }
