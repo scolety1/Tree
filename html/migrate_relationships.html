@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relationship Migration | Family Tree</title>
+    <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/global.css?v=20260612-4">
+</head>
+<body class="is-auth-loading">
+
+    <header>
+        <h1><a id="brandHomeLink" class="brand-link" href="/">Family tree</a></h1>
+        <nav aria-label="Main">
+            <ul class="nav">
+                <li class="home-nav-item"><a href="/">Home</a></li>
+                <li><a id="treeNavLink" href="/tree">Example Tree</a></li>
+            </ul>
+        </nav>
+        <div class="account-area">
+            <p id="authStatus" class="auth-status">Checking sign-in...</p>
+            <a id="authLink" class="account-link" href="/signin" aria-label="Sign in" hidden>
+                <span class="account-icon" aria-hidden="true"></span>
+                <span class="account-link-text">Sign In</span>
+            </a>
+        </div>
+    </header>
+
+    <main>
+        <section class="dashboard-hero">
+            <div>
+                <h2>Relationship Migration</h2>
+                <p>
+                    Preview older typed-name relationships before converting them to person ID relationships.
+                </p>
+            </div>
+            <div class="dashboard-actions">
+                <button id="previewMigrationBtn" class="button" type="button" disabled>Preview Migration</button>
+                <button id="applyMigrationBtn" class="button button-secondary" type="button" disabled>Apply Safe Updates</button>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <div class="section-heading">
+                <h2>Owner-only tool</h2>
+                <p>This page never writes data until the tree owner previews changes and confirms the apply step.</p>
+            </div>
+            <p id="migrationStatus" class="form-status" role="status" aria-live="polite">
+                Checking owner access...
+            </p>
+            <div id="migrationResults" class="migration-results" aria-live="polite"></div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Copyright &copy; <span id="year"></span> Family Tree</small>
+    </footer>
+
+    <script type="module" src="/js/main.js?v=20260612-4"></script>
+</body>
+</html>

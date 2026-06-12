@@ -30,6 +30,10 @@
     {
       "source": "/dashboard",
       "destination": "/html/dashboard.html"
+    },
+    {
+      "source": "/admin/migrate-relationships",
+      "destination": "/html/migrate_relationships.html"
     }
   ],
   "headers": [

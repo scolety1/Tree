@@ -5,6 +5,7 @@ import "./search.js?v=20260612-4";
 import "./home.js?v=20260612-4";
 import { signOutCurrentUser } from "./auth.js?v=20260612-4";
 import "./dashboard.js?v=20260612-4";
+import "./migrateRelationships.js?v=20260612-4";
 import { getCurrentFamilyId } from "./helpers.js?v=20260612-4";
 
 document.addEventListener('DOMContentLoaded', () => {
