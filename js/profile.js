@@ -1,5 +1,5 @@
 // profile.js
-import { db, storage } from "./firebase.js?v=20260610-12";
+import { db, storage } from "./firebase.js?v=20260612-2";
 import {
   doc,
   getDoc,
@@ -21,6 +21,7 @@ import {
   canEditFamily,
   findPersonByNameString,
   getDisplayName,
+  getFamilyRole,
   toTitleFullName, 
   toTitle, 
   getChildren,
@@ -33,10 +34,10 @@ import {
   resolvePersonParentIds,
   resolvePersonSpouseIds,
   safeImageFileName,
-} from "./helpers.js?v=20260610-12";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260610-12";
-import { getAuthUserOnce } from "./familyContext.js?v=20260610-12";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260610-12";
+} from "./helpers.js?v=20260612-2";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260612-2";
+import { getAuthUserOnce } from "./familyContext.js?v=20260612-2";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-2";
 
 
 let personId = null;
@@ -46,6 +47,7 @@ let allPeople = [];
 let currentAuthUser = getCurrentUser();
 let profileSource = "tree";
 let profileCanEdit = false;
+let profileCanDelete = false;
 let currentProfileImageUrl = "";
 let profileDemoContext = "";
 
@@ -330,23 +332,22 @@ function setProfileUnavailable({
   });
 }
 
-function setEditingAvailable(isAvailable) {
+function setEditingAvailable({ canEdit = false, canDelete = false } = {}) {
   const editBtn = document.getElementById("editPersonBtn");
   const deleteBtn = document.getElementById("deletePersonBtn");
 
-  [editBtn, deleteBtn].forEach(button => {
-    if (button) button.hidden = !isAvailable;
-  });
+  if (editBtn) editBtn.hidden = !canEdit;
+  if (deleteBtn) deleteBtn.hidden = !canDelete;
 }
 
-function setProfileEditState({ editable, message }) {
+function setProfileEditState({ editable, canDelete = false, message }) {
   const state = document.getElementById("profileEditState");
   if (!state) return;
 
   state.textContent = message;
   state.classList.toggle("is-editable", editable);
   state.classList.toggle("is-read-only", !editable);
-  setEditingAvailable(editable);
+  setEditingAvailable({ canEdit: editable, canDelete });
 }
 
 async function currentUserCanEditProfile(user, currentFamilyId) {
@@ -361,13 +362,27 @@ async function currentUserCanEditProfile(user, currentFamilyId) {
   }
 }
 
+async function currentUserCanDeleteProfile(user, currentFamilyId) {
+  if (!user || !currentFamilyId) return false;
+
+  try {
+    const familySnap = await getDoc(doc(db, "families", currentFamilyId));
+    return familySnap.exists() && getFamilyRole(familySnap.data(), user) === "owner";
+  } catch (error) {
+    console.error("Error checking profile delete access:", error);
+    return false;
+  }
+}
+
 function refreshProfileEditState() {
   const signedIn = Boolean(currentAuthUser || getCurrentUser());
 
   if (!personId) {
     profileCanEdit = false;
+    profileCanDelete = false;
     setProfileEditState({
       editable: false,
+      canDelete: false,
       message: "Open a person profile before editing.",
     });
     return;
@@ -375,8 +390,10 @@ function refreshProfileEditState() {
 
   if (!familyId) {
     profileCanEdit = false;
+    profileCanDelete = false;
     setProfileEditState({
       editable: false,
+      canDelete: false,
       message: "This is the read-only example tree. Open a private family tree to edit people.",
     });
     return;
@@ -384,8 +401,10 @@ function refreshProfileEditState() {
 
   if (!signedIn) {
     profileCanEdit = false;
+    profileCanDelete = false;
     setProfileEditState({
       editable: false,
+      canDelete: false,
       message: "Sign in to edit or remove people in this private family tree.",
     });
     return;
@@ -393,22 +412,33 @@ function refreshProfileEditState() {
 
   setProfileEditState({
     editable: false,
+    canDelete: false,
     message: "Checking edit access...",
   });
 
-  currentUserCanEditProfile(currentAuthUser || getCurrentUser(), familyId).then((canEdit) => {
+  const user = currentAuthUser || getCurrentUser();
+  Promise.all([
+    currentUserCanEditProfile(user, familyId),
+    currentUserCanDeleteProfile(user, familyId),
+  ]).then(([canEdit, canDelete]) => {
     profileCanEdit = canEdit;
+    profileCanDelete = canDelete;
     setProfileEditState({
       editable: canEdit,
+      canDelete,
       message: canEdit
-        ? "You can edit this profile because this account has owner or editor access."
+        ? canDelete
+          ? "You can edit this profile because this account has owner access."
+          : "You can edit this profile because this account has editor access. Removing people is owner-only for the birthday release."
         : "You can view this profile. Ask the owner for editor access before changing people or photos.",
     });
   }).catch((error) => {
     console.error("Error refreshing edit state:", error);
     profileCanEdit = false;
+    profileCanDelete = false;
     setProfileEditState({
       editable: false,
+      canDelete: false,
       message: "Could not confirm edit access for this profile.",
     });
   });
@@ -1312,9 +1342,9 @@ if (deletePersonBtn) {
       return;
     }
 
-    const canEditNow = profileCanEdit || await currentUserCanEditProfile(getCurrentUser(), familyId);
-    if (!canEditNow) {
-      setProfileStatus("Only the owner and editors can remove people.");
+    const canDeleteNow = profileCanDelete || await currentUserCanDeleteProfile(getCurrentUser(), familyId);
+    if (!canDeleteNow) {
+      setProfileStatus("Only the tree owner can remove people for the birthday release.");
       refreshProfileEditState();
       return;
     }

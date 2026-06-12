@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260610-12";
+import { db } from "./firebase.js?v=20260612-2";
 import {
   collection,
   deleteDoc,
@@ -14,7 +14,7 @@ import {
   arrayUnion,
   deleteField,
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { watchAuth } from "./auth.js?v=20260610-12";
+import { watchAuth } from "./auth.js?v=20260612-2";
 import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
@@ -23,12 +23,11 @@ import {
   getStoredFamilyId,
   normalizeRelationshipIds,
   setFamilyId,
-} from "./helpers.js?v=20260610-12";
+} from "./helpers.js?v=20260612-2";
 import {
   STARTER_TREE_ID,
   STARTER_TREE_NAME,
-  createStarterColetyTree,
-} from "./starterTree.js?v=20260610-12";
+} from "./starterTree.js?v=20260612-2";
 
 const listEl = document.getElementById("familyTreeList");
 const statusEl = document.getElementById("dashboardStatus");
@@ -286,7 +285,7 @@ function createChecklistItem({ label, detail, status = "todo", href = "" }) {
   const marker = document.createElement("span");
   marker.className = "birthday-prep-marker";
   marker.setAttribute("aria-hidden", "true");
-  marker.textContent = status === "done" ? "Ã¢Å“â€œ" : status === "review" ? "!" : "Ã¢â‚¬Â¢";
+  marker.textContent = status === "done" ? "Done" : status === "review" ? "Review" : "To do";
   item.appendChild(marker);
 
   const copy = document.createElement("span");
@@ -1005,20 +1004,6 @@ async function createTreeFromDoc(docSnap, user) {
   };
 }
 
-async function createAndRenderStarterTree(user) {
-  const starterTreeId = await createStarterColetyTree(user);
-  const starterSnap = await getDoc(doc(db, "families", starterTreeId));
-
-  if (!starterSnap.exists()) {
-    throw new Error("Starter tree was created but could not be loaded.");
-  }
-
-  const starterTree = await createTreeFromDoc(starterSnap, user);
-  setFamilyId(starterTree.id);
-  setStatus("");
-  listEl.replaceChildren(createTreeCard(starterTree));
-}
-
 function setCardStatus(card, message, tone = "") {
   const cardStatus = card.querySelector(".family-tree-card-status");
   if (!cardStatus) return;
@@ -1341,15 +1326,8 @@ async function loadFamilyTrees(user) {
     }
 
     if (docs.length === 0) {
-      setStatus("Preparing your Colety family tree...", "loading");
-      renderDashboardLoadingState();
-      try {
-        await createAndRenderStarterTree(user);
-      } catch (error) {
-        console.error("Error creating starter tree:", error);
-        setStatus("Could not prepare the Colety family tree. You can still start one manually.", "error");
-        renderDashboardEmptyState();
-      }
+      setStatus("No private family tree is connected to this account yet.");
+      renderDashboardEmptyState();
       return;
     }
 
@@ -1361,15 +1339,11 @@ async function loadFamilyTrees(user) {
       .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     if (activeTrees.length === 0) {
-      setStatus("Preparing your Colety family tree...", "loading");
-      renderDashboardLoadingState();
-      try {
-        await createAndRenderStarterTree(user);
-      } catch (error) {
-        console.error("Error creating starter tree:", error);
-        setStatus("Could not prepare the Colety family tree. You can still start one manually.", "error");
-        renderDashboardEmptyState();
-      }
+      setStatus("No active family tree is connected to this account yet.");
+      renderDashboardEmptyState({
+        title: "No active family tree yet",
+        message: "Create a private family tree or join one with an access code from a relative.",
+      });
       return;
     }
 

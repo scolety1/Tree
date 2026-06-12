@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260610-12";
+import { db } from "./firebase.js?v=20260612-2";
 import {
   doc,
   getDoc
@@ -16,10 +16,10 @@ import {
   toTitle,
   toTitleFullName,
   buildFullName
-} from "./helpers.js?v=20260610-12";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260610-12";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260610-12";
-import { STARTER_TREE_ID } from "./starterTree.js?v=20260610-12";
+} from "./helpers.js?v=20260612-2";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-2";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-2";
+import { STARTER_TREE_ID } from "./starterTree.js?v=20260612-2";
 
 /* Keep a reference to the last rendered people so we can redraw lines on resize */
 let lastRenderedPeople = [];
@@ -1005,6 +1005,7 @@ function getTreeFocusElements() {
   return {
     form: document.getElementById("treeFocusForm"),
     input: document.getElementById("treeFocusInput"),
+    submitButton: document.getElementById("treeFocusSubmit"),
     status: document.getElementById("treeFocusStatus"),
     dataList: document.getElementById("treePersonList"),
     previousButton: document.getElementById("treeFocusPrevious"),
@@ -1136,12 +1137,25 @@ function runTreeFocusSearch(direction = 0) {
 }
 
 function setupTreeFocusControls() {
-  const { form, input, previousButton, nextButton } = getTreeFocusElements();
+  const { form, input, submitButton, previousButton, nextButton } = getTreeFocusElements();
   if (!form || !input) return;
+
+  const submitSearch = () => runTreeFocusSearch(0);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    runTreeFocusSearch(0);
+    submitSearch();
+  });
+
+  submitButton?.addEventListener("click", (event) => {
+    event.preventDefault();
+    submitSearch();
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    submitSearch();
   });
 
   input.addEventListener("input", () => {
@@ -2586,7 +2600,7 @@ function renderGeneration(genNumber, peopleInGen, treeLayout, familyId = null, o
 
   const title = document.createElement("h2");
   title.className = "generation-title";
-  title.textContent = `${getGenerationLabel(genNumber)} Ã‚Â· ${peopleInGen.length}`;
+  title.textContent = `${getGenerationLabel(genNumber)} - ${peopleInGen.length}`;
   genContainer.appendChild(title);
 
   const row = document.createElement("div");

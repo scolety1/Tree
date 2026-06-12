@@ -124,9 +124,12 @@ service cloud.firestore {
         && resource.data.familyId is string
         && isFamilyMember(resource.data.familyId);
 
-      allow update, delete: if signedIn()
+      allow update: if signedIn()
         && resource.data.familyId is string
         && isFamilyEditor(resource.data.familyId);
+      allow delete: if signedIn()
+        && resource.data.familyId is string
+        && isFamilyOwner(resource.data.familyId);
     }
 
     // Keep the example tree read-only once strict rules are deployed.

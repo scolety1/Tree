@@ -124,7 +124,7 @@ export function generateLargeDemoTree() {
         `demo-g5-${pairIndex + 1}${i + 1}`,
         ["Nico", "Lila", "Rory", "Eden", "Miles", "Nia", "Oscar", "Mira", "Caleb", "Esme", "Jonah", "Zara"][pairIndex * 3 + i],
         parentA.lastName,
-        2035 + pairIndex + i,
+        2005 + pairIndex + i,
         [parentA.id, parentB.id]
       ));
     }
@@ -146,7 +146,7 @@ export function generateLargeDemoTree() {
         `demo-g6-${pairIndex + 1}${i + 1}`,
         ["Poppy", "Finn", "Maeve", "Owen"][pairIndex * 2 + i],
         parentA.lastName,
-        2060 + pairIndex + i,
+        2022 + pairIndex + i,
         [parentA.id, parentB.id]
       );
     }

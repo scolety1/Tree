@@ -1,4 +1,4 @@
-import { db, storage } from "./firebase.js?v=20260610-12";
+import { db, storage } from "./firebase.js?v=20260612-2";
 import {
   addDoc,
   collection,
@@ -23,8 +23,8 @@ import {
   normalizeImageUrl,
   prepareImageFileForUpload,
   safeImageFileName,
-} from "./helpers.js?v=20260610-12";
-import { getCurrentUser, watchAuth } from "./auth.js?v=20260610-12";
+} from "./helpers.js?v=20260612-2";
+import { getCurrentUser, watchAuth } from "./auth.js?v=20260612-2";
 
 const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");

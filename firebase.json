@@ -50,7 +50,15 @@
         "destination": "/html/profile.html"
       },
       {
+        "source": "/p/profile",
+        "destination": "/html/profile.html"
+      },
+      {
         "source": "/signin",
+        "destination": "/html/signin.html"
+      },
+      {
+        "source": "/p/signin",
         "destination": "/html/signin.html"
       },
       {

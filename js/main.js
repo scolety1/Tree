@@ -1,11 +1,11 @@
-import "./helpers.js?v=20260610-12";
-import "./postPeople.js?v=20260610-12";
-import "./tree.js?v=20260610-12";
-import "./search.js?v=20260610-12";
-import "./home.js?v=20260610-12";
-import { signOutCurrentUser } from "./auth.js?v=20260610-12";
-import "./dashboard.js?v=20260610-12";
-import { getCurrentFamilyId } from "./helpers.js?v=20260610-12";
+import "./helpers.js?v=20260612-2";
+import "./postPeople.js?v=20260612-2";
+import "./tree.js?v=20260612-2";
+import "./search.js?v=20260612-2";
+import "./home.js?v=20260612-2";
+import { signOutCurrentUser } from "./auth.js?v=20260612-2";
+import "./dashboard.js?v=20260612-2";
+import { getCurrentFamilyId } from "./helpers.js?v=20260612-2";
 
 document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname;

@@ -6,14 +6,14 @@ import {
   derivePersonChildren,
   resolvePersonParentIds,
   resolvePersonSpouseIds,
-} from "./helpers.js?v=20260610-12";
-import { db } from "./firebase.js?v=20260610-12";
+} from "./helpers.js?v=20260612-2";
+import { db } from "./firebase.js?v=20260612-2";
 import {
   doc,
   getDoc
 } from "https://www.gstatic.com/firebasejs/11.9.0/firebase-firestore.js";
-import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260610-12";
-import { generateLargeDemoTree } from "./demoTreeData.js?v=20260610-12";
+import { resolveCurrentUserFamilyId } from "./familyContext.js?v=20260612-2";
+import { generateLargeDemoTree } from "./demoTreeData.js?v=20260612-2";
 
 let allPeople = [];
 let currentFamilyId = null;
@@ -183,7 +183,6 @@ function createResultCard(person, familyId = null) {
     link.appendChild(generation);
   }
 
-  const missing = getMissingInfoLabels(person, allPeople);
   const badges = document.createElement("div");
   badges.className = "directory-badges";
 
@@ -197,19 +196,6 @@ function createResultCard(person, familyId = null) {
     const tag = document.createElement("span");
     tag.className = "directory-badge";
     tag.textContent = "story";
-    badges.appendChild(tag);
-  }
-  const visibleMissing = missing.filter(label => label !== "Photo");
-  visibleMissing.slice(0, 3).forEach(label => {
-    const tag = document.createElement("span");
-    tag.className = "directory-badge is-warning";
-    tag.textContent = `needs ${label}`;
-    badges.appendChild(tag);
-  });
-  if (visibleMissing.length > 3) {
-    const tag = document.createElement("span");
-    tag.className = "directory-badge is-warning";
-    tag.textContent = `+${visibleMissing.length - 3} more`;
     badges.appendChild(tag);
   }
   link.appendChild(badges);

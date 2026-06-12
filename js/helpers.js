@@ -1,4 +1,4 @@
-import { db } from "./firebase.js?v=20260610-12";
+import { db } from "./firebase.js?v=20260612-2";
 import {
   collection,
   getDocs,
@@ -817,7 +817,7 @@ function alignSpouseGenerations(people) {
     } else if (!pHasParents && sHasParents) {
       targetGen = spouse.generation;
     } else {
-      // Both have (or both don't have) parents ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ keep kids below them, so use the higher gen
+      // Both have (or both don't have) parents, so keep kids below them by using the higher generation.
       targetGen = Math.max(
         typeof p.generation === "number" ? p.generation : 1,
         typeof spouse.generation === "number" ? spouse.generation : 1
@@ -928,7 +928,7 @@ function assignGenerationsBFS(people) {
     children.forEach(child => {
       const proposedGen = (current.generation || 1) + 1;
 
-      // ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã‹Å“ Allow child to "upgrade" to a higher generation if a later parent is deeper
+      // Allow child to upgrade to a higher generation if a later parent is deeper.
       if (
         typeof child.generation !== "number" ||
         child.generation < proposedGen
@@ -1004,7 +1004,7 @@ export function groupByGeneration(people) {
       const idxDiff = ai - bi;
       if (idxDiff !== 0) return idxDiff;
 
-      // same BFS cluster ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ use birthdate to order siblings from oldest to youngest if possible
+      // Same BFS cluster; use birthdate to order siblings from oldest to youngest if possible.
       const ta = a.birthDate && typeof a.birthDate.toDate === "function"
         ? a.birthDate.toDate().getTime()
         : null;
