@@ -2400,14 +2400,13 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-subtitle {
+        display: none;
         font-size: 0.9rem;
         overflow-wrap: anywhere;
     }
 
     .tree-print-controls {
-        display: grid;
-        grid-template-columns: 1fr;
-        justify-content: stretch;
+        display: none;
     }
 
     .tree-print-controls .button {
@@ -2419,6 +2418,10 @@ a.family-spotlight-name:focus-visible {
 
     .join-code-display {
         margin: -4px auto 18px;
+    }
+
+    .large-tree-hint {
+        display: none;
     }
 
     .join-code-content {
@@ -2450,16 +2453,18 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-focus-row {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) repeat(3, 52px);
+        gap: 6px;
     }
 
     .tree-focus-row input {
-        grid-column: 1 / -1;
+        grid-column: auto;
     }
 
     .tree-focus-row button {
         width: 100%;
+        padding: 0 6px;
+        font-size: 0.78rem;
     }
 
     .tree-focus-step {
@@ -2482,6 +2487,7 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-focus-status {
+        display: none;
         font-size: 0.84rem;
     }
 
@@ -2741,11 +2747,11 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-focus-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(0, 1fr) repeat(3, 48px);
     }
 
     .tree-focus-row button[type="submit"] {
-        grid-column: 1 / -1;
+        grid-column: auto;
     }
 
     .tree-focus-row input,

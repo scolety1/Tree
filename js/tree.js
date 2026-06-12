@@ -334,7 +334,7 @@ function setTreeView(view, options = {}) {
   const actionHint = document.querySelector(".tree-action-hint");
   if (isChartView) {
     if (label) label.textContent = "Start here";
-    if (hint) hint.textContent = "Search a name, or click any person card for details.";
+    if (hint) hint.textContent = "Search or click a card.";
     if (actionHint) actionHint.textContent = "Pan and zoom the map when the family gets wide.";
   }
 
@@ -2941,13 +2941,13 @@ function setTreeModeCopy(isOverviewMode) {
 
   if (hint) {
     hint.textContent = isOverviewMode
-      ? "Use Find person first, then open profiles from the selected person panel."
-      : "Search a name, or click any person card for details.";
+      ? "Use Find person to jump."
+      : "Search or click a card.";
   }
 
   if (actionHint) {
     actionHint.textContent = isOverviewMode
-      ? "The card list is a fallback view for browsing wide families."
+      ? "Fallback list for wide families."
       : "Scroll sideways if this tree grows wider than the screen.";
   }
 }
@@ -3286,7 +3286,7 @@ async function updateTreeTitle(familyId, user = null) {
     setPublicDemoBannerVisible(true);
     titleEl.textContent = "Large Example Family Tree";
     document.title = "Large Example Family Tree";
-    setTreeSubtitle("A made-up Johnson family tree with several generations. Search a name or click any card to understand the branches.");
+    setTreeSubtitle("Read-only example tree.");
     if (joinCodeDisplay) {
       joinCodeDisplay.style.display = "none";
     }
