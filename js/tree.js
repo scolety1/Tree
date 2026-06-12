@@ -130,7 +130,7 @@ function startChartLoadTimer() {
     setChartStatus(
       "error",
       "Chart is taking too long",
-      "The connected chart did not finish loading. Card list view is still available.",
+      "The connected chart did not finish loading. The fallback list is still available.",
       { showFallback: true }
     );
   }, CHART_READY_TIMEOUT_MS);
@@ -150,7 +150,7 @@ function markChartReady() {
   }
 }
 
-function markChartError(message = "The connected chart could not load. Card list view is still available.") {
+function markChartError(message = "The connected chart could not load. The fallback list is still available.") {
   clearChartLoadTimer();
   setChartStatus("error", "Chart view needs a refresh", message, { showFallback: true });
 }
@@ -228,7 +228,7 @@ function setupChartFrameSafety() {
     }
 
     if (data.status === "error") {
-      markChartError(data.message || "The connected chart could not render. Card list view is still available.");
+      markChartError(data.message || "The connected chart could not render. The fallback list is still available.");
     }
   });
 }
@@ -756,17 +756,7 @@ function formatSelectedRelationshipList(people, emptyText) {
 }
 
 function formatSelectedBranchNote({ parents = [], spouses = [], children = [], siblings = [] } = {}) {
-  const pieces = [];
-  if (parents.length > 0) pieces.push(`${parents.length} parent${parents.length === 1 ? "" : "s"}`);
-  if (spouses.length > 0) pieces.push(`${spouses.length} partner${spouses.length === 1 ? "" : "s"}`);
-  if (children.length > 0) pieces.push(`${children.length} child${children.length === 1 ? "" : "ren"}`);
-  if (siblings.length > 0) pieces.push(`${siblings.length} sibling${siblings.length === 1 ? "" : "s"}`);
-
-  if (pieces.length === 0) {
-    return "This branch has no close relatives linked yet. Open the profile to add family context.";
-  }
-
-  return `This branch highlights ${pieces.join(", ")}. Use the close-relative chips to move around without losing your place.`;
+  return "";
 }
 
 function buildTreeProfileUrl(personId, { edit = false } = {}) {
@@ -874,6 +864,7 @@ function renderSelectedRelativeActions(person, parents, spouses, children, sibli
 function clearSelectedPersonPanel() {
   const panel = document.getElementById("treeSelectedPersonPanel");
   if (panel) panel.hidden = true;
+  document.body.classList.remove("tree-has-selected-person");
   setSelectedLink(document.getElementById("treeSelectedProfileLink"), "");
   setSelectedLink(document.getElementById("treeSelectedEditLink"), "");
   const focusBtn = document.getElementById("treeSelectedFocusBtn");
@@ -897,9 +888,7 @@ function clearSelectedPersonSelection() {
     card.classList.remove("person-card-focused");
   });
   updateTreeFocusUrl({ personId: "" });
-  setTreeFocusStatus(treeFocusMatches.length > 0
-    ? "Selection cleared. Use Find, Prev, or Next to choose another match."
-    : "Selection cleared. Search a name or click a card to explore.");
+  setTreeFocusStatus("");
 }
 
 function setSelectedPersonPanel(personId, { source = "tree", scroll = false, focusChart = false } = {}) {
@@ -918,15 +907,15 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
   const siblings = getSelectedRelationshipPeople(person, "siblings");
 
   panel.hidden = false;
+  document.body.classList.add("tree-has-selected-person");
   document.getElementById("treeSelectedPersonName").textContent = getPersonDisplayName(person);
   document.getElementById("treeSelectedPersonMeta").textContent = activeTreeContext.isDemoMode
-    ? "Read-only example person. View details, focus the map, or choose a close relative."
-    : activeTreeContext.canEdit
-      ? "Owner/editor view. Edit profile details, photos, relationships, or focus this branch."
-      : "Private-tree person. View details or focus this branch. Editing is owner/editor only.";
+    ? "Read-only example"
+    : "";
   const branchNote = document.getElementById("treeSelectedBranchNote");
   if (branchNote) {
-    branchNote.textContent = formatSelectedBranchNote({ parents, spouses, children, siblings });
+    branchNote.textContent = "";
+    branchNote.hidden = true;
   }
   document.getElementById("treeSelectedBirthday").textContent = formatSelectedBirthDate(person);
   document.getElementById("treeSelectedParents").textContent = formatSelectedRelationshipList(parents, "None listed");
@@ -973,8 +962,6 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
     clearBtn.onclick = clearSelectedPersonSelection;
   }
 
-  addRecentPerson(person.id);
-  renderRecentPeople();
   renderSelectedRelativeActions(person, parents, spouses, children, siblings);
   setFocusedCard(person.id);
 
@@ -3066,7 +3053,7 @@ function setupTreeFullscreenButton() {
 
   function updateButtonLabel() {
     const isFullscreen = Boolean(document.fullscreenElement);
-    button.textContent = isFullscreen ? "Exit full screen" : "Full screen map";
+    button.textContent = isFullscreen ? "Exit" : "Full";
     button.setAttribute(
       "aria-label",
       isFullscreen ? "Exit full screen family tree view" : "Open family tree in full screen"
@@ -3110,7 +3097,7 @@ function setupTreePresentationControls() {
     document.body.classList.toggle("tree-presentation-mode", isActive);
     if (escapeBar) escapeBar.hidden = !isActive;
     if (presentationButton) {
-      presentationButton.textContent = isActive ? "Exit Presentation" : "Presentation View";
+      presentationButton.textContent = isActive ? "Exit map view" : "Map view";
       presentationButton.setAttribute("aria-pressed", isActive ? "true" : "false");
       presentationButton.setAttribute(
         "aria-label",

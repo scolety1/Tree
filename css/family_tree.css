@@ -214,18 +214,16 @@ body.tree-presentation-mode .tree-layout {
 
 .tree-workspace {
     display: grid;
-    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
     align-items: stretch;
 }
 
 .tree-toolbar {
-    display: flex;
-    flex-direction: column;
-    align-self: stretch;
-    gap: 14px;
+    display: block;
+    align-self: auto;
     margin: 0;
-    padding: 14px;
+    padding: 12px;
     border: 1px solid var(--line);
     border-radius: var(--radius);
     background: rgba(255, 255, 255, 0.88);
@@ -237,6 +235,7 @@ body.tree-presentation-mode .tree-layout {
 }
 
 .tree-canvas-panel {
+    position: relative;
     min-width: 0;
 }
 
@@ -371,10 +370,8 @@ body.tree-presentation-mode .tree-layout {
 
 .tree-focus-controls {
     display: grid;
-    gap: 6px;
+    gap: 8px;
     min-width: 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--line);
 }
 
 .tree-focus-controls label {
@@ -383,19 +380,19 @@ body.tree-presentation-mode .tree-layout {
 
 .tree-focus-row {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(180px, 1fr) auto auto auto;
     gap: 8px;
     align-items: center;
 }
 
 .tree-focus-row input {
-    grid-column: 1 / -1;
+    grid-column: auto;
     min-height: 36px;
     padding: 8px 10px;
 }
 
 .tree-focus-row button {
-    width: 100%;
+    width: auto;
     min-height: 36px;
     padding: 0 10px;
     border: 1px solid #b7c7b3;
@@ -492,6 +489,18 @@ body.tree-presentation-mode .tree-layout {
     box-shadow: var(--shadow-soft);
 }
 
+.tree-context-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
+    gap: 14px;
+    margin-top: 14px;
+    align-items: start;
+}
+
+.tree-context-panel .tree-selected-person-panel[hidden] + .tree-map-key-panel {
+    grid-column: 1 / -1;
+}
+
 .tree-selected-person-panel[hidden] {
     display: none;
 }
@@ -521,16 +530,22 @@ body.tree-presentation-mode .tree-layout {
 }
 
 .tree-selected-clear {
-    min-height: 34px;
-    padding: 0 9px;
+    display: inline-flex;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
     border: 1px solid #cbd8c7;
     border-radius: 999px;
     background: #ffffff;
     color: var(--brand-strong);
     cursor: pointer;
     font: inherit;
-    font-size: 0.74rem;
+    font-size: 1.3rem;
     font-weight: 850;
+    line-height: 1;
 }
 
 .tree-selected-clear:hover,
@@ -685,6 +700,49 @@ body.tree-presentation-mode .tree-layout {
     border-top: 1px solid var(--line);
 }
 
+.tree-map-controls {
+    position: sticky;
+    top: calc(100vh - 84px);
+    z-index: 15;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    width: fit-content;
+    max-width: calc(100% - 20px);
+    margin: 0 12px -50px auto;
+    padding: 6px;
+    border: 1px solid rgba(32, 47, 36, 0.12);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 14px 30px rgba(32, 47, 36, 0.16);
+    backdrop-filter: blur(12px);
+}
+
+.tree-map-icon-button {
+    display: inline-flex;
+    min-width: 42px;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid #cbd8c7;
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--brand-strong);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.tree-map-icon-button:hover,
+.tree-map-icon-button:focus-visible {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+}
+
 .tree-map-control-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -815,6 +873,16 @@ body.tree-presentation-mode .tree-layout {
     border: 1px solid var(--line);
     border-radius: var(--radius-sm);
     background: rgba(249, 251, 247, 0.72);
+}
+
+.tree-map-key-panel {
+    padding: 14px;
+}
+
+.tree-map-key-panel h2 {
+    margin: 0 0 10px;
+    color: var(--brand-strong);
+    font-size: 1rem;
 }
 
 .tree-relationship-tool summary,
@@ -2332,7 +2400,7 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-subtitle {
-        font-size: 0.98rem;
+        font-size: 0.9rem;
         overflow-wrap: anywhere;
     }
 
@@ -2372,36 +2440,13 @@ a.family-spotlight-name:focus-visible {
         position: relative;
         align-self: auto;
         align-items: stretch;
-        gap: 12px;
-        padding: 12px;
+        padding: 10px;
         max-height: none;
         overflow: visible;
     }
 
     .tree-canvas-panel {
         order: 2;
-    }
-
-    .tree-more-tools-cue {
-        display: block;
-        margin: 0;
-        padding: 9px 10px;
-        border: 1px dashed #d7c198;
-        border-radius: var(--radius-sm);
-        background: #fff8eb;
-        color: #735018;
-        font-size: 0.82rem;
-        font-weight: 800;
-        line-height: 1.35;
-    }
-
-    .tree-tool-section {
-        gap: 8px;
-    }
-
-    .tree-view-actions .button {
-        width: 100%;
-        min-height: 46px;
     }
 
     .tree-focus-row {
@@ -2440,22 +2485,10 @@ a.family-spotlight-name:focus-visible {
         font-size: 0.84rem;
     }
 
-    .tree-recent-people-panel {
-        gap: 8px;
-        padding: 10px 0;
-    }
-
-    .tree-recent-people-list {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 2px;
-        scrollbar-width: thin;
-    }
-
-    .tree-recent-people-list .tree-relative-chip,
-    .tree-recent-people-list button {
-        flex: 0 0 auto;
-        max-width: 180px;
+    .tree-context-panel {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 10px;
     }
 
     .tree-selected-person-panel {
@@ -2505,29 +2538,13 @@ a.family-spotlight-name:focus-visible {
         justify-content: flex-start;
     }
 
-    .tree-density-controls {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        justify-self: stretch;
-    }
-
-    .tree-view-switch {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        justify-self: stretch;
-    }
-
     .tree-chart-beta-link {
         justify-self: stretch;
         width: 100%;
     }
 
-    .tree-density-controls button {
-        padding: 0 6px;
-    }
-
     .tree-toolbar.is-chart-view {
-        display: flex;
+        display: block;
     }
 
     .tree-chart-view,
@@ -2540,7 +2557,20 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-canvas-panel {
-        padding-bottom: 170px;
+        padding-bottom: 0;
+    }
+
+    .tree-map-controls {
+        top: calc(100vh - 78px);
+        max-width: calc(100% - 16px);
+        margin: 0 8px -48px auto;
+        padding: 5px;
+    }
+
+    .tree-map-icon-button {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0 9px;
     }
 
     .tree-chart-status {
@@ -2689,14 +2719,12 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-toolbar {
-        gap: 10px;
         padding: 10px;
     }
 
     .tree-tool-section,
     .tree-focus-controls,
     .tree-selected-person-panel,
-    .tree-view-actions,
     .tree-key,
     .tree-advanced-tools,
     .tree-relationship-tool,
@@ -2708,8 +2736,6 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-print-controls,
-    .tree-density-controls,
-    .tree-view-switch,
     .tree-overview-stats {
         grid-template-columns: 1fr;
     }
@@ -2725,11 +2751,6 @@ a.family-spotlight-name:focus-visible {
     .tree-focus-row input,
     .relationship-finder-form input {
         font-size: 16px;
-    }
-
-    .tree-density-controls button {
-        padding: 0 4px;
-        font-size: 0.82rem;
     }
 
     .tree-selected-person-panel {
@@ -2757,7 +2778,11 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-canvas-panel {
-        padding-bottom: 24px;
+        padding-bottom: 0;
+    }
+
+    .tree-map-controls {
+        top: calc(100vh - 74px);
     }
 
     .tree-layout {
