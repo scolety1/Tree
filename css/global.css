@@ -1903,26 +1903,23 @@ body.add-person-modal-open #addPersonBtn {
 
 @media (max-width: 900px) {
     header {
-        grid-template-columns: 1fr;
-        justify-items: center;
+        grid-template-columns: minmax(150px, auto) minmax(180px, 1fr) minmax(140px, auto);
         gap: 10px;
-        position: static;
+        padding-inline: 18px;
     }
 
     nav {
-        width: 100%;
+        min-width: 0;
     }
 
     .account-area {
-        grid-column: auto;
-        grid-row: auto;
-        justify-self: center;
-        justify-content: center;
-        width: 100%;
+        grid-column: 3;
+        justify-self: end;
+        justify-content: flex-end;
     }
 
     .auth-status {
-        text-align: center;
+        max-width: 150px;
     }
 
     .actions-grid,
@@ -2035,6 +2032,7 @@ body.add-person-modal-open #addPersonBtn {
         top: calc(100% + 10px);
         right: 0;
         z-index: 150;
+        display: block;
         width: min(82vw, 280px);
         padding: 8px;
         border: 1px solid var(--line);
