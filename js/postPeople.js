@@ -15,6 +15,7 @@ import {
 import {
   buildFullName,
   canEditFamily,
+  filterActivePeople,
   getAllPeople,
   getCurrentFamilyId,
   getDisplayName,
@@ -171,7 +172,7 @@ function populateRelationshipSelects(people) {
     emptyOption.textContent = placeholder;
     select.appendChild(emptyOption);
 
-    [...people]
+    filterActivePeople(people)
       .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)))
       .forEach(person => {
       const option = document.createElement("option");

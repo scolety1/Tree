@@ -370,14 +370,27 @@ export function getPersonNameKey(person) {
   return buildFullName(person.firstName, person.lastName);
 }
 
+export function isDeletedPerson(person) {
+  return Boolean(person?.deletedAt);
+}
+
+export function filterActivePeople(people) {
+  if (!Array.isArray(people)) return [];
+  return people.filter(person => !isDeletedPerson(person));
+}
+
+export function getActivePeople(people) {
+  return filterActivePeople(people);
+}
+
 export function findPersonByNameString(name, allPeople) {
   const cleanName = normalizeNamePart(name);
   if (!cleanName || !Array.isArray(allPeople)) return null;
-  return allPeople.find(person => getPersonNameKey(person) === cleanName) || null;
+  return filterActivePeople(allPeople).find(person => getPersonNameKey(person) === cleanName) || null;
 }
 
 function getRelationshipLookups(allPeople) {
-  const people = Array.isArray(allPeople) ? allPeople : [];
+  const people = filterActivePeople(allPeople);
   const idToPerson = new Map();
   const nameToPerson = new Map();
 
@@ -480,7 +493,7 @@ export function resolvePersonSpouseIds(person, allPeople) {
 export function derivePersonChildren(person, allPeople) {
   if (!person || !Array.isArray(allPeople)) return [];
 
-  return allPeople.filter(candidate => (
+  return filterActivePeople(allPeople).filter(candidate => (
     candidate?.id !== person.id &&
     resolvePersonParentIds(candidate, allPeople).includes(person.id)
   ));
@@ -490,16 +503,20 @@ export function derivePersonChildren(person, allPeople) {
    FIRESTORE LOOKUPS
 ----------------------------------- */
 
-export async function getAllPeople(familyId = null) {
+export async function getAllPeople(familyId = null, options = {}) {
+  const includeDeleted = Boolean(options.includeDeleted);
+
   if (familyId) {
     const peopleRef = collection(db, "people");
     const qPeople = query(peopleRef, where("familyId", "==", familyId));
     const snapshot = await getDocs(qPeople);
 
-    return snapshot.docs.map(doc => ({
+    const people = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
+
+    return includeDeleted ? people : filterActivePeople(people);
   }
 
   const snapshot = await getDocs(collection(db, "example"));

@@ -19,6 +19,7 @@ import {
 import { 
   buildFullName,
   canEditFamily,
+  filterActivePeople,
   findPersonByNameString,
   getDisplayName,
   getFamilyRole,
@@ -29,6 +30,7 @@ import {
   getCurrentFamilyId as getFamilyIdFromHelper,
   getImageFileExtension,
   getImageUploadMetadata,
+  isDeletedPerson,
   normalizeImageUrl,
   prepareImageFileForUpload,
   resolvePersonParentIds,
@@ -482,7 +484,7 @@ function fillRelationshipSelect(select, people, selectedId, placeholder) {
   emptyOption.textContent = placeholder;
   select.appendChild(emptyOption);
 
-  people
+  filterActivePeople(people)
     .filter(person => person.id !== personId)
     .sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b)))
     .forEach(person => {
@@ -642,6 +644,22 @@ async function loadProfile() {
     const data = generatedDemoPerson || docSnap.data();
     const person = { id: personId, ...data };
     currentProfileImageUrl = data.image || "";
+
+    if (familyId && isDeletedPerson(person)) {
+      setProfileUnavailable({
+        title: "This profile has been removed",
+        status: "This person is hidden from the active family tree.",
+        editMessage: "Removed profiles cannot be edited from this page.",
+        birthday: "Removed from active tree",
+        parents: "Hidden from active tree",
+        spouse: "Hidden from active tree",
+        children: "Hidden from active tree",
+        bio: "This person is hidden from the active family tree.",
+        funFact: "Restore this person from a future owner tool before viewing birthday notes.",
+        storyLead: "This removed profile is not part of the active family tree view.",
+      });
+      return;
+    }
     
 
     if (!familyId && data.familyId && !profileDemoContext) {
