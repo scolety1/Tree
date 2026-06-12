@@ -19,8 +19,10 @@ import {
   ACCESS_CODE_LENGTH,
   canEditFamily,
   generateAccessCode,
+  getAllPeople,
   getFamilyRole,
   getStoredFamilyId,
+  isDeletedPerson,
   normalizeRelationshipIds,
   setFamilyId,
 } from "./helpers.js?v=20260612-4";
@@ -30,6 +32,9 @@ import {
 } from "./starterTree.js?v=20260612-4";
 
 const listEl = document.getElementById("familyTreeList");
+const removedPeopleSectionEl = document.getElementById("removedPeopleSection");
+const removedPeopleListEl = document.getElementById("removedPeopleList");
+const removedPeopleStatusEl = document.getElementById("removedPeopleStatus");
 const statusEl = document.getElementById("dashboardStatus");
 let currentUser = null;
 
@@ -48,6 +53,20 @@ function setStatus(message, tone = "") {
   statusEl.classList.toggle("is-loading", tone === "loading");
   statusEl.classList.toggle("is-error", tone === "error");
   statusEl.classList.toggle("is-success", tone === "success");
+}
+
+function setRemovedPeopleStatus(message, tone = "") {
+  if (!removedPeopleStatusEl) return;
+  removedPeopleStatusEl.textContent = message;
+  removedPeopleStatusEl.classList.toggle("is-loading", tone === "loading");
+  removedPeopleStatusEl.classList.toggle("is-error", tone === "error");
+  removedPeopleStatusEl.classList.toggle("is-success", tone === "success");
+}
+
+function resetRemovedPeopleSection() {
+  if (removedPeopleSectionEl) removedPeopleSectionEl.hidden = true;
+  if (removedPeopleListEl) removedPeopleListEl.replaceChildren();
+  setRemovedPeopleStatus("");
 }
 
 function getRoleLabel(role) {
@@ -787,6 +806,60 @@ function createTreeCard(tree) {
   return article;
 }
 
+function setRemovedPersonCardStatus(card, message, tone = "") {
+  const cardStatus = card.querySelector(".family-tree-card-status");
+  if (!cardStatus) return;
+  cardStatus.textContent = message;
+  cardStatus.classList.toggle("is-loading", tone === "loading");
+  cardStatus.classList.toggle("is-error", tone === "error");
+  cardStatus.classList.toggle("is-success", tone === "success");
+}
+
+function createRemovedPersonCard(person, tree) {
+  const article = document.createElement("article");
+  article.className = "family-tree-card removed-person-card";
+  article.dataset.personId = person.id;
+  article.dataset.familyId = tree.id;
+
+  const details = document.createElement("div");
+
+  const heading = document.createElement("h3");
+  heading.textContent = getPersonDisplayName(person);
+  details.appendChild(heading);
+
+  const treeLabel = document.createElement("p");
+  treeLabel.className = "family-tree-meta";
+  treeLabel.textContent = `Tree: ${tree.name || "Untitled Family Tree"}`;
+  details.appendChild(treeLabel);
+
+  const removedAt = formatDate(person.deletedAt);
+  const removedMeta = document.createElement("p");
+  removedMeta.className = "family-tree-meta";
+  removedMeta.textContent = removedAt ? `Removed ${removedAt}` : "Removed from active tree";
+  details.appendChild(removedMeta);
+
+  const status = document.createElement("p");
+  status.className = "family-tree-card-status";
+  status.setAttribute("aria-live", "polite");
+  details.appendChild(status);
+
+  article.appendChild(details);
+
+  const actions = document.createElement("div");
+  actions.className = "family-tree-card-actions";
+
+  const restoreButton = document.createElement("button");
+  restoreButton.type = "button";
+  restoreButton.className = "button button-secondary restore-person-button";
+  restoreButton.textContent = "Restore";
+  restoreButton.setAttribute("aria-label", `Restore ${getPersonDisplayName(person)} to ${tree.name || "this family tree"}`);
+  restoreButton.addEventListener("click", () => restorePerson(article, person, tree));
+  actions.appendChild(restoreButton);
+
+  article.appendChild(actions);
+  return article;
+}
+
 function dedupeTrees(trees) {
   const byId = new Map();
   trees.forEach(tree => {
@@ -884,6 +957,39 @@ function renderDashboardUnavailableState() {
   listEl.replaceChildren(state);
 }
 
+async function renderRemovedPeopleForOwnedTrees(trees) {
+  if (!removedPeopleSectionEl || !removedPeopleListEl || !currentUser) return;
+
+  resetRemovedPeopleSection();
+  const ownedTrees = (Array.isArray(trees) ? trees : [])
+    .filter(tree => tree.ownerId === currentUser.uid);
+
+  if (ownedTrees.length === 0) return;
+
+  const deletedGroups = await Promise.all(ownedTrees.map(async (tree) => {
+    try {
+      const people = await getAllPeople(tree.id, { includeDeleted: true });
+      return {
+        tree,
+        people: people.filter(isDeletedPerson),
+      };
+    } catch (error) {
+      console.warn("Could not load removed people for owner tools:", error);
+      return { tree, people: [] };
+    }
+  }));
+
+  const deletedItems = deletedGroups
+    .flatMap(group => group.people.map(person => ({ person, tree: group.tree })))
+    .sort((a, b) => getPersonDisplayName(a.person).localeCompare(getPersonDisplayName(b.person)));
+
+  if (deletedItems.length === 0) return;
+
+  removedPeopleSectionEl.hidden = false;
+  setRemovedPeopleStatus(`${deletedItems.length} removed ${deletedItems.length === 1 ? "person" : "people"} available to restore.`);
+  removedPeopleListEl.replaceChildren(...deletedItems.map(({ person, tree }) => createRemovedPersonCard(person, tree)));
+}
+
 function getMemberLabel(memberId, memberProfiles) {
   const profile = memberProfiles.get(memberId);
   return profile?.displayName || profile?.email || "Family member";
@@ -927,7 +1033,7 @@ async function loadBirthdayPrepSummary(familyId) {
     const people = peopleSnap.docs.map(docSnap => ({
       id: docSnap.id,
       ...docSnap.data(),
-    }));
+    })).filter(person => !isDeletedPerson(person));
     const linkedPersonIds = new Set();
 
     people.forEach(person => {
@@ -1168,6 +1274,38 @@ async function removeMember(card, tree, memberId) {
   }
 }
 
+async function restorePerson(card, person, tree) {
+  if (!currentUser || tree.ownerId !== currentUser.uid) {
+    setRemovedPersonCardStatus(card, "Only the tree owner can restore removed people.", "error");
+    return;
+  }
+
+  const personName = getPersonDisplayName(person);
+  const confirmed = confirm(`Restore ${personName} to the active tree and directory?`);
+  if (!confirmed) return;
+
+  setRemovedPersonCardStatus(card, "Restoring person...", "loading");
+
+  try {
+    await updateDoc(doc(db, "people", person.id), {
+      deletedAt: deleteField(),
+      deletedBy: deleteField(),
+      deletedSource: deleteField(),
+      deletedReason: deleteField(),
+      restoredAt: serverTimestamp(),
+      restoredBy: currentUser.uid,
+    });
+
+    setRemovedPersonCardStatus(card, "Person restored.", "success");
+    if (currentUser) {
+      await loadFamilyTrees(currentUser);
+    }
+  } catch (error) {
+    console.error("Error restoring removed person:", error);
+    setRemovedPersonCardStatus(card, "Could not restore this person. Confirm owner access and try again.", "error");
+  }
+}
+
 async function updateMemberRole(card, tree, memberId, role) {
   if (!currentUser || tree.ownerId !== currentUser.uid || memberId === tree.ownerId) return;
 
@@ -1271,6 +1409,7 @@ async function loadFamilyTrees(user) {
   if (!listEl) return;
   currentUser = user;
   listEl.replaceChildren();
+  resetRemovedPeopleSection();
 
   if (!user) {
     setStatus("Sign in to see your private family tree.");
@@ -1369,9 +1508,12 @@ async function loadFamilyTrees(user) {
       tree.healthReport = createAccountHealthReport(tree, activeTrees);
       listEl.appendChild(createTreeCard(tree));
     });
+
+    await renderRemovedPeopleForOwnedTrees(activeTrees);
   } catch (error) {
     console.error("Error loading dashboard:", error);
     setStatus("Could not load your family tree. Refresh the page, then confirm this account has access.", "error");
+    resetRemovedPeopleSection();
     renderDashboardUnavailableState();
   }
 }
