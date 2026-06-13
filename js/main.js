@@ -63,12 +63,45 @@ document.addEventListener('DOMContentLoaded', () => {
         return context;
     }
 
+    function normalizeAppPath(path = "") {
+        if (path === "/p") return "/";
+        return path.startsWith("/p/") ? path.slice(2) : path;
+    }
+
+    function getCurrentPageLabel() {
+        const path = normalizeAppPath(window.location.pathname);
+        if (path.includes("/tree")) return "Family Tree";
+        if (path.includes("/search")) return "People Directory";
+        if (path.includes("/profile")) return "Profile";
+        if (path.includes("/account")) return "Account";
+        if (path.includes("/signin")) return "Sign In";
+        return "Home";
+    }
+
+    function isCurrentMobileMenuHref(href = "") {
+        if (!href) return false;
+        const linkPath = normalizeAppPath(new URL(href, window.location.origin).pathname);
+        const current = normalizeAppPath(window.location.pathname);
+        if (current === "/" && linkPath === "/") return true;
+        if (current.includes("/tree") && linkPath.includes("/tree")) return true;
+        if (current.includes("/search") && linkPath.includes("/search")) return true;
+        if (current.includes("/profile") && linkPath.includes("/profile")) return true;
+        if (current.includes("/account") && linkPath.includes("/account")) return true;
+        if (current.includes("/signin") && linkPath.includes("/signin")) return true;
+        return current === linkPath;
+    }
+
     function createMobileMenuItem({ label, href, onClick, destructive = false }) {
         const item = document.createElement("li");
         const control = href ? document.createElement("a") : document.createElement("button");
+        const isCurrent = href ? isCurrentMobileMenuHref(href) : false;
 
         control.textContent = label;
         control.className = destructive ? "mobile-menu-link mobile-menu-link-danger" : "mobile-menu-link";
+        control.classList.toggle("is-current", isCurrent);
+        if (isCurrent) {
+            control.setAttribute("aria-current", "page");
+        }
 
         if (href) {
             control.href = href;
@@ -81,6 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         item.appendChild(control);
+        return item;
+    }
+
+    function createMobileMenuContext() {
+        const item = document.createElement("li");
+        item.className = "mobile-menu-context";
+        const page = document.createElement("span");
+        page.textContent = getCurrentPageLabel();
+        const account = document.createElement("small");
+        account.textContent = document.body.classList.contains("is-signed-in") ? "Signed in" : "Signed out";
+        item.append(page, account);
         return item;
     }
 
@@ -200,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 items.push({ label: "Sign In", href: "/signin" });
             }
 
-            menuList.replaceChildren(...items.map(createMobileMenuItem));
+            menuList.replaceChildren(createMobileMenuContext(), ...items.map(createMobileMenuItem));
         }
 
         menuButton.addEventListener("click", () => {

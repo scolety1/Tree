@@ -1388,10 +1388,7 @@ if (deletePersonBtn) {
       if (returnView) {
         returnParams.set("view", returnView);
       }
-      const treeQuery = new URLSearchParams(window.location.search).get("treeQuery") || "";
-      if (treeQuery) {
-        returnParams.set("treeQuery", treeQuery);
-      }
+      returnParams.set("removed", "1");
       const redirectQuery = returnParams.toString();
       const redirectUrl = redirectQuery ? `/tree?${redirectQuery}` : "/tree";
       setProfileStatus("Person removed from the active tree.");

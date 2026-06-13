@@ -74,21 +74,6 @@
             </aside>
 
             <section class="tree-canvas-panel" aria-label="Family tree canvas">
-                <div class="tree-map-controls" aria-label="Map actions">
-                    <button id="treeMapZoomOutBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView" aria-label="Zoom out">
-                        -
-                    </button>
-                    <button id="treeMapZoomInBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView" aria-label="Zoom in">
-                        +
-                    </button>
-                    <button id="treeMapOverviewBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout" aria-label="Show full overview">
-                        Fit
-                    </button>
-                    <button id="treeFullscreenBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout" aria-label="Full screen map">
-                        Full
-                    </button>
-                    <p id="treeFullscreenStatus" class="sr-only" aria-live="polite"></p>
-                </div>
                 <p class="tree-mobile-scroll-cue" aria-live="polite">
                     Swipe sideways to see more relatives.
                 </p>
@@ -106,6 +91,22 @@
                     </div>
                     <iframe id="treeChartFrame" class="tree-chart-frame" title="Connected family chart" src="about:blank"></iframe>
                 </section>
+
+                <div class="tree-map-controls" aria-label="Map actions">
+                    <button id="treeMapZoomOutBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView" aria-label="Zoom out">
+                        -
+                    </button>
+                    <button id="treeMapZoomInBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView" aria-label="Zoom in">
+                        +
+                    </button>
+                    <button id="treeMapOverviewBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout" aria-label="Show full overview">
+                        Fit
+                    </button>
+                    <button id="treeFullscreenBtn" class="tree-map-icon-button" type="button" aria-describedby="treeFullscreenStatus" aria-controls="treeChartView tree-layout" aria-label="Full screen map">
+                        Full
+                    </button>
+                    <p id="treeFullscreenStatus" class="sr-only" aria-live="polite"></p>
+                </div>
 
                 <div class="tree-context-panel" aria-label="Selected person and map key">
                 <section id="treeSelectedPersonPanel" class="tree-selected-person-panel" aria-live="polite" aria-labelledby="treeSelectedPersonName" hidden>
@@ -138,6 +139,7 @@
                     </dl>
                     <div id="treeSelectedRelativeActions" class="tree-selected-relative-actions"></div>
                     <div class="tree-selected-actions">
+                        <button id="treeSelectedAddChildBtn" class="button" type="button" hidden>Add child</button>
                         <a id="treeSelectedEditLink" class="button" href="/profile" hidden>Edit profile</a>
                         <a id="treeSelectedProfileLink" class="button button-secondary" href="/profile" hidden>View details</a>
                         <button id="treeSelectedFocusBtn" class="button button-secondary" type="button" aria-controls="treeChartView tree-layout">Focus in map</button>

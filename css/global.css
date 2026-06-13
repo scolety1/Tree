@@ -2053,6 +2053,26 @@ body.add-person-modal-open #addPersonBtn {
         list-style: none;
     }
 
+    .mobile-menu-context {
+        display: grid;
+        gap: 2px;
+        padding: 8px 10px 10px;
+        border-bottom: 1px solid var(--line);
+        color: var(--ink);
+    }
+
+    .mobile-menu-context span {
+        font-size: 0.86rem;
+        font-weight: 900;
+    }
+
+    .mobile-menu-context small {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
     .mobile-menu-link {
         display: flex;
         width: 100%;
@@ -2072,8 +2092,14 @@ body.add-person-modal-open #addPersonBtn {
     }
 
     .mobile-menu-link:hover,
-    .mobile-menu-link:focus-visible {
+    .mobile-menu-link:focus-visible,
+    .mobile-menu-link.is-current {
         background: var(--brand-soft);
+    }
+
+    .mobile-menu-link.is-current {
+        color: var(--brand-strong);
+        box-shadow: inset 3px 0 0 var(--brand);
     }
 
     .mobile-menu-link-danger {
@@ -2083,6 +2109,7 @@ body.add-person-modal-open #addPersonBtn {
     main {
         width: min(100% - 24px, var(--content));
         padding-top: 24px;
+        padding-bottom: max(92px, calc(env(safe-area-inset-bottom) + 92px));
     }
 
     .welcome-section {
@@ -2314,10 +2341,14 @@ body.add-person-modal-open #addPersonBtn {
     }
 
     #addPersonBtn {
-        position: static;
-        width: 100%;
+        position: fixed;
+        right: 14px;
+        bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
+        left: 14px;
+        z-index: 1000;
+        width: auto;
         min-height: 50px;
-        margin: 18px auto 0;
+        margin: 0;
         padding: 0 18px;
         border-radius: var(--radius-sm);
         box-shadow: 0 10px 18px rgba(47, 111, 78, 0.22);

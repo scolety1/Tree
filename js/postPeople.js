@@ -31,6 +31,7 @@ const form = document.getElementById("addPersonForm");
 const statusEl = document.getElementById("addPersonStatus");
 let peopleOptions = [];
 let currentUser = getCurrentUser();
+let pendingAddChildParent = null;
 
 function getAddPersonStatusTone(message = "") {
   if (!message) return "";
@@ -185,6 +186,19 @@ function populateRelationshipSelects(people) {
   });
 }
 
+function applyPendingAddChildParent() {
+  if (!pendingAddChildParent?.parentId) return;
+
+  const parent1Select = document.getElementById("parent1");
+  if (!parent1Select || ![...parent1Select.options].some(option => option.value === pendingAddChildParent.parentId)) {
+    return;
+  }
+
+  parent1Select.value = pendingAddChildParent.parentId;
+  setStatus(`Adding child for ${pendingAddChildParent.parentName || "selected parent"}.`);
+  pendingAddChildParent = null;
+}
+
 async function refreshRelationshipOptions() {
   if (!form) return;
   const familyId = getCurrentFamilyId();
@@ -237,11 +251,16 @@ if (form) {
     });
   });
 
-  window.addEventListener("add-person-modal-opened", () => {
-    refreshRelationshipOptions().catch(error => {
-      console.error("Error refreshing relationship options:", error);
-      setStatus("Could not refresh relationship choices. You can still type basics and save, then reload.");
-    });
+  window.addEventListener("add-person-modal-opened", (event) => {
+    pendingAddChildParent = event.detail?.parentId ? event.detail : null;
+    refreshRelationshipOptions()
+      .then(applyPendingAddChildParent)
+      .catch(error => {
+        console.error("Error refreshing relationship options:", error);
+        setStatus(pendingAddChildParent
+          ? "Could not preselect that parent. You can still choose them from Parent one."
+          : "Could not refresh relationship choices. You can still type basics and save, then reload.");
+      });
   });
 }
 

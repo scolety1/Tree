@@ -60,6 +60,10 @@ function getInitialTreeQuery() {
   return new URLSearchParams(window.location.search).get("treeQuery") || "";
 }
 
+function wasPersonJustRemoved() {
+  return new URLSearchParams(window.location.search).get("removed") === "1";
+}
+
 function getRequestedTreeView() {
   const requestedView = new URLSearchParams(window.location.search).get("view");
   return TREE_VIEWS.has(requestedView) ? requestedView : null;
@@ -368,13 +372,13 @@ function setupAddPersonModal() {
 
   if (!modal || !btn || !closeBtn) return;
 
-  function openModal() {
+  function openModal(detail = {}) {
     previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : btn;
     document.body.classList.add("add-person-modal-open");
     modal.hidden = false;
     modal.classList.add("is-open");
     btn.setAttribute("aria-expanded", "true");
-    window.dispatchEvent(new CustomEvent("add-person-modal-opened"));
+    window.dispatchEvent(new CustomEvent("add-person-modal-opened", { detail }));
     const firstNameInput = document.getElementById("firstName");
     if (firstNameInput && !firstNameInput.disabled) {
       firstNameInput.focus();
@@ -395,8 +399,11 @@ function setupAddPersonModal() {
     }
   }
 
-  btn.addEventListener("click", openModal);
+  btn.addEventListener("click", () => openModal());
   closeBtn.addEventListener("click", closeModal);
+  window.addEventListener("open-add-person-modal", (event) => {
+    openModal(event.detail || {});
+  });
 
   modal.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -867,6 +874,12 @@ function clearSelectedPersonPanel() {
   document.body.classList.remove("tree-has-selected-person");
   setSelectedLink(document.getElementById("treeSelectedProfileLink"), "");
   setSelectedLink(document.getElementById("treeSelectedEditLink"), "");
+  const addChildBtn = document.getElementById("treeSelectedAddChildBtn");
+  if (addChildBtn) {
+    addChildBtn.hidden = true;
+    addChildBtn.onclick = null;
+    addChildBtn.removeAttribute("aria-label");
+  }
   const focusBtn = document.getElementById("treeSelectedFocusBtn");
   if (focusBtn) {
     focusBtn.hidden = true;
@@ -941,6 +954,20 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
     activeTreeContext.canEdit ? buildTreeProfileUrl(person.id, { edit: true }) : "",
     `Edit ${selectedName}'s profile`
   );
+
+  const addChildBtn = document.getElementById("treeSelectedAddChildBtn");
+  if (addChildBtn) {
+    addChildBtn.hidden = !activeTreeContext.canEdit || activeTreeContext.isDemoMode;
+    addChildBtn.setAttribute("aria-label", `Add a child for ${selectedName}`);
+    addChildBtn.onclick = () => {
+      window.dispatchEvent(new CustomEvent("open-add-person-modal", {
+        detail: {
+          parentId: person.id,
+          parentName: selectedName,
+        },
+      }));
+    };
+  }
 
   const focusBtn = document.getElementById("treeSelectedFocusBtn");
   if (focusBtn) {
@@ -3474,9 +3501,11 @@ async function loadFamilyTree() {
     if (focusInput && initialTreeQuery) {
       focusInput.value = initialTreeQuery;
     }
-    setTreeFocusStatus(overviewMode
-      ? `Search ${allPeople.length} people to jump directly to a card.`
-      : `Search ${allPeople.length} people in this tree.`);
+    setTreeFocusStatus(wasPersonJustRemoved()
+      ? "Person removed from the active tree."
+      : overviewMode
+        ? `Search ${allPeople.length} people to jump directly to a card.`
+        : `Search ${allPeople.length} people in this tree.`);
     renderBirthdayCalendar(allPeople, familyId, { isDemoMode: isPublicDemoMode });
     renderMissingInfoChecklist(allPeople, familyId, { isDemoMode: isPublicDemoMode });
     renderFamilyStats(allPeople, familyId, { isDemoMode: isPublicDemoMode });

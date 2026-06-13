@@ -702,7 +702,7 @@ body.tree-presentation-mode .tree-layout {
 
 .tree-map-controls {
     position: sticky;
-    top: calc(100vh - 84px);
+    bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 15;
     display: flex;
     flex-wrap: wrap;
@@ -710,7 +710,7 @@ body.tree-presentation-mode .tree-layout {
     gap: 6px;
     width: fit-content;
     max-width: calc(100% - 20px);
-    margin: 0 12px -50px auto;
+    margin: -62px 12px 12px auto;
     padding: 6px;
     border: 1px solid rgba(32, 47, 36, 0.12);
     border-radius: 999px;
@@ -2567,9 +2567,9 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-map-controls {
-        top: calc(100vh - 78px);
+        bottom: max(14px, env(safe-area-inset-bottom));
         max-width: calc(100% - 16px);
-        margin: 0 8px -48px auto;
+        margin: -58px 8px 12px auto;
         padding: 5px;
     }
 
@@ -2701,11 +2701,15 @@ a.family-spotlight-name:focus-visible {
     }
 
     #addPersonBtn {
-        position: static;
-        z-index: auto;
+        position: fixed;
+        right: 14px;
+        bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
+        left: 14px;
+        z-index: 1000;
         width: 100%;
+        max-width: calc(100% - 28px);
         min-height: 50px;
-        margin: 14px 0 0;
+        margin: 0;
         border-radius: var(--radius-sm);
     }
 }
@@ -2765,8 +2769,8 @@ a.family-spotlight-name:focus-visible {
         bottom: auto;
         left: auto;
         z-index: auto;
-        max-height: min(72vh, 560px);
-        overflow: auto;
+        max-height: none;
+        overflow: visible;
         box-shadow: var(--shadow-soft);
     }
 
@@ -2788,7 +2792,9 @@ a.family-spotlight-name:focus-visible {
     }
 
     .tree-map-controls {
-        top: calc(100vh - 74px);
+        bottom: max(12px, env(safe-area-inset-bottom));
+        margin-right: 6px;
+        margin-left: auto;
     }
 
     .tree-layout {
