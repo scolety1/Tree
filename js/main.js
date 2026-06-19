@@ -1,10 +1,10 @@
 import "./helpers.js?v=20260612-4";
 import "./postPeople.js?v=20260612-4";
-import "./tree.js?v=20260613-mobile-1";
+import "./tree.js?v=20260618-mobile-2";
 import "./search.js?v=20260612-4";
 import "./home.js?v=20260612-4";
 import { signOutCurrentUser } from "./auth.js?v=20260612-4";
-import "./dashboard.js?v=20260612-4";
+import "./dashboard.js?v=20260618-mobile-2";
 import "./migrateRelationships.js?v=20260612-migration-guard";
 import { getCurrentFamilyId } from "./helpers.js?v=20260612-4";
 

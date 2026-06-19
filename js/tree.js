@@ -892,6 +892,8 @@ function clearSelectedPersonPanel() {
     clearBtn.onclick = null;
     clearBtn.removeAttribute("aria-label");
   }
+  const moreDetails = document.getElementById("treeSelectedMoreDetails");
+  if (moreDetails) moreDetails.open = false;
   document.getElementById("treeSelectedRelativeActions")?.replaceChildren();
 }
 
@@ -921,6 +923,10 @@ function setSelectedPersonPanel(personId, { source = "tree", scroll = false, foc
 
   panel.hidden = false;
   document.body.classList.add("tree-has-selected-person");
+  const moreDetails = document.getElementById("treeSelectedMoreDetails");
+  if (moreDetails && window.matchMedia("(max-width: 640px)").matches) {
+    moreDetails.open = false;
+  }
   document.getElementById("treeSelectedPersonName").textContent = getPersonDisplayName(person);
   document.getElementById("treeSelectedPersonMeta").textContent = activeTreeContext.isDemoMode
     ? "Read-only example"

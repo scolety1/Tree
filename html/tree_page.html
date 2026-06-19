@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Our Family Tree</title>
     <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/css/global.css?v=20260613-mobile-1">
-    <link rel="stylesheet" href="/css/family_tree.css?v=20260613-mobile-1">
+    <link rel="stylesheet" href="/css/global.css?v=20260618-mobile-2">
+    <link rel="stylesheet" href="/css/family_tree.css?v=20260618-mobile-2">
 
 </head>
 <body class="is-auth-loading">
@@ -119,25 +119,28 @@
                     <h2 id="treeSelectedPersonName">Choose someone</h2>
                     <p id="treeSelectedPersonMeta" class="tree-selected-meta"></p>
                     <p id="treeSelectedBranchNote" class="tree-selected-branch-note" hidden></p>
-                    <dl class="tree-selected-details">
-                        <div>
-                            <dt>Birthday</dt>
-                            <dd id="treeSelectedBirthday">-</dd>
-                        </div>
-                        <div>
-                            <dt>Parents</dt>
-                            <dd id="treeSelectedParents">-</dd>
-                        </div>
-                        <div>
-                            <dt>Spouse/partner</dt>
-                            <dd id="treeSelectedSpouse">-</dd>
-                        </div>
-                        <div>
-                            <dt>Children</dt>
-                            <dd id="treeSelectedChildren">-</dd>
-                        </div>
-                    </dl>
-                    <div id="treeSelectedRelativeActions" class="tree-selected-relative-actions"></div>
+                    <details id="treeSelectedMoreDetails" class="tree-selected-more-details">
+                        <summary>More details</summary>
+                        <dl class="tree-selected-details">
+                            <div>
+                                <dt>Birthday</dt>
+                                <dd id="treeSelectedBirthday">-</dd>
+                            </div>
+                            <div>
+                                <dt>Parents</dt>
+                                <dd id="treeSelectedParents">-</dd>
+                            </div>
+                            <div>
+                                <dt>Spouse/partner</dt>
+                                <dd id="treeSelectedSpouse">-</dd>
+                            </div>
+                            <div>
+                                <dt>Children</dt>
+                                <dd id="treeSelectedChildren">-</dd>
+                            </div>
+                        </dl>
+                        <div id="treeSelectedRelativeActions" class="tree-selected-relative-actions"></div>
+                    </details>
                     <div class="tree-selected-actions">
                         <button id="treeSelectedAddChildBtn" class="button" type="button" hidden>Add child</button>
                         <a id="treeSelectedEditLink" class="button" href="/profile" hidden>Edit profile</a>
@@ -223,6 +226,6 @@
         <small>Copyright &copy; <span id="year"></span> Family Tree</small>
     </footer>
 
-    <script type="module" src="/js/main.js?v=20260613-mobile-1"></script>
+    <script type="module" src="/js/main.js?v=20260618-mobile-2"></script>
 </body>
 </html>

@@ -290,12 +290,12 @@ button[hidden] {
 
 @media (max-width: 760px) {
   .profile-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: 96px minmax(0, 1fr);
     padding: 20px;
   }
 
   .profile-card.no-photo {
-    grid-template-columns: 1fr;
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .profile-photo-wrapper {
@@ -304,16 +304,56 @@ button[hidden] {
 
   .profile-image,
   .profile-photo-placeholder {
-    width: min(220px, 100%);
+    width: 96px;
+    min-width: 96px;
   }
 
   .profile-photo-placeholder {
-    min-height: 220px;
+    min-height: 96px;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .profile-photo-initials {
+    width: 54px;
+    height: 54px;
+    font-size: 1.15rem;
+  }
+
+  .profile-photo-placeholder strong,
+  .profile-photo-placeholder span:last-child {
+    display: none;
+  }
+
+  .profile-details {
+    display: contents;
+  }
+
+  .profile-details h1 {
+    grid-column: 2;
+    align-self: center;
+    margin: 0;
+    font-size: clamp(1.75rem, 8vw, 2.5rem);
+  }
+
+  .profile-status,
+  .profile-card .demo-route-banner,
+  .profile-edit-state,
+  .profile-story-lead,
+  .profile-facts,
+  .profile-memory-panel,
+  .profile-buttons {
+    grid-column: 1 / -1;
   }
 
   .profileInfo {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .profile-relation-link {
+    min-height: 44px;
+    align-items: center;
   }
 }
 
@@ -328,7 +368,7 @@ button[hidden] {
   }
 
   .profile-details h1 {
-    font-size: clamp(2rem, 13vw, 2.8rem);
+    font-size: clamp(1.55rem, 8vw, 2.2rem);
   }
 
   .profile-buttons {

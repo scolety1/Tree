@@ -1617,6 +1617,7 @@ async function loadFamilyTrees(user) {
       setFamilyId(currentTree.id);
     }
 
+    listEl.replaceChildren();
     activeTrees.forEach(tree => {
       tree.healthReport = createAccountHealthReport(tree, activeTrees);
       listEl.appendChild(createTreeCard(tree));

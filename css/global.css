@@ -2240,6 +2240,10 @@ body.add-person-modal-open #addPersonBtn {
         overflow: hidden;
     }
 
+    .search-results {
+        padding-bottom: 86px;
+    }
+
     .directory-card-header h3,
     .directory-card-meta,
     .directory-badge {
